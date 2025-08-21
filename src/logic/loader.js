@@ -99,7 +99,7 @@ export async function loadAllPagesSequentially() {
         console.log("Загрузка страниц остановлена из-за смены URL."); 
     } 
 }
-async function handleUrlChange() {
+export async function handleUrlChange() {
     const tbody = document.querySelector('.trade-table__tbody');
     if (!tbody) {
         return;

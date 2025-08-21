@@ -1,6 +1,7 @@
 import { disableBodyScroll, enableBodyScroll } from '../utils/domHelpers.js';
 import { loadAndDisplayReviews } from './Review.js';
 import { startPriceTimer } from '../utils/timers.js';
+import { showNotification } from '../utils/notifications.js';
 
 export async function openTradingModal(apiResult, originalAd, paymentNames) {
     // Удаляем существующее модальное окно

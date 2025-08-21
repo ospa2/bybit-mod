@@ -1,5 +1,7 @@
 // src/state.js
 
+import { handleUrlChange } from "./logic/loader";
+
 // Единый объект состояния приложения
 export const appState = {
     MIN_LEFT_VALUE: 9000,
@@ -8,7 +10,6 @@ export const appState = {
     isLoading: false,
     isSequentialLoadingActive: false,
     shouldStopLoading: false, // Флаг для остановки
-    USER_ID: "",              // можно задать, если нужен
     MAX_PAGES: 50,            // дефолт
     DELAY_MS: 500             // дефолт
 };
@@ -24,6 +25,7 @@ export function updateGlobalValues(min, max, onChangeCallback) {
 
     if (typeof onChangeCallback === "function") {
         onChangeCallback();
+        handleUrlChange()
     }
 
     console.log(

@@ -1,7 +1,7 @@
 import './style.css';
 import { initSliderReplacement } from "C:/Web/bybitmod/bybit-mod/src/components/rangeSlider.js";
 import { updateGlobalValues } from "./state.js";
-import { loadAllPagesSequentially, observeUrlChanges } from "./logic/loader.js";
+import { loadAllPagesSequentially, observeUrlChanges, handleUrlChange } from "./logic/loader.js";
 
 function waitForTableAndStart() {
     const tbody = document.querySelector(".trade-table__tbody");
@@ -12,6 +12,12 @@ function waitForTableAndStart() {
     } else {
         tbody.querySelectorAll(".dynamic-row").forEach(row => row.remove());
         tbody.querySelector(".completion-indicator")?.remove();
+         document.addEventListener('keydown', (event) => {
+                // Проверяем, что нажата клавиша 'Z' (без учета регистра)
+                if (event.key === 'z' || event.key === 'Z' || event.key === 'я' || event.key === 'Я') {
+                    handleUrlChange();
+                }
+            });
 
         setTimeout(() => {
             document.querySelectorAll(".trade-table__tbody tr").forEach(row => row.classList.add("filtered-ad"));
