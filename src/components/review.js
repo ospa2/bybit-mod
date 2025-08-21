@@ -88,7 +88,6 @@ export async function loadAndDisplayReviews(originalAd) {
                 if (analysis.shouldHighlight) {
                     highlightedCount++;
                 }
-                console.log('review:', review);
                 
                 // <-- ИЗМЕНЕНИЕ: Вызываем новую функцию, передавая ей ВЕСЬ объект отзыва.
                 reviewsHTML += createReviewHTML(review, 'review-item');

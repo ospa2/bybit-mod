@@ -1,7 +1,7 @@
+import './style.css';
 import { initSliderReplacement } from "C:/Web/bybitmod/bybit-mod/src/components/rangeSlider.js";
-import { updateGlobalValues, currentPage } from "./state.js";
+import { updateGlobalValues } from "./state.js";
 import { loadAllPagesSequentially, observeUrlChanges } from "./logic/loader.js";
-import { USER_ID } from "./config.js";
 
 function waitForTableAndStart() {
     const tbody = document.querySelector(".trade-table__tbody");
@@ -22,8 +22,8 @@ function waitForTableAndStart() {
                 onUpdate: updateGlobalValues
             });
 
-            loadAllPagesSequentially(USER_ID);
-            observeUrlChanges(USER_ID);
+            loadAllPagesSequentially();
+            observeUrlChanges();
         }, 100);
     }
 }

@@ -1,4 +1,4 @@
-import { disableBodyScroll } from '../utils/domHelpers.js';
+import { disableBodyScroll, enableBodyScroll } from '../utils/domHelpers.js';
 import { loadAndDisplayReviews } from './Review.js';
 import { startPriceTimer } from '../utils/timers.js';
 
@@ -145,8 +145,6 @@ export async function openTradingModal(apiResult, originalAd, paymentNames) {
 
     // --- ЗАПУСКАЕМ АСИНХРОННУЮ ЗАГРУЗКУ ДАННЫХ ---
     loadAndDisplayReviews(originalAd);
-    
-    window.toggleTheme = toggleTheme;
 }
 
 
