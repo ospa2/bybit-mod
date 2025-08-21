@@ -1,0 +1,906 @@
+.spinner {
+   width: 56px;
+   height: 56px;
+   display: grid;
+}
+
+.spinner::before,
+.spinner::after {
+   content: "";
+   grid-area: 1/1;
+   background: var(--c) 50%  0, 
+        var(--c) 50%  100%, 
+        var(--c) 100% 50%, 
+        var(--c) 0    50%;
+   background-size: 13.4px 13.4px;
+   background-repeat: no-repeat;
+   animation: spinner-3hs4a3 1s infinite;
+}
+
+.spinner::before {
+   --c: radial-gradient(farthest-side,#474bff 92%,#0000);
+   margin: 4.5px;
+   background-size: 9px 9px;
+   animation-timing-function: linear;
+}
+
+.spinner::after {
+   --c: radial-gradient(farthest-side,#474bff 92%,#0000);
+}
+
+@keyframes spinner-3hs4a3 {
+   100% {
+      transform: rotate(.5turn);
+   }
+}
+
+.highlighted-review {
+    background-color: #fee2e2 !important;
+    border-left: 4px solid #dc2626 !important;
+    color: #dc2626 !important;
+    font-weight: 500 !important;
+}
+
+.filter-info {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    background-color: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 12px;
+}
+
+.filtered-info {
+    color: #6b7280;
+}
+
+.highlighted-info {
+    color: #dc2626;
+    font-weight: 500;
+}
+
+.reviews-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.review-item {
+    padding: 8px 12px;
+    margin-bottom: 4px;
+    border-radius: 4px;
+    background-color: #f9fafb;
+    border-left: 2px solid #e5e7eb;
+    transition: all 0.2s ease;
+    color: #374151;
+}
+
+.review-item.highlighted-review {
+    animation: highlightPulse 2s ease-in-out;
+}
+
+@keyframes highlightPulse {
+    0%, 100% { background-color: #fee2e2; }
+    50% { background-color: #fecaca; }
+}
+
+.no-reviews {
+    text-align: center;
+    color: #10b981;
+    padding: 24px;
+    font-size: 18px;
+    font-weight: 600;
+    font-style: normal;
+    background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+    border-radius: 12px;
+    border: 2px solid #10b981;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+    position: relative;
+    overflow: hidden;
+}
+
+.no-reviews::before {
+    content: '✓';
+    display: block;
+    font-size: 32px;
+    margin-bottom: 8px;
+    color: #059669;
+}
+
+.no-reviews::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, #10b981, #059669, #10b981);
+    border-radius: 12px;
+    z-index: -1;
+    animation: borderGlow 3s ease-in-out infinite;
+}
+
+@keyframes borderGlow {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+}
+
+.filtered-ad { 
+    display: none !important; 
+}
+
+.dynamic-row {
+    opacity: 0.9;
+    border-left: 3px solid #10b981 !important;
+    background-color: #f0fdf4 !important;
+}
+
+.completion-indicator {
+    background: linear-gradient(90deg, #f0f9ff 0%, #e0f2fe 100%) !important;
+    border: 1px solid #0ea5e9 !important;
+    color: #0284c7 !important;
+}
+
+.filtered-review { 
+    display: none !important; 
+}
+
+.highlighted-review {
+    background: linear-gradient(90deg, rgba(220, 38, 38, 0.1), rgba(248, 113, 113, 0.1)) !important;
+    border: 2px solid #dc2626 !important;
+    border-radius: 8px !important;
+    animation: pulse-red 2s infinite !important;
+    color: #dc2626 !important;
+}
+
+@keyframes pulse-red {
+    0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(220, 38, 38, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+}
+
+.bybit-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: modalOverlayFadeIn 0.2s ease-out;
+}
+
+/* Анимация закрытия для overlay */
+.bybit-modal-overlay.closing {
+    animation: modalOverlayFadeOut 0.2s ease-out forwards;
+}
+
+@keyframes modalOverlayFadeIn {
+    from { 
+        opacity: 0; 
+        backdrop-filter: blur(0px);
+    }
+    to { 
+        opacity: 1; 
+        backdrop-filter: blur(4px);
+    }
+}
+
+@keyframes modalOverlayFadeOut {
+    from { 
+        opacity: 1; 
+        backdrop-filter: blur(4px);
+    }
+    to { 
+        opacity: 0; 
+        backdrop-filter: blur(0px);
+    }
+}
+
+.bybit-modal {
+    background: #ffffff;
+    border-radius: 16px;
+    width: 1800px;
+    max-width: 95vw;
+    max-height: 95vh;
+    overflow: hidden;
+    position: relative;
+    animation: modalSlideIn 0.3s ease-out;
+    box-shadow: 0 20px 80px rgba(0, 0, 0, 0.15);
+    border: 1px solid #e5e7eb;
+    transform-origin: center;
+}
+
+/* Анимация закрытия для модального окна */
+.bybit-modal.closing {
+    animation: modalSlideOut 0.25s ease-in forwards;
+}
+
+@keyframes modalSlideIn {
+    from {
+        transform: scale(0.95) translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes modalSlideOut {
+    from {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
+    to {
+        transform: scale(0.95) translateY(-20px);
+        opacity: 0;
+    }
+}
+
+.bybit-modal-header {
+    position: relative;
+    padding: 0;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+    background: #ffffff;
+}
+
+.bybit-modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    z-index: 10;
+    color: #6b7280;
+}
+
+.bybit-modal-close:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: #374151;
+    transform: scale(1.1);
+}
+
+.bybit-modal-close:active {
+    transform: scale(0.95);
+}
+
+.bybit-modal-body {
+    display: flex;
+    height: calc(90vh - 60px);
+    max-height: 600px;
+    overflow: hidden;
+}
+
+/* Левая панель - УВЕЛИЧЕНО */
+.advertiser-panel {
+    width: 65%; /* Увеличено */
+    padding: 32px;
+    background: #ffffff;
+    overflow-y: auto;
+    border-right: 1px solid #e5e7eb;
+    display: flex;
+    flex-direction: column; /* Добавлено для лучшего расположения */
+}
+
+.advertiser-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.avatar-container {
+    position: relative;
+}
+
+.avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #f7931a, #ffd700);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: 600;
+    color: #000;
+    position: relative;
+}
+
+.avatar.online::after {
+    content: '';
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    width: 12px;
+    height: 12px;
+    background: #10b981;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+}
+
+.advertiser-info {
+    flex: 1;
+}
+
+.advertiser-name {
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 4px;
+}
+
+.advertiser-stats {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #6b7280;
+    margin-bottom: 4px;
+}
+
+.stats-divider {
+    color: #d1d5db;
+}
+
+.online-status {
+    font-size: 12px;
+    color: #10b981;
+    font-weight: 500;
+}
+
+.verification-tags {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+
+.verification-tag {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.verification-tag::before {
+    content: '✓';
+    font-weight: bold;
+}
+
+.crypto-info-section {
+    margin-bottom: 24px;
+}
+
+.crypto-info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.crypto-info-item:last-child {
+    border-bottom: none;
+}
+
+.crypto-info-label {
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.crypto-info-value {
+    font-size: 14px;
+    color: #111827;
+    font-weight: 500;
+}
+
+/* Секция условий мейкера - УВЕЛИЧЕНА */
+.terms-section {
+    margin-top: 24px;
+    flex: 1; /* Позволяет секции растягиваться на оставшееся пространство */
+    display: flex;
+    flex-direction: column;
+}
+
+.terms-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 12px;
+}
+
+.terms-content {
+    background: #f9fafb;
+    border-radius: 8px;
+    padding: 16px;
+    flex: 1; /* Позволяет блоку растягиваться */
+    max-height: none; /* Убираем ограничение по высоте */
+    overflow-y: auto;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #374151;
+    border: 1px solid #e5e7eb;
+}
+
+.terms-content ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.terms-content li {
+    padding: 8px 0;
+    border-bottom: 1px dashed #d1d5db;
+}
+
+.terms-content li:last-child {
+    border-bottom: none;
+}
+
+.terms-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.terms-content::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 3px;
+}
+
+.terms-content::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+}
+
+/* Правая панель - УМЕНЬШЕНА */
+.trading-panel {
+    flex: 1;
+    padding: 32px;
+    background: #ffffff;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.price-section {
+    background: #f9fafb;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+    border: 1px solid #e5e7eb;
+}
+
+.price-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.price-label {
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.price-timer {
+    font-size: 12px;
+    color: #6b7280;
+    background: rgba(0, 0, 0, 0.05);
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.price-value {
+    font-size: 28px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.input-section {
+    margin-bottom: 20px;
+}
+
+.input-label {
+    font-size: 14px;
+    color: #6b7280;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.input-container {
+    position: relative;
+    background: #f9fafb;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    transition: all 0.2s;
+    overflow: hidden;
+}
+
+.input-container.focused {
+    border-color: #f7931a;
+    box-shadow: 0 0 0 2px rgba(247, 147, 26, 0.2);
+}
+
+.input-wrapper {
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    min-height: 48px;
+}
+
+.coin-icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 8px;
+    border-radius: 50%;
+}
+
+.amount-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #111827;
+    font-size: 16px;
+    font-weight: 500;
+    padding: 0;
+}
+
+.amount-input::placeholder {
+    color: #9ca3af;
+}
+
+.input-suffix {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.input-divider {
+    color: #d1d5db;
+}
+
+.max-button {
+    background: none;
+    border: none;
+    color: #f7931a;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 0;
+    transition: opacity 0.2s;
+}
+
+.max-button:hover {
+    opacity: 0.8;
+}
+
+.balance-info {
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.info-icon {
+    cursor: help;
+    opacity: 0.7;
+}
+
+.payment-section {
+    margin-bottom: 32px;
+}
+
+.payment-methods {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    background: #f9fafb;
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+}
+
+.payment-method {
+    background: rgba(247, 147, 26, 0.1);
+    color: #ea580c;
+    padding: 6px 12px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 500;
+    border: 1px solid rgba(247, 147, 26, 0.3);
+}
+
+.button-section {
+    margin-top: auto;
+    display: flex;
+    gap: 12px;
+}
+
+.trade-button {
+    flex: 1;
+    background: linear-gradient(135deg, #f7931a, #ff6b35);
+    border: none;
+    border-radius: 8px;
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 600;
+    padding: 14px 24px;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-height: 48px;
+}
+
+.trade-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(247, 147, 26, 0.3);
+}
+
+.trade-button:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.trade-button:disabled {
+    background: #e5e7eb;
+    color: #9ca3af;
+    cursor: not-allowed;
+}
+
+.cancel-button {
+    background: transparent;
+    border: 2px solid #d1d5db;
+    border-radius: 8px;
+    color: #6b7280;
+    font-size: 16px;
+    font-weight: 600;
+    padding: 14px 24px;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-height: 48px;
+    min-width: 120px;
+}
+
+.cancel-button:hover {
+    border-color: #9ca3af;
+    color: #374151;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .bybit-modal {
+        width: 95vw;
+        height: 95vh;
+        border-radius: 12px;
+    }
+
+    .bybit-modal-body {
+        flex-direction: column;
+        height: calc(95vh - 60px);
+    }
+
+    .advertiser-panel {
+        width: 100%;
+        max-height: 40%;
+        padding: 20px;
+    }
+
+    .trading-panel {
+        padding: 20px;
+    }
+
+    .button-section {
+        flex-direction: column;
+    }
+}
+
+/* Анимации загрузки */
+.loading-pulse {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+/* Улучшения для предотвращения визуальных глючей */
+.bybit-modal-overlay,
+.bybit-modal {
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    -webkit-transform-style: preserve-3d;
+    transform-style: preserve-3d;
+    will-change: transform, opacity;
+}
+
+/* Обеспечиваем плавное исчезновение backdrop-filter */
+.bybit-modal-overlay {
+    transition: backdrop-filter 0.2s ease-out;
+}
+
+/* Предотвращение скролла фона */
+body.modal-open {
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+}
+
+/* Фиксация для мобильных устройств */
+@media (max-width: 768px) {
+    body.modal-open {
+        position: fixed;
+        overflow: hidden;
+        width: 100%;
+        height: 100%;
+    }
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+:root {
+    --primary: #e5b546; /* Или любой другой цвет */
+}
+
+/* Основной контейнер для слайдера */
+/* Общие стили для элемента-родителя, если нужно */
+.moly-input {
+    /* Ширина будет установлена через JS */
+    /* width: 120px; */ 
+    transition: width 0.3s ease-in-out; /* Добавляем плавный переход */
+}
+
+/* Основной контейнер для слайдера */
+.double-slider-container {
+    position: relative;
+    width: 100%;
+    height: 30px; /* Высота контейнера, включая метки */
+    display: flex;
+    align-items: center;
+}
+
+/* Дорожка (трек) слайдера */
+.slider-track {
+    position: absolute;
+    height: 4px;
+    width: 100%;
+    border-radius: 9999px;
+    background-color: rgba(229, 195, 70, 0.2);
+    overflow: hidden;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* Активная область между ползунками */
+.slider-range {
+    position: absolute;
+    height: 100%;
+    background-color: #e5b546; /* Используем напрямую, или через --primary, если он определен */
+}
+
+/* Общие стили для ползунков */
+.min-slider,
+.max-slider {
+    position: absolute;
+    width: 100%;
+    height: 20px; /* Увеличиваем высоту, чтобы было легче кликать */
+    background: transparent;
+    appearance: none;
+    -webkit-appearance: none;
+    outline: none;
+    pointer-events: none; /* Запрещаем клики по треку, но не по самим ползункам */
+    z-index: 2;
+    top: 30%;
+    transform: translateY(-50%);
+}
+
+/* Стили для "ручки" ползунка */
+.min-slider::-webkit-slider-thumb,
+.max-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background: white;
+    border: 1px solid rgba(229, 192, 70, 0.5);
+    border-radius: 9999px;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+    pointer-events: all; /* Делаем ручку кликабельной */
+    z-index: 20;
+}
+
+.min-slider::-moz-range-thumb,
+.max-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: white;
+    border: 1px solid rgba(229, 173, 70, 0.5);
+    border-radius: 9999px;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+    pointer-events: all;
+}
+
+/* Стили для трека, чтобы он был прозрачным и не мешал ручкам */
+.min-slider::-webkit-slider-runnable-track,
+.max-slider::-webkit-slider-runnable-track {
+    background: transparent;
+    height: 4px;
+}
+
+/* Эффекты при наведении и фокусе */
+.min-slider::-webkit-slider-thumb:hover,
+.max-slider::-webkit-slider-thumb:hover {
+    border-color: #e5c546;
+}
+
+.min-slider:focus::-webkit-slider-thumb,
+.max-slider:focus::-webkit-slider-thumb {
+    box-shadow: 0 0 0 4px rgba(229, 181, 70, 0.2);
+}
+
+/* Отдельные стили для отображения значений */
+.value-labels {
+    position: absolute;
+    top: 18px;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.875rem;
+    color: #4b5563;
+    pointer-events: none; /* Запрещаем клики, так как это просто текст */
+}
+
+.value-labels span {
+    position: relative;
+    top: 20px;
+}
