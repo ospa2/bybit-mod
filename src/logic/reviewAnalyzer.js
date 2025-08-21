@@ -1,5 +1,4 @@
-import { KEYWORDS_TO_HIDE, KEYWORDS_TO_HIGHLIGHT, spamKeywords } from '../config';
-
+import { KEYWORDS_TO_HIGHLIGHT, KEYWORDS_TO_HIDE } from '../config.js';
 
 export function analyzeReview(reviewText) {
     if (!reviewText) return { shouldHide: false, shouldHighlight: false };
@@ -9,65 +8,29 @@ export function analyzeReview(reviewText) {
 
     const searchText = reviewText.toLowerCase();
 
-    // Проверяем каждое ключевое слово для скрытия (полное совпадение)
     KEYWORDS_TO_HIDE.forEach(keyword => {
-        if (keyword.trim() === '') return;
-        
-        const searchKeyword = keyword.toLowerCase();
-        
-        if (searchText === searchKeyword) {
+        if (keyword.trim() !== '' && searchText === keyword.toLowerCase()) {
             shouldHide = true;
         }
     });
 
-    // Разбиваем текст на фрагменты по запятым и очищаем пробелы
-    const textFragments = searchText.split(',').map(fragment => fragment.trim());
+    const spamKeywords = ['медленный', 'грубый', 'просит оплатить дополнительные комиссии','нетерпеливый','slow','rude','asks for additional fees','impatient'];
 
-    // Проверяем, содержит ли отзыв только спам-ключевые слова
+    const textFragments = searchText.split(',').map(f => f.trim());
+
     let isSpamReview = textFragments.length > 0;
-    for (let fragment of textFragments) {
-        if (fragment === '') continue;
-        
-        let isSpamFragment = false;
-        for (let spamKeyword of spamKeywords) {
-            const searchSpamKeyword = spamKeyword.toLowerCase();
-            if (fragment === searchSpamKeyword) {
-                isSpamFragment = true;
-                break;
-            }
-        }
-        
-        if (!isSpamFragment) {
-            isSpamReview = false;
-            break;
-        }
-    }
-
-    // Дополнительно проверяем, что есть хотя бы 2 спам-ключевых слова
     let spamKeywordCount = 0;
+
     for (let fragment of textFragments) {
         if (fragment === '') continue;
-        
-        for (let spamKeyword of spamKeywords) {
-            const searchSpamKeyword = spamKeyword.toLowerCase();
-            if (fragment === searchSpamKeyword) {
-                spamKeywordCount++;
-                break;
-            }
-        }
+        let isSpamFragment = spamKeywords.some(spam => fragment === spam.toLowerCase());
+        if (isSpamFragment) spamKeywordCount++; else isSpamReview = false;
     }
 
-    if (isSpamReview && spamKeywordCount >= 2) {
-        shouldHide = true;
-    }
+    if (isSpamReview && spamKeywordCount >= 2) shouldHide = true;
 
-    // Проверяем ключевые слова для подсветки (частичное совпадение)
     KEYWORDS_TO_HIGHLIGHT.forEach(keyword => {
-        if (keyword.trim() === '') return;
-        
-        const searchKeyword = keyword.toLowerCase();
-        
-        if (searchText.includes(searchKeyword)) {
+        if (keyword.trim() !== '' && searchText.includes(keyword.toLowerCase())) {
             shouldHighlight = true;
         }
     });

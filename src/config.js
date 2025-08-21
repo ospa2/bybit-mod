@@ -1,3 +1,4 @@
+//src/config.js
 export const USER_ID = 204412940//498960529 - id маминого акка;
 export const MAX_PAGES = 40;
 export const DELAY_MS = 10;

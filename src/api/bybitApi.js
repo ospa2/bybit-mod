@@ -1,101 +1,61 @@
-// src/api/bybitApi.js
+import { createRowFromTemplate } from "../components/AdRow.js";
+import { adShouldBeFiltered } from "../logic/adFilter.js";
+import { isLoading, shouldStopLoading } from "../state.js";
 
-/**
- * [НОВАЯ ФУНКЦИЯ] Загружает список объявлений с указанной страницы.
- * @param {number} page - Номер страницы для загрузки.
- * @returns {Promise<Array>} - Массив с объектами объявлений.
- */
-export async function fetchAds(page) {
+export async function fetchAndAppendPage(pageNum, USER_ID) {
+    if (isLoading.value || shouldStopLoading.value) return;
+    isLoading.value = true;
+
+    let side = "1";
+    const currentUrl = window.location.href;
+    if (currentUrl.includes("/sell/USDT/RUB")) side = "0";
+    else if (currentUrl.includes("/buy/USDT/RUB")) side = "1";
+
     const payload = {
+        userId: USER_ID,
         tokenId: "USDT",
         currencyId: "RUB",
-        side: "0", // 0 для продажи (я покупаю), 1 для покупки (я продаю)
+        payment: [],
+        side: side,
         size: "10",
-        page: page.toString(),
-        authMaker: false,
-        canTrade: false
+        page: String(pageNum),
+        amount: "",
+        vaMaker: false,
+        bulkMaker: false,
+        canTrade: true,
+        verificationFilter: 0,
+        sortType: "OVERALL_RANKING",
+        paymentPeriod: [],
+        itemRegion: 1
     };
 
-    const response = await fetch("https://www.bybit.com/fiat/otc/item/online", {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.result?.items || []; // Возвращаем массив объявлений
-}
-
-
-/**
- * Получает детальную информацию об объявлении для модального окна.
- * @param {string} adId - ID объявления.
- * @returns {Promise<object>}
- */
-export async function fetchAdDetails(adId) {
-    const payload = { item_id: adId, shareCode: null };
-    const response = await fetch("https://www.bybit.com/x-api/fiat/otc/item/simple", {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
-    if (!response.ok) throw new Error('Failed to fetch ad details');
-    return response.json();
-}
-
-/**
- * Получает отзывы по ID пользователя.
- * @param {string} userId - ID пользователя (мейкера).
- * @returns {Promise<Array>}
- */
-export async function fetchReviews(userId) {
-    let allReviews = [];
-    for (let page = 1; page <= 7; page++) {
-        const payload = { makerUserId: userId, page: page.toString(), size: "10", appraiseType: "0" };
-        const response = await fetch("https://www.bybit.com/x-api/fiat/otc/order/appraiseList", {
-             method: 'POST',
-             headers: { 'Content-Type': 'application/json' },
-             body: JSON.stringify(payload)
+    try {
+        const res = await fetch("https://www.bybit.com/x-api/fiat/otc/item/online", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
         });
-        const json = await response.json();
-        const pageReviews = json.result?.appraiseInfoVo || json.data?.appraiseInfoVo || [];
-        allReviews = allReviews.concat(pageReviews);
-        if (pageReviews.length === 0) break;
+
+        const json = await res.json();
+        const ads = json.result || json.data || [];
+
+        const tbody = document.querySelector(".trade-table__tbody");
+        if (!tbody) return console.log("Tbody не найден");
+
+        let addedCount = 0;
+
+        ads.items.forEach(ad => {
+            if (!adShouldBeFiltered(ad)) {
+                const newRow = createRowFromTemplate(ad);
+                if (newRow) {
+                    tbody.appendChild(newRow);
+                    addedCount++;
+                }
+            }
+        });
+    } catch (e) {
+        console.error("Ошибка при подгрузке:", e);
     }
-    return allReviews;
-}
 
-/**
- * Получает баланс пользователя.
- * @returns {Promise<string>}
- */
-export async function fetchUserBalance() {
-    const response = await fetch("https://www.bybit.com/x-api/fiat/otc/user/availableBalance", {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tokenId: "USDT" })
-    });
-    if (!response.ok) throw new Error('Failed to fetch balance');
-    const json = await response.json();
-    return json.result[0].withdrawAmount;
-}
-
-/**
- * Создает ордер на покупку/продажу.
- * @param {object} orderPayload - Тело запроса для создания ордера.
- * @returns {Promise<object>}
- */
-export async function createOrder(orderPayload) {
-     const response = await fetch('https://www.bybit.com/x-api/fiat/otc/order/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(orderPayload)
-    });
-    if (!response.ok) throw new Error('Failed to create order');
-    return response.json();
+    isLoading.value = false;
 }

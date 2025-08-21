@@ -1,15 +1,14 @@
-import { paymentNames, paymentColors } from '../config';
-import { filterRemark } from '../utils/formatters';
-import { openTradingModal } from './modal';
-import { fetchAdDetails } from '../api/bybitApi';
+import { filterRemark } from '../utils/formatters.js';
+import { openTradingModal } from './TradingModal.js';
+import { paymentNames, paymentColors } from '../config.js';
 
 export function createRowFromTemplate(ad) {
-    
-    // Функция для получения цвета фона платежа
+
     function getPaymentStyle(paymentId) {
         const color = paymentColors[paymentId];
         return color ? `background-color: ${color}; color: white;` : '';
     }
+
     const filteredRemark = filterRemark(ad.remark);
 
     const rowHTML = `
@@ -95,13 +94,19 @@ export function createRowFromTemplate(ad) {
     tempDiv.innerHTML = rowHTML.trim();
     const newRow = tempDiv.firstChild;
 
-
     newRow.querySelector('button')?.addEventListener('click', async () => {
+        const payload = { item_id: ad.id, shareCode: null };
+
         try {
-            const result = await fetchAdDetails(ad.id);
-            openTradingModal(result, ad); // Передаем только необходимые данные
+            const res = await fetch("https://www.bybit.com/x-api/fiat/otc/item/simple", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await res.json();
+            openTradingModal(result, ad, paymentNames);
         } catch (e) {
-            console.error('Ошибка при подгрузке деталей объявления:', e);
+            console.error('Ошибка при подгрузке:', e);
         }
     });
 
