@@ -5,7 +5,6 @@ import { appState } from '../state.js';
  
 export function adShouldBeFiltered(ad) { 
     if (parseInt(ad.finishNum) <= MIN_EXECUTED_COUNT) return true;
-    console.log(parseFloat(ad.price));
     
     if (parseFloat(ad.price)>87) return true;
  

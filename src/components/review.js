@@ -61,7 +61,7 @@ async function fetchAllReviews(userId) {
 }
 
 
-export async function loadAndDisplayReviews(originalAd) {
+export async function loadAndDisplayReviews(originalAd, setBalance) {
     const reviewsContainer = document.getElementById('reviews-container');
     
     try {
@@ -82,6 +82,7 @@ export async function loadAndDisplayReviews(originalAd) {
         // Используем деструктуризацию для чистоты
         const { result: [{ withdrawAmount: curBalance = 0 }] = [] } = balanceResponse;
         
+        setBalance(balanceResponse.result[0]?.withdrawAmount || 0);
 
         // --- 2. ОБНОВЛЕНИЕ ИНТЕРФЕЙСА ---
 

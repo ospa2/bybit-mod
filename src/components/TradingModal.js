@@ -2,16 +2,17 @@ import { disableBodyScroll, enableBodyScroll } from '../utils/domHelpers.js';
 import { loadAndDisplayReviews } from './Review.js';
 import { startPriceTimer } from '../utils/timers.js';
 import { showNotification } from '../utils/notifications.js';
+import { paymentNames } from '../config.js';
 
-export async function openTradingModal(apiResult, originalAd, paymentNames) {
-    // Удаляем существующее модальное окно
+export async function openTradingModal(originalAd) {
+    // 1. --- ФАЗА НЕМЕДЛЕННОГО ОТОБРАЖЕНИЯ ---
+
+    // Удаляем предыдущее модальное окно, если оно есть
     disableBodyScroll();
     const existingModal = document.querySelector('.bybit-modal-overlay');
     if (existingModal) {
         existingModal.remove();
     }
-
-    const adData = apiResult?.result || originalAd;
 
     // Создаем оверлей и модальное окно СРАЗУ
     const overlay = document.createElement('div');
@@ -20,14 +21,11 @@ export async function openTradingModal(apiResult, originalAd, paymentNames) {
     const modal = document.createElement('div');
     modal.className = 'bybit-modal';
 
-    // Вставляем "скелет" модального окна с плейсхолдерами для данных
+    // Вставляем "скелет" модального окна с данными из originalAd и плейсхолдерами для загрузки
     modal.innerHTML = `
         <div class="bybit-modal-header">
             <button class="bybit-modal-close" type="button">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M12.854 3.146a.5.5 0 0 1 0 .708l-9 9a.5.5 0 0 1-.708-.708l9-9a.5.5 0 0 1 .708 0z"/>
-                    <path d="M3.146 3.146a.5.5 0 0 1 .708 0l9 9a.5.5 0 0 1-.708.708l-9-9a.5.5 0 0 1 0-.708z"/>
-                </svg>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M12.854 3.146a.5.5 0 0 1 0 .708l-9 9a.5.5 0 0 1-.708-.708l9-9a.5.5 0 0 1 .708 0z"/><path d="M3.146 3.146a.5.5 0 0 1 .708 0l9 9a.5.5 0 0 1-.708.708l-9-9a.5.5 0 0 1 0-.708z"/></svg>
             </button>
         </div>
         <div class="bybit-modal-body">
@@ -35,97 +33,78 @@ export async function openTradingModal(apiResult, originalAd, paymentNames) {
                 <div> 
                     <div class="advertiser-header">
                         <div class="avatar-container">
-                            <div class="avatar ${originalAd.isOnline ? 'online' : ''}">
-                                ${(originalAd.nickName || 'U').charAt(0).toUpperCase()}
-                            </div>
+                            <div class="avatar ${originalAd.isOnline ? 'online' : ''}">${(originalAd.nickName || 'U').charAt(0).toUpperCase()}</div>
                         </div>
                         <div class="advertiser-info">
                             <div class="advertiser-name">${originalAd.nickName || 'Unknown'}</div>
                             <div class="advertiser-stats">
-                                <span>${originalAd.finishNum || 0} исполнено</span>
-                                <span class="stats-divider">|</span>
-                                <span>${originalAd.recentExecuteRate || 0}%</span>
+                                <span>${originalAd.finishNum || 0} исполнено</span><span class="stats-divider">|</span><span>${originalAd.recentExecuteRate || 0}%</span>
                             </div>
                             <div class="online-status">${originalAd.isOnline ? 'Онлайн' : 'Офлайн'}</div>
                         </div>
                     </div>
                     <div class="verification-tags">
-                        <div class="verification-tag">Эл. почта</div>
-                        <div class="verification-tag">SMS</div>
-                        <div class="verification-tag">Верификация личности</div>
+                        <div class="verification-tag">Эл. почта</div><div class="verification-tag">SMS</div><div class="verification-tag">Верификация личности</div>
                     </div>
                     <div class="crypto-info-section">
                         <div class="crypto-info-item">
                             <span class="crypto-info-label">Доступно</span>
-                            <span class="crypto-info-value" id="balance-value">Загрузка...</span>
+                            <span class="crypto-info-value" id="balance-value"><div class="spinner small"></div></span>
                         </div>
                         <div class="crypto-info-item">
                             <span class="crypto-info-label">Лимиты</span>
-                            <span class="crypto-info-value">${parseFloat(adData.minAmount || 0).toLocaleString('ru-RU')} ~ ${parseFloat(adData.maxAmount || 0).toLocaleString('ru-RU')} ${adData.currencyId || 'RUB'}</span>
+                            <span class="crypto-info-value">${parseFloat(originalAd.minAmount || 0).toLocaleString('ru-RU')} ~ ${parseFloat(originalAd.maxAmount || 0).toLocaleString('ru-RU')} ${originalAd.currencyId || 'RUB'}</span>
                         </div>
                         <div class="crypto-info-item">
                             <span class="crypto-info-label">Длительность оплаты</span>
-                            <span class="crypto-info-value">${adData.paymentPeriod || 15} мин.</span>
+                            <span class="crypto-info-value">${originalAd.paymentPeriod || 15} мин.</span>
                         </div>
                     </div>
                 </div>
                 <div class="terms-section">
                     <div class="terms-title">Отзывы о мейкере</div>
-                    <div class="terms-content" id="reviews-container">
-                        <div class="spinner"></div>
-                    </div>
+                    <div class="terms-content" id="reviews-container"><div class="spinner"></div></div>
                 </div>
             </div>
             <div class="trading-panel">
                 <div class="price-section">
                     <div class="price-header">
                         <span class="price-label">Цена</span>
-                        <span class="price-timer" id="price-timer">29s</span>
+                        <span class="price-timer" id="price-timer">30s</span>
                     </div>
-                    <div class="price-value">${parseFloat(adData.price).toFixed(2)} ${adData.currencyId || 'RUB'}</div>
+                    <div class="price-value">${parseFloat(originalAd.price).toFixed(2)} ${originalAd.currencyId || 'RUB'}</div>
                 </div>
                 <div class="input-section">
-                    <label class="input-label">Я ${adData.side === 1 ? 'куплю' : 'продам'}</label>
+                    <label class="input-label">Я ${originalAd.side === 1 ? 'куплю' : 'продам'}</label>
                     <div class="input-container" id="amount-container">
                         <div class="input-wrapper">
-                            <img class="coin-icon" src="data:image/svg+xml;base64,...">
                             <input type="text" class="amount-input" id="amount-input" placeholder="0.0000" autocomplete="off">
                             <div class="input-suffix">
-                                <span>${adData.tokenId || 'USDT'}</span>
-                                <span class="input-divider">|</span>
-                                <button type="button" class="max-button" id="max-button">Все</button>
+                                <span>${originalAd.tokenId || 'USDT'}</span><span class="input-divider">|</span><button type="button" class="max-button" id="max-button">Все</button>
                             </div>
                         </div>
                     </div>
-                    <div class="balance-info" id="available-for-trade">
-                        // --- Этот текст тоже обновится после загрузки баланса ---
-                        Доступно для ${adData.side === 1 ? 'покупки' : 'продажи'}: Загрузка...
-                        <span class="info-icon">ℹ</span>
-                    </div>
+                    <div class="balance-info" id="available-for-trade">Доступно для ${originalAd.side === 1 ? 'покупки' : 'продажи'}: <span class="spinner small"></span></div>
                 </div>
                 <div class="input-section">
                     <label class="input-label">Я получу</label>
-                    <div class="input-container">
-                        <div class="input-wrapper">
-                            <div style="width: 24px; ...">₽</div>
-                            <input type="text" class="amount-input" id="receive-input" placeholder="0.00" readonly>
-                            <div class="input-suffix">
-                                <span>${adData.currencyId || 'RUB'}</span>
-                            </div>
-                        </div>
-                    </div>
+                    <div class="input-container"><div class="input-wrapper">
+                        <div style="width: 24px;">₽</div>
+                        <input type="text" class="amount-input" id="receive-input" placeholder="0.00" readonly>
+                        <div class="input-suffix"><span>${originalAd.currencyId || 'RUB'}</span></div>
+                    </div></div>
                 </div>
                 <div class="payment-section">
                     <label class="input-label">Способ оплаты</label>
                     <div class="payment-methods">
-                        ${adData.payments && adData.payments.length > 0
-                            ? adData.payments.map(paymentId => `<span class="payment-method">${paymentNames[paymentId] || paymentId}</span>`).join('')
+                        ${originalAd.payments && originalAd.payments.length > 0
+                            ? originalAd.payments.map(paymentId => `<span class="payment-method">${paymentNames[paymentId] || paymentId}</span>`).join('')
                             : '<span class="payment-method">Не указано</span>'
                         }
                     </div>
                 </div>
                 <div class="button-section">
-                    <button type="button" class="trade-button" id="trade-button">${adData.side === 1 ? 'Купить' : 'Продать'} ${adData.tokenId || 'USDT'}</button>
+                    <button type="button" class="trade-button" id="trade-button" disabled>${originalAd.side === 1 ? 'Купить' : 'Продать'} ${originalAd.tokenId || 'USDT'}</button>
                     <button type="button" class="cancel-button" id="cancel-button">Отмена</button>
                 </div>
             </div>
@@ -135,19 +114,67 @@ export async function openTradingModal(apiResult, originalAd, paymentNames) {
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
     document.body.style.overflow = 'hidden';
-    console.log('adData:', adData);
-    console.log('originalAd:', originalAd);
-    console.log('apiResult:', apiResult);
+
+     function setAvBalance(balance) {
+        const balanceValueEl = document.getElementById('balance-value');
+        const availableForTradeEl = document.getElementById('available-for-trade');
+
+        // Исправлено: Используем конкатенацию или метод .toString() для преобразования числа в строку
+        if (balanceValueEl) {
+            balanceValueEl.textContent = balance.toString() + " USDT";
+        }
     
-    
-    // Настраиваем обработчики событий для уже существующих элементов
-    setupModalEvents(overlay, adData, originalAd, apiResult);
+        if (availableForTradeEl) {
+            availableForTradeEl.textContent = `Доступно для ${originalAd.side === 1 ? 'покупки' : 'продажи'}: ${balance.toString()} ${originalAd.tokenId || 'USDT'}`;
+        }
+    }
+
+
+
+    // Запускаем асинхронную загрузку отзывов
+    loadAndDisplayReviews(originalAd, setAvBalance);
     startPriceTimer();
+    // 2. --- ФАЗА ФОНОВОЙ ЗАГРУЗКИ И ОБНОВЛЕНИЯ ---
+    try {
+        const payload = { item_id: originalAd.id, shareCode: null };
+        const res = await fetch("https://www.bybit.com/x-api/fiat/otc/item/simple", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
 
-    // --- ЗАПУСКАЕМ АСИНХРОННУЮ ЗАГРУЗКУ ДАННЫХ ---
-    loadAndDisplayReviews(originalAd);
+        if (!res.ok) {
+            throw new Error(`Ошибка сети: ${res.statusText}`);
+        }
+        
+        const apiResult = await res.json();
+        
+        if (apiResult.ret_code !== 0) {
+            // Если API вернуло ошибку, показываем ее и закрываем окно
+            showNotification(apiResult.ret_msg || 'Не удалось загрузить детали объявления.', 'error');
+            closeModal(overlay);
+            return;
+        }
+
+        const adData = apiResult.result;
+
+        // ВАЖНО: Только теперь, когда все данные загружены, мы "оживляем" модальное окно
+        setupModalEvents(overlay, adData, originalAd, apiResult);
+
+    } catch (e) {
+        console.error('Ошибка при подгрузке деталей объявления:', e);
+        showNotification('Ошибка при подгрузке деталей. Попробуйте снова.', 'error');
+        // Закрываем модальное окно при ошибке, чтобы пользователь не застрял
+        closeModal(overlay);
+    }
 }
-
+function closeModal(overlay) {
+    if (overlay) {
+        overlay.remove();
+    }
+    document.body.style.overflow = '';
+    enableBodyScroll();
+}
 
 export function setupModalEvents(overlay, adData, originalAd, apiResult) {
     const amountInput = overlay.querySelector('#amount-input');
@@ -156,18 +183,28 @@ export function setupModalEvents(overlay, adData, originalAd, apiResult) {
     const cancelButton = overlay.querySelector('#cancel-button');
     const maxButton = overlay.querySelector('#max-button');
     const closeButton = overlay.querySelector('.bybit-modal-close');
+    
     // Функция валидации и активации кнопки
     function validateAndToggleButton() {
         const amount = parseFloat(amountInput.value) || 0;
         const minAmount = parseFloat(adData.minAmount) || 0;
         const maxAmount = parseFloat(adData.maxAmount) || 0;
-        const balance = parseFloat(adData.availableBalance) || 0;
+        const availableBalance = overlay.querySelector('.balance-info');
+        const textContent = availableBalance.textContent;
 
-        const isValid = amount > 0 && 
-                    amount >= minAmount && 
-                    amount <= maxAmount && 
-                    amount <= balance;
+        // Шаг 1: Извлечение текста и очистка
+        const cleanedString = textContent.replace('Доступно для продажи:', '') // Удаляем префикс
+                                        .replace('USDT', '') // Удаляем суффикс
+                                        .replace(/\s+/g, '') // Удаляем все пробелы, включая &nbsp;
+                                        .replace(',', '.') // Заменяем запятую на точку
+                                        .trim(); // Удаляем пробелы по краям
 
+        // Шаг 2: Преобразование в число
+        const balance = parseFloat(cleanedString);
+        
+        const isValid = amount > 0 &&  amount >= (minAmount/apiResult.result.price).toFixed(4) && amount <= (maxAmount/apiResult.result.price).toFixed(4) && amount <= balance;
+        //console.log(amount, '> 0 &&' ,  amount, '>=', (minAmount/apiResult.result.price).toFixed(4) ," && ", amount,' <=' ,(maxAmount/apiResult.result.price).toFixed(4), '&&',amount, '<= ',balance);
+        //            $                   $              ₽                 $              ₽               $             $
         tradeButton.disabled = !isValid;
         tradeButton.style.opacity = isValid ? '1' : '0.6';
         tradeButton.style.cursor = isValid ? 'pointer' : 'not-allowed';
@@ -178,6 +215,8 @@ export function setupModalEvents(overlay, adData, originalAd, apiResult) {
         const amount = parseFloat(amountInput.value) || 0;
         const price = parseFloat(adData.price) || 0;
         const receiveAmount = amount * price;
+        
+        
         receiveInput.value = receiveAmount.toFixed(2);
         validateAndToggleButton();
     }
@@ -257,10 +296,14 @@ export function setupModalEvents(overlay, adData, originalAd, apiResult) {
         // Кнопка "Все"
         maxButton.addEventListener('click', () => {
             const maxAmount = Math.min(
-                parseFloat(adData.maxAmount) || 0,
-                parseFloat(adData.availableBalance) || 0
+                parseFloat(adData.maxAmount/apiResult.result.price) || 0
             );
             amountInput.value = maxAmount.toFixed(4);
+            console.log('adData: ', adData);
+            console.log('originalAd: ', originalAd);
+            console.log('apiResult: ', apiResult.result.price);
+
+            
             calculateReceiveAmount();
         });
 
@@ -395,32 +438,34 @@ export function setupModalEvents(overlay, adData, originalAd, apiResult) {
                 tradeButton.disabled = false;
                 tradeButton.textContent = originalText;
                 tradeButton.style.opacity = '1';
-                validateAndToggleButton(); // Повторно валидируем
+                setTimeout(() => {
+                    validateAndToggleButton()
+                },2000)
+                ; // Повторно валидируем
                 }
-                    });
+            });
 
         // Закрытие модального окна
-        function closeModal() {
-            overlay.remove();
-            document.body.style.overflow = '';
-            enableBodyScroll()
+
+    cancelButton.addEventListener('click', () => closeModal(overlay));
+    closeButton.addEventListener('click', () => closeModal(overlay));
+    
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            closeModal(overlay);
         }
+    });
 
-        cancelButton.addEventListener('click', closeModal);
-        closeButton.addEventListener('click', closeModal);
-        
-        overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) {
-                closeModal();
-            }
-        });
-
-        // Закрытие по Escape
-        document.addEventListener('keydown', function escHandler(e) {
-            if (e.key === 'Escape') {
-                closeModal();
-                document.removeEventListener('keydown', escHandler);
-            }
-        });
+    document.addEventListener('keydown', function escHandler(e) {
+        if (e.key === 'Escape') {
+            closeModal(overlay);
+            document.removeEventListener('keydown', escHandler);
+        }
+    });
+    
+    // Инициализируем состояние кнопки после загрузки данных
+    setTimeout(() => {
+                    validateAndToggleButton()
+                },2000)
 }
 

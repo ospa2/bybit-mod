@@ -94,20 +94,8 @@ export function createRowFromTemplate(ad) {
     tempDiv.innerHTML = rowHTML.trim();
     const newRow = tempDiv.firstChild;
 
-    newRow.querySelector('button')?.addEventListener('click', async () => {
-        const payload = { item_id: ad.id, shareCode: null };
-
-        try {
-            const res = await fetch("https://www.bybit.com/x-api/fiat/otc/item/simple", {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            const result = await res.json();
-            openTradingModal(result, ad, paymentNames);
-        } catch (e) {
-            console.error('Ошибка при подгрузке:', e);
-        }
+    newRow.querySelector('button')?.addEventListener('click', async () => {       
+        openTradingModal(ad);
     });
 
     return newRow;
