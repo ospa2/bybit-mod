@@ -4,7 +4,10 @@ import { forbiddenPhrases, MIN_EXECUTED_COUNT, MAX_PRICE_DIFFERENCE } from '../c
 import { appState } from '../state.js'; 
  
 export function adShouldBeFiltered(ad) { 
-    if (parseInt(ad.finishNum) <= MIN_EXECUTED_COUNT) return true; 
+    if (parseInt(ad.finishNum) <= MIN_EXECUTED_COUNT) return true;
+    console.log(parseFloat(ad.price));
+    
+    if (parseFloat(ad.price)>87) return true;
  
     const min = parseFloat(ad.minAmount); 
     const max = parseFloat(ad.maxAmount); 

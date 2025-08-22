@@ -11,7 +11,6 @@ export const appState = {
     isSequentialLoadingActive: false,
     shouldStopLoading: false, // Флаг для остановки
     MAX_PAGES: 50,            // дефолт
-    DELAY_MS: 500             // дефолт
 };
 
 /**

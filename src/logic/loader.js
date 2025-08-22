@@ -1,5 +1,5 @@
 // src/logic/loader.js 
-import { appState, setStopLoading, setLoading, setCurrentPage } from "../state.js"; 
+import { appState, setStopLoading, setCurrentPage } from "../state.js"; 
 import { adShouldBeFiltered } from "./adFilter.js"; 
 import { createRowFromTemplate } from "../components/AdRow.js";
 import { USER_ID } from "../config.js";
@@ -9,10 +9,17 @@ export async function fetchAndAppendPage(pageNum) {
     if (appState.isLoading || appState.shouldStopLoading) return; 
     appState.isLoading = true; 
  
-    let side = "1"; 
+    let side = "1";
+    let size = "1"
     const currentUrl = window.location.href; 
-    if (currentUrl.includes("/sell/USDT/RUB")) side = "0"; 
-    else if (currentUrl.includes("/buy/USDT/RUB")) side = "1"; 
+    if (currentUrl.includes("/sell/USDT/RUB")) {
+        side = "0"
+        size = "300"
+    }
+    else if (currentUrl.includes("/buy/USDT/RUB")) {
+        side = "1"
+        size = "70"
+    }; 
  
     const payload = { 
         userId: USER_ID, 
@@ -20,7 +27,7 @@ export async function fetchAndAppendPage(pageNum) {
         currencyId: "RUB", 
         payment: [], 
         side: side, 
-        size: "10", 
+        size: size, 
         page: String(pageNum), 
         amount: "", 
         vaMaker: false, 
@@ -49,7 +56,8 @@ export async function fetchAndAppendPage(pageNum) {
         } 
  
         let addedCount = 0; 
- 
+        
+        
         ads.items.forEach(ad => { 
             if (!adShouldBeFiltered(ad)) { 
                 const newRow = createRowFromTemplate(ad); 
@@ -79,17 +87,17 @@ export async function loadAllPagesSequentially() {
  
     appState.isSequentialLoadingActive = true; 
     setStopLoading(false); 
+    await fetchAndAppendPage(1);
+    // while (appState.currentPage <= appState.MAX_PAGES && !appState.shouldStopLoading) { 
+    //     await fetchAndAppendPage(appState.currentPage); 
  
-    while (appState.currentPage <= appState.MAX_PAGES && !appState.shouldStopLoading) { 
-        await fetchAndAppendPage(appState.currentPage); 
+    //     if (appState.shouldStopLoading) break; 
  
-        if (appState.shouldStopLoading) break; 
- 
-        appState.currentPage++; 
-        if (appState.currentPage <= appState.MAX_PAGES && !appState.shouldStopLoading) { 
-            await new Promise(resolve => setTimeout(resolve, appState.DELAY_MS)); 
-        } 
-    } 
+    //     appState.currentPage++; 
+    //     if (appState.currentPage <= appState.MAX_PAGES && !appState.shouldStopLoading) { 
+    //         await new Promise(resolve => setTimeout(resolve, DELAY_MS)); 
+    //     } 
+    // } 
  
     appState.isSequentialLoadingActive = false; 
  
@@ -121,7 +129,7 @@ export async function handleUrlChange() {
     // Сбрасываем состояние
     const currentUrl = window.location.href;
     if (currentUrl.includes("/sell/USDT/RUB")) {
-        setCurrentPage(16)
+        setCurrentPage(1)
     } else setCurrentPage(1);
     
     setStopLoading(false);
@@ -142,7 +150,7 @@ export function observeUrlChanges() {
                 tableRows.forEach(row => {
                     row.classList.add('filtered-ad');
                 });
-            }, 2000);
+            }, 1000);
         }
     });
     observer.observe(document.body, { childList: true, subtree: true });

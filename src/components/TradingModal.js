@@ -141,7 +141,7 @@ export async function openTradingModal(apiResult, originalAd, paymentNames) {
     
     
     // Настраиваем обработчики событий для уже существующих элементов
-    setupHighQualityModalEvents(overlay, adData, originalAd, apiResult);
+    setupModalEvents(overlay, adData, originalAd, apiResult);
     startPriceTimer();
 
     // --- ЗАПУСКАЕМ АСИНХРОННУЮ ЗАГРУЗКУ ДАННЫХ ---
@@ -149,7 +149,7 @@ export async function openTradingModal(apiResult, originalAd, paymentNames) {
 }
 
 
-export function setupHighQualityModalEvents(overlay, adData, originalAd, apiResult) {
+export function setupModalEvents(overlay, adData, originalAd, apiResult) {
     const amountInput = overlay.querySelector('#amount-input');
     const receiveInput = overlay.querySelector('#receive-input');
     const tradeButton = overlay.querySelector('#trade-button');

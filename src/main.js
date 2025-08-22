@@ -20,7 +20,7 @@ function waitForTableAndStart() {
             });
 
         setTimeout(() => {
-            document.querySelectorAll(".trade-table__tbody tr").forEach(row => row.classList.add("filtered-ad"));
+            
 
             initSliderReplacement({
                 min: 9000,
@@ -30,6 +30,7 @@ function waitForTableAndStart() {
 
             loadAllPagesSequentially();
             observeUrlChanges();
+            document.querySelectorAll(".trade-table__tbody tr").forEach(row => row.classList.add("filtered-ad"));
         }, 100);
     }
 }

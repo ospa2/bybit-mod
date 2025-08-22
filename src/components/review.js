@@ -20,104 +20,124 @@ export function createReviewHTML(review, className) {
     `;
 }
 
-export async function loadAndDisplayReviews(originalAd) {
-    try {
-        // --- 1. ЗАГРУЗКА БАЛАНСА И ОТЗЫВОВ (код без изменений) ---
-        let termsContent = [];
-        let curBalance = 0;
+// --- Вспомогательная функция для загрузки всех страниц отзывов ПАРАЛЛЕЛЬНО ---
+async function fetchAllReviews(userId) {
+    // Создаем массив номеров страниц [1, 2, 3, 4, 5, 6, 7]
+    const pageNumbers = Array.from({ length: 7 }, (_, i) => i + 1);
 
+    // Создаем массив промисов, где каждый элемент - это fetch-запрос за одной страницей
+    const reviewPromises = pageNumbers.map(page => {
+        const payload = { makerUserId: userId, page: page.toString(), size: "10", appraiseType: "0" };
+        return fetch("https://www.bybit.com/x-api/fiat/otc/order/appraiseList", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }).then(res => res.json());
+    });
+    const hiddenReviewPromises = pageNumbers.map(page => {
+        const payload = { makerUserId: userId, page: page.toString(), size: "10", appraiseType: "0", foldingDisplay: "1" };
+        return fetch("https://www.bybit.com/x-api/fiat/otc/order/appraiseList", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }).then(res => res.json());
+    })
+    // Ожидаем выполнения ВСЕХ запросов одновременно
+    const results = await Promise.all(reviewPromises, hiddenReviewPromises);
+    const hiddenResults = await Promise.all(hiddenReviewPromises)
+    // Собираем отзывы из всех полученных страниц в один плоский массив
+    // и сразу отсекаем пустые страницы
+    const reviews = results.flatMap(json => 
+        json.result?.appraiseInfoVo || []
+    );
+
+    const hiddenReviews = hiddenResults.flatMap(json => 
+        json.result?.appraiseInfoVo || []
+    );
+    const allReviews = reviews.concat(hiddenReviews);
+    const sortedReviews = allReviews.sort((a, b) => b.updateDate - a.updateDate);
+    
+    return sortedReviews;
+}
+
+
+export async function loadAndDisplayReviews(originalAd) {
+    const reviewsContainer = document.getElementById('reviews-container');
+    
+    try {
+        // --- 1. ПАРАЛЛЕЛЬНАЯ ЗАГРУЗКА ДАННЫХ ---
+        
         const balancePromise = fetch("https://www.bybit.com/x-api/fiat/otc/user/availableBalance", {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ tokenId: "USDT" })
         }).then(res => res.json());
 
-        const reviewsPromise = (async () => {
-            let allReviews = [];
-            for (let page = 1; page <= 7; page++) {
-                const payload = { makerUserId: originalAd.userId, page: page.toString(), size: "10", appraiseType: "0" };
-                const res = await fetch("https://www.bybit.com/x-api/fiat/otc/order/appraiseList", {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const json = await res.json();
-                console.log('json:', json);
-                
-                const pageReviews = json.result?.appraiseInfoVo || json.data?.appraiseInfoVo || [];
-                allReviews = allReviews.concat(pageReviews);
-                if (pageReviews.length <= 0) break;
-            }
-            return allReviews;
-        })();
+        // Вызываем новую асинхронную функцию для загрузки отзывов
+        const reviewsPromise = fetchAllReviews(originalAd.userId);
 
-        const [moneyJson, allNegReviews] = await Promise.all([balancePromise, reviewsPromise]);
+        // Ожидаем оба промиса, как и раньше
+        const [balanceResponse, allReviews] = await Promise.all([balancePromise, reviewsPromise]);
         
-        curBalance = moneyJson.result[0].withdrawAmount;
-        termsContent = allNegReviews; // Это массив объектов отзывов
+        // Используем деструктуризацию для чистоты
+        const { result: [{ withdrawAmount: curBalance = 0 }] = [] } = balanceResponse;
+        
 
-        // --- 2. ОБНОВЛЕНИЕ ИНТЕРФЕЙСА (обновлен блок формирования отзывов) ---
+        // --- 2. ОБНОВЛЕНИЕ ИНТЕРФЕЙСА ---
 
         // Обновляем баланс (код без изменений)
         const balanceElement = document.getElementById('balance-value');
         if (balanceElement) {
-            balanceElement.textContent = `${parseFloat(curBalance || 0).toLocaleString('ru-RU', {minimumFractionDigits: 4, maximumFractionDigits: 4})} ${originalAd.tokenId || 'USDT'}`;
+            balanceElement.textContent = `${parseFloat(curBalance).toLocaleString('ru-RU', {minimumFractionDigits: 4, maximumFractionDigits: 4})} ${originalAd.tokenId || 'USDT'}`;
         }
         
         const availableBalanceElement = document.getElementById('available-for-trade');
         if(availableBalanceElement) {
-            availableBalanceElement.textContent = `Доступно для ${originalAd.side === 1 ? 'покупки' : 'продажи'}: ${parseFloat(curBalance || 0).toLocaleString('ru-RU', {minimumFractionDigits: 4})} ${originalAd.tokenId || 'USDT'}`;
+            availableBalanceElement.textContent = `Доступно для ${originalAd.side === 1 ? 'покупки' : 'продажи'}: ${parseFloat(curBalance).toLocaleString('ru-RU', {minimumFractionDigits: 4})} ${originalAd.tokenId || 'USDT'}`;
         }
 
-        // --- БЛОК ФОРМИРОВАНИЯ HTML ДЛЯ ОТЗЫВОВ (здесь основные изменения) ---
-        let reviewsHTML = '';
-        let filteredCount = 0;
-        let highlightedCount = 0;
+        // --- БЛОК ФОРМИРОВАНИЯ HTML (рефакторинг с использованием map) ---
+        let reviewsHTML = '<div class="no-reviews">Плохих отзывов нет</div>';
 
-        if (Array.isArray(termsContent) && termsContent.length > 0) {
-            
-            // <-- ИЗМЕНЕНИЕ: Мы теперь итерируем по всему массиву объектов, а не только по текстам.
-            termsContent.forEach(review => {
-                if (!review.appraiseContent) return; // Проверяем наличие текста отзыва
-                
-                const analysis = analyzeReview(review.appraiseContent);
-                if (analysis.shouldHide) {
-                    filteredCount++;
-                    return;
-                }
-                if (analysis.shouldHighlight) {
-                    highlightedCount++;
-                }
-                
-                // <-- ИЗМЕНЕНИЕ: Вызываем новую функцию, передавая ей ВЕСЬ объект отзыва.
-                reviewsHTML += createReviewHTML(review, 'review-item');
-            });
+        if (Array.isArray(allReviews) && allReviews.length > 0) {
+            let filteredCount = 0;
+            let highlightedCount = 0;
 
-            if (filteredCount > 0 || highlightedCount > 0) {
-                reviewsHTML = `
+            const reviewItemsHTML = allReviews
+                .map(review => {
+                    if (!review.appraiseContent) return ''; // Пропускаем отзывы без текста
+
+                    const analysis = analyzeReview(review.appraiseContent);
+                    if (analysis.shouldHide) {
+                        filteredCount++;
+                        return ''; // Возвращаем пустую строку для скрываемых отзывов
+                    }
+                    if (analysis.shouldHighlight) {
+                        highlightedCount++;
+                    }
+                    
+                    return createReviewHTML(review, 'review-item'); // Ваша функция генерации HTML для одного отзыва
+                })
+                .join(''); // Объединяем весь массив HTML-строк в одну
+
+            if (reviewItemsHTML.trim()) { // Если после фильтрации остались отзывы
+                const statsHTML = (filteredCount > 0 || highlightedCount > 0) ? `
                     <div class="filter-info">
                         ${filteredCount > 0 ? `<span class="filtered-info">Скрыто спам-отзывов: ${filteredCount}</span>` : ''}
                         ${highlightedCount > 0 ? `<span class="highlighted-info">Подсвечено подозрительных: ${highlightedCount}</span>` : ''}
                     </div>
-                    ${reviewsHTML}
-                `;
+                ` : '';
+                
+                reviewsHTML = `${statsHTML}<ul class="reviews-list">${reviewItemsHTML}</ul>`;
             }
-            reviewsHTML = `<ul class="reviews-list">${reviewsHTML}</ul>`;
-            
-            // <-- ИЗМЕНЕНИЕ: Сравниваем с общей длиной исходного массива.
-            if (filteredCount === termsContent.length) reviewsHTML = '<div class="no-reviews">Плохих отзывов нет</div>';
-        } else {
-            reviewsHTML = '<div class="no-reviews">Плохих отзывов нет</div>';
         }
 
-        const reviewsContainer = document.getElementById('reviews-container');
         if (reviewsContainer) {
             reviewsContainer.innerHTML = reviewsHTML;
         }
 
     } catch (e) {
         console.error('Ошибка при подгрузке данных для модального окна:', e);
-        const reviewsContainer = document.getElementById('reviews-container');
         if (reviewsContainer) {
             reviewsContainer.innerHTML = '<div class="no-reviews error">Не удалось загрузить отзывы.</div>';
         }
