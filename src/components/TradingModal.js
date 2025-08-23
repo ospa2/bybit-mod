@@ -62,7 +62,7 @@ export async function openTradingModal(originalAd) {
                     </div>
                 </div>
                 <div class="terms-section">
-                    <div class="terms-title">Отзывы о мейкере</div>
+                    <div class="terms-title" id="reviews-titleee">Хороших отзывов: ...</div>
                     <div class="terms-content" id="reviews-container"><div class="spinner"></div></div>
                 </div>
             </div>
@@ -137,23 +137,25 @@ export async function openTradingModal(originalAd) {
         if (apiRes.ret_code !== 0) {
             // Если API вернуло ошибку, показываем ее и закрываем окно
             showNotification(apiResult.ret_msg || 'Не удалось загрузить детали объявления.', 'error');
-            closeModal(overlay);
+            closeModal();
             return;
         }
 
         const apiResult = apiRes.result;
+        apiResult.side = originalAd.side;
 
         // ВАЖНО: Только теперь, когда все данные загружены, мы "оживляем" модальное окно
-        setupModalEvents(overlay, originalAd, apiResult);
+        setupModalEvents(apiResult);
 
     } catch (e) {
         console.error('Ошибка при подгрузке деталей объявления:', e);
         showNotification('Ошибка при подгрузке деталей. Попробуйте снова.', 'error');
         // Закрываем модальное окно при ошибке, чтобы пользователь не застрял
-        closeModal(overlay);
+        closeModal();
     }
 }
-function closeModal(overlay) {
+function closeModal() {
+    const overlay = document.querySelector('.bybit-modal-overlay');
     if (overlay) {
         overlay.remove();
     }
@@ -161,7 +163,9 @@ function closeModal(overlay) {
     enableBodyScroll();
 }
 
-export function setupModalEvents(overlay, originalAd, apiResult) {
+export function setupModalEvents(apiResult) {
+
+    const overlay = document.querySelector('.bybit-modal-overlay');
     const amountInput = overlay.querySelector('#amount-input');
     const receiveInput = overlay.querySelector('#receive-input');
     const tradeButton = overlay.querySelector('#trade-button');
@@ -214,21 +218,6 @@ export function setupModalEvents(overlay, originalAd, apiResult) {
             securityRiskToken: "",
             isFromAi: false
         };
-        // {"itemId": "1954851016589996032", 
-        // "tokenId": "USDT",
-        // "currencyId": "RUB", 
-        // "side": "1", 
-        // "quantity": "33788.10", 
-        // "amount": "402", 
-        // "curPrice": 
-        // "f97ede1fb4da48f5ba1ba4c4ad5dfc06", 
-        // "flag": "amount", 
-        // "version": "1.0", 
-        // "securityRiskToken": "", 
-        // "isFromAi": false, 
-        // "paymentType": "382", 
-        // "paymentId": "16627221", 
-        // "online": "0" }
     }
 
     // === Продажа покупателю ===
@@ -292,8 +281,7 @@ export function setupModalEvents(overlay, originalAd, apiResult) {
                 parseFloat(apiResult.maxAmount/apiResult.price) || 0
             );
             amountInput.value = maxAmount.toFixed(4);
-            //console.log('originalAd: ', originalAd);
-            //console.log('apiResult: ', apiResult);
+            console.log('apiResult: ', apiResult);
 
             validateAndToggleButton();
         });
@@ -319,7 +307,7 @@ export function setupModalEvents(overlay, originalAd, apiResult) {
                     throw new Error("Insufficient ad inventory, please try other ads.");
                 }
                 // Формируем payload для создания ордера
-                const orderPayload = originalAd.side == 0 ? createSellPayload(apiResult) : createBuyPayload(apiResult);
+                const orderPayload = apiResult.side == 0 ? createSellPayload(apiResult) : createBuyPayload(apiResult);
 
                 console.log('Отправка ордера:', orderPayload);
 
@@ -437,18 +425,18 @@ export function setupModalEvents(overlay, originalAd, apiResult) {
 
         // Закрытие модального окна
 
-    cancelButton.addEventListener('click', () => closeModal(overlay));
-    closeButton.addEventListener('click', () => closeModal(overlay));
+    cancelButton.addEventListener('click', () => closeModal());
+    closeButton.addEventListener('click', () => closeModal());
     
     overlay.addEventListener('click', (e) => {
         if (e.target === overlay) {
-            closeModal(overlay);
+            closeModal();
         }
     });
 
     document.addEventListener('keydown', function escHandler(e) {
         if (e.key === 'Escape') {
-            closeModal(overlay);
+            closeModal();
             document.removeEventListener('keydown', escHandler);
         }
     });

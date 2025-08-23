@@ -73,12 +73,18 @@ export async function loadAndDisplayReviews(originalAd) {
             body: JSON.stringify({ tokenId: "USDT" })
         }).then(res => res.json());
 
+        const goodReviewsCountPromise = fetch("https://www.bybit.com/x-api/fiat/otc/order/appraiseList", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ makerUserId: originalAd.userId, page: "1", size: "10", appraiseType: "1", })
+        }).then(res => res.json());
         // Вызываем новую асинхронную функцию для загрузки отзывов
         const reviewsPromise = fetchAllReviews(originalAd.userId);
 
         // Ожидаем оба промиса, как и раньше
-        const [balanceResponse, allReviews] = await Promise.all([balancePromise, reviewsPromise]);
+        const [goodReviewsCount, balanceResponse, allReviews] = await Promise.all([goodReviewsCountPromise, balancePromise, reviewsPromise]);
         
+        console.log('goodReviewsCount:', goodReviewsCount.result.count);
         // Используем деструктуризацию для чистоты
         const { result: [{ withdrawAmount: curBalance = 0 }] = [] } = balanceResponse;
         
@@ -87,11 +93,11 @@ export async function loadAndDisplayReviews(originalAd) {
         
         // Исправлено: Используем конкатенацию или метод .toString() для преобразования числа в строку
         if (balanceValueEl) {
-                balanceValueEl.textContent = (balanceResponse.result[0]?.withdrawAmount || 0).toString() + " USDT";
+            balanceValueEl.textContent = (balanceResponse.result[0]?.withdrawAmount || 0).toString() + " USDT";
         }
             
         if (availableForTradeEl) {
-                availableForTradeEl.textContent = `Доступно для ${originalAd.side === 1 ? 'покупки' : 'продажи'}: ${(balanceResponse.result[0]?.withdrawAmount || 0).toString()} ${originalAd.tokenId || 'USDT'}`;
+            availableForTradeEl.textContent = `Доступно для ${originalAd.side === 1 ? 'покупки' : 'продажи'}: ${(balanceResponse.result[0]?.withdrawAmount || 0).toString()} ${originalAd.tokenId || 'USDT'}`;
         }
         // --- 2. ОБНОВЛЕНИЕ ИНТЕРФЕЙСА ---
 
@@ -99,6 +105,12 @@ export async function loadAndDisplayReviews(originalAd) {
         const balanceElement = document.getElementById('balance-value');
         if (balanceElement) {
             balanceElement.textContent = `${parseFloat(curBalance).toLocaleString('ru-RU', {minimumFractionDigits: 4, maximumFractionDigits: 4})} ${originalAd.tokenId || 'USDT'}`;
+        }
+        const titleElement = document.getElementById('reviews-titleee');
+        console.log(titleElement);
+       
+        if (titleElement) {
+            titleElement.textContent = `Хороших отзывов: ${goodReviewsCount.result.count}`;
         }
         
         const availableBalanceElement = document.getElementById('available-for-trade');
@@ -132,7 +144,7 @@ export async function loadAndDisplayReviews(originalAd) {
 
             if (reviewItemsHTML.trim()) { // Если после фильтрации остались отзывы
                 const statsHTML = (filteredCount > 0 || highlightedCount > 0) ? `
-                    <div class="filter-info">
+                    <div class="filter-info">                    
                         ${filteredCount > 0 ? `<span class="filtered-info">Скрыто спам-отзывов: ${filteredCount}</span>` : ''}
                         ${highlightedCount > 0 ? `<span class="highlighted-info">Подсвечено подозрительных: ${highlightedCount}</span>` : ''}
                     </div>
