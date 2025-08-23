@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import monkey from 'vite-plugin-monkey';
+import mkcert from 'vite-plugin-mkcert'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -16,5 +17,6 @@ export default defineConfig({
         'run-at': 'document-end',
       },
     }),
+    mkcert()
   ],
 });

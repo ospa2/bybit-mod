@@ -115,24 +115,9 @@ export async function openTradingModal(originalAd) {
     document.body.appendChild(overlay);
     document.body.style.overflow = 'hidden';
 
-     function setAvBalance(balance) {
-        const balanceValueEl = document.getElementById('balance-value');
-        const availableForTradeEl = document.getElementById('available-for-trade');
-
-        // Исправлено: Используем конкатенацию или метод .toString() для преобразования числа в строку
-        if (balanceValueEl) {
-            balanceValueEl.textContent = balance.toString() + " USDT";
-        }
-    
-        if (availableForTradeEl) {
-            availableForTradeEl.textContent = `Доступно для ${originalAd.side === 1 ? 'покупки' : 'продажи'}: ${balance.toString()} ${originalAd.tokenId || 'USDT'}`;
-        }
-    }
-
-
 
     // Запускаем асинхронную загрузку отзывов
-    loadAndDisplayReviews(originalAd, setAvBalance);
+    loadAndDisplayReviews(originalAd);
     startPriceTimer();
     // 2. --- ФАЗА ФОНОВОЙ ЗАГРУЗКИ И ОБНОВЛЕНИЯ ---
     try {
@@ -147,19 +132,19 @@ export async function openTradingModal(originalAd) {
             throw new Error(`Ошибка сети: ${res.statusText}`);
         }
         
-        const apiResult = await res.json();
+        const apiRes = await res.json();
         
-        if (apiResult.ret_code !== 0) {
+        if (apiRes.ret_code !== 0) {
             // Если API вернуло ошибку, показываем ее и закрываем окно
             showNotification(apiResult.ret_msg || 'Не удалось загрузить детали объявления.', 'error');
             closeModal(overlay);
             return;
         }
 
-        const adData = apiResult.result;
+        const apiResult = apiRes.result;
 
         // ВАЖНО: Только теперь, когда все данные загружены, мы "оживляем" модальное окно
-        setupModalEvents(overlay, adData, originalAd, apiResult);
+        setupModalEvents(overlay, originalAd, apiResult);
 
     } catch (e) {
         console.error('Ошибка при подгрузке деталей объявления:', e);
@@ -176,7 +161,7 @@ function closeModal(overlay) {
     enableBodyScroll();
 }
 
-export function setupModalEvents(overlay, adData, originalAd, apiResult) {
+export function setupModalEvents(overlay, originalAd, apiResult) {
     const amountInput = overlay.querySelector('#amount-input');
     const receiveInput = overlay.querySelector('#receive-input');
     const tradeButton = overlay.querySelector('#trade-button');
@@ -187,59 +172,67 @@ export function setupModalEvents(overlay, adData, originalAd, apiResult) {
     // Функция валидации и активации кнопки
     function validateAndToggleButton() {
         const amount = parseFloat(amountInput.value) || 0;
-        const minAmount = parseFloat(adData.minAmount) || 0;
-        const maxAmount = parseFloat(adData.maxAmount) || 0;
+        const minAmount = parseFloat(apiResult.minAmount) || 0;
+        const maxAmount = parseFloat(apiResult.maxAmount) || 0;
         const availableBalance = overlay.querySelector('.balance-info');
         const textContent = availableBalance.textContent;
 
         // Шаг 1: Извлечение текста и очистка
-        const cleanedString = textContent.replace('Доступно для продажи:', '') // Удаляем префикс
+        const cleanedString = textContent.replace('Доступно для ', '').replace('покупки:', '').replace('продажи:', '') // Удаляем префикс
                                         .replace('USDT', '') // Удаляем суффикс
                                         .replace(/\s+/g, '') // Удаляем все пробелы, включая &nbsp;
                                         .replace(',', '.') // Заменяем запятую на точку
                                         .trim(); // Удаляем пробелы по краям
+        
 
         // Шаг 2: Преобразование в число
         const balance = parseFloat(cleanedString);
+        const price = parseFloat(apiResult.price) || 0;
+        const receiveAmount = amount * price;       
+        receiveInput.value = receiveAmount.toFixed(2);
         
-        const isValid = amount > 0 &&  amount >= (minAmount/apiResult.result.price).toFixed(4) && amount <= (maxAmount/apiResult.result.price).toFixed(4) && amount <= balance;
-        //console.log(amount, '> 0 &&' ,  amount, '>=', (minAmount/apiResult.result.price).toFixed(4) ," && ", amount,' <=' ,(maxAmount/apiResult.result.price).toFixed(4), '&&',amount, '<= ',balance);
-        //            $                   $              ₽                 $              ₽               $             $
+        const isValid = amount > 0 &&  amount >= (minAmount/apiResult.price).toFixed(4) && amount <= (maxAmount/apiResult.price).toFixed(4) && amount <= balance;
+        console.log(amount, '> 0 &&' ,  amount, '>=', (minAmount/apiResult.price).toFixed(4) ," && ", amount,' <=' ,(maxAmount/apiResult.price).toFixed(4), '&&',amount, '<= ',balance);        
         tradeButton.disabled = !isValid;
         tradeButton.style.opacity = isValid ? '1' : '0.6';
         tradeButton.style.cursor = isValid ? 'pointer' : 'not-allowed';
     }
 
-    // Функция расчета суммы к получению
-    function calculateReceiveAmount() {
-        const amount = parseFloat(amountInput.value) || 0;
-        const price = parseFloat(adData.price) || 0;
-        const receiveAmount = amount * price;
-        
-        
-        receiveInput.value = receiveAmount.toFixed(2);
-        validateAndToggleButton();
-    }
-
     // === Покупка у продавца ===
-    function createBuyPayload(adData, originalAd, apiResult) {
+    function createBuyPayload(apiResult) {
+        
         return {
-            itemId: adData.id,
-            tokenId: originalAd.tokenId,
-            currencyId: originalAd.currencyId,
+            itemId: apiResult.id,
+            tokenId: "USDT",//originalAd.tokenId
+            currencyId: "RUB",//originalAd.currencyId
             side: "0",
-            quantity: adData.minQuantity,
-            amount: adData.minAmount,
-            curPrice: apiResult.result.curPrice,
+            quantity: (parseFloat(amountInput.value)).toString(), // $$
+            amount: ((parseFloat(amountInput.value)*apiResult.price).toFixed(2)).toString(),   //₽₽₽
+            curPrice: apiResult.curPrice,
             flag: "amount",
             version: "1.0",
             securityRiskToken: "",
             isFromAi: false
         };
+        // {"itemId": "1954851016589996032", 
+        // "tokenId": "USDT",
+        // "currencyId": "RUB", 
+        // "side": "1", 
+        // "quantity": "33788.10", 
+        // "amount": "402", 
+        // "curPrice": 
+        // "f97ede1fb4da48f5ba1ba4c4ad5dfc06", 
+        // "flag": "amount", 
+        // "version": "1.0", 
+        // "securityRiskToken": "", 
+        // "isFromAi": false, 
+        // "paymentType": "382", 
+        // "paymentId": "16627221", 
+        // "online": "0" }
     }
 
     // === Продажа покупателю ===
-    function createSellPayload(adData, originalAd, apiResult) {
+    function createSellPayload(apiResult) {
         const paymentIdMap = {
             '75':  '16627518', // Тинькофф
             '377': '17762813', // Сбербанк
@@ -255,15 +248,15 @@ export function setupModalEvents(overlay, adData, originalAd, apiResult) {
             '612': '',         // Уралсиб
             '613': ''          // Уралсиб
         };
-
+        
         // Приоритетные методы оплаты
         const priorityPayments = ['75', '377', '382'];
         
-        // Ищем приоритетный метод оплаты в массиве adData.payments
-        let selectedPayment = adData.payments[0]; // по умолчанию первый
+        // Ищем приоритетный метод оплаты в массиве apiResult.payments
+        let selectedPayment = apiResult.payments[0]; // по умолчанию первый
         let selectedPaymentId = paymentIdMap[selectedPayment] || "";
         
-        for (const payment of adData.payments) {
+        for (const payment of apiResult.payments) {
             if (priorityPayments.includes(payment)) {
                 selectedPayment = payment;
                 selectedPaymentId = paymentIdMap[payment] || "";
@@ -272,13 +265,13 @@ export function setupModalEvents(overlay, adData, originalAd, apiResult) {
         }
 
         return {
-            itemId: adData.id,
-            tokenId: originalAd.tokenId,
-            currencyId: originalAd.currencyId,
+            itemId: apiResult.id,
+            tokenId: "USDT",//originalAd.tokenId,
+            currencyId: "RUB",//originalAd.currencyId,
             side: "1",
-            quantity: adData.maxQuantity,
-            amount: adData.maxAmount,
-            curPrice: apiResult.result.curPrice,
+            quantity: (parseFloat(amountInput.value)).toString(), // $$
+            amount: ((parseFloat(amountInput.value)*apiResult.price).toFixed(2)).toString(),   //₽₽₽
+            curPrice: apiResult.curPrice,
             flag: "amount",
             version: "1.0",
             securityRiskToken: "",
@@ -290,27 +283,24 @@ export function setupModalEvents(overlay, adData, originalAd, apiResult) {
     }
         
         // Обработка ввода суммы
-        amountInput.addEventListener('input', calculateReceiveAmount);
-        amountInput.addEventListener('keyup', calculateReceiveAmount);
+        amountInput.addEventListener('input', validateAndToggleButton);
+        amountInput.addEventListener('keyup', validateAndToggleButton);
 
         // Кнопка "Все"
         maxButton.addEventListener('click', () => {
             const maxAmount = Math.min(
-                parseFloat(adData.maxAmount/apiResult.result.price) || 0
+                parseFloat(apiResult.maxAmount/apiResult.price) || 0
             );
             amountInput.value = maxAmount.toFixed(4);
-            console.log('adData: ', adData);
-            console.log('originalAd: ', originalAd);
-            console.log('apiResult: ', apiResult.result.price);
+            //console.log('originalAd: ', originalAd);
+            //console.log('apiResult: ', apiResult);
 
-            
-            calculateReceiveAmount();
+            validateAndToggleButton();
         });
 
         // НОВАЯ ЛОГИКА: Обработчик для кнопки торговли
         tradeButton.addEventListener('click', async () => {
             
-
             // Отключаем кнопку и показываем состояние загрузки
             tradeButton.disabled = true;
             const originalText = tradeButton.textContent;
@@ -329,7 +319,7 @@ export function setupModalEvents(overlay, adData, originalAd, apiResult) {
                     throw new Error("Insufficient ad inventory, please try other ads.");
                 }
                 // Формируем payload для создания ордера
-                const orderPayload = originalAd.side == 0 ? createSellPayload(adData, originalAd, apiResult) : createBuyPayload(adData, originalAd, apiResult);
+                const orderPayload = originalAd.side == 0 ? createSellPayload(apiResult) : createBuyPayload(apiResult);
 
                 console.log('Отправка ордера:', orderPayload);
 
@@ -463,9 +453,24 @@ export function setupModalEvents(overlay, adData, originalAd, apiResult) {
         }
     });
     
-    // Инициализируем состояние кнопки после загрузки данных
-    setTimeout(() => {
-                    validateAndToggleButton()
-                },2000)
+    const intervalId = setInterval(() => {
+        const tradeButton = overlay.querySelector('#trade-button');
+    
+        // Клик по кнопке "max"
+        if (maxButton) {
+            maxButton.click();
+        }
+
+        // Вызов функции валидации
+        validateAndToggleButton(); 
+
+        // Проверка состояния кнопки "trade"
+        if (tradeButton && !tradeButton.disabled) {
+            // Если кнопка не заблокирована, останавливаем интервал
+            clearInterval(intervalId);          
+        }
+    }, 50);
+    
+  
 }
 

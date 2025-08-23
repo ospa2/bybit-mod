@@ -61,7 +61,7 @@ async function fetchAllReviews(userId) {
 }
 
 
-export async function loadAndDisplayReviews(originalAd, setBalance) {
+export async function loadAndDisplayReviews(originalAd) {
     const reviewsContainer = document.getElementById('reviews-container');
     
     try {
@@ -82,8 +82,17 @@ export async function loadAndDisplayReviews(originalAd, setBalance) {
         // Используем деструктуризацию для чистоты
         const { result: [{ withdrawAmount: curBalance = 0 }] = [] } = balanceResponse;
         
-        setBalance(balanceResponse.result[0]?.withdrawAmount || 0);
-
+        const balanceValueEl = document.getElementById('balance-value');
+        const availableForTradeEl = document.getElementById('available-for-trade');
+        
+        // Исправлено: Используем конкатенацию или метод .toString() для преобразования числа в строку
+        if (balanceValueEl) {
+                balanceValueEl.textContent = (balanceResponse.result[0]?.withdrawAmount || 0).toString() + " USDT";
+        }
+            
+        if (availableForTradeEl) {
+                availableForTradeEl.textContent = `Доступно для ${originalAd.side === 1 ? 'покупки' : 'продажи'}: ${(balanceResponse.result[0]?.withdrawAmount || 0).toString()} ${originalAd.tokenId || 'USDT'}`;
+        }
         // --- 2. ОБНОВЛЕНИЕ ИНТЕРФЕЙСА ---
 
         // Обновляем баланс (код без изменений)

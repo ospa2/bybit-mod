@@ -32,6 +32,7 @@ export function analyzeReview(reviewText) {
     KEYWORDS_TO_HIGHLIGHT.forEach(keyword => {
         if (keyword.trim() !== '' && searchText.includes(keyword.toLowerCase())) {
             shouldHighlight = true;
+            shouldHide = false;
         }
     });
 

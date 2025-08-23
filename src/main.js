@@ -20,8 +20,6 @@ function waitForTableAndStart() {
             });
 
         setTimeout(() => {
-            
-
             initSliderReplacement({
                 min: 9000,
                 max: 80000,
