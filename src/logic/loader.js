@@ -1,87 +1,6 @@
 // src/logic/loader.js 
-import { appState, setStopLoading, setCurrentPage } from "../state.js"; 
-import { adShouldBeFiltered } from "./adFilter.js"; 
-import { createRowFromTemplate } from "../components/AdRow.js";
-import { USER_ID } from "../config.js";
- 
-// Загружаем одну страницу и добавляем её в таблицу 
-export async function fetchAndAppendPage(pageNum) { 
-    if (appState.isLoading || appState.shouldStopLoading) return; 
-    appState.isLoading = true; 
- 
-    let side = "1";
-    let size = "1"
-    const currentUrl = window.location.href; 
-    if (currentUrl.includes("/sell/USDT/RUB")) {
-        side = "0"
-        size = "300"
-    }
-    else if (currentUrl.includes("/buy/USDT/RUB")) {
-        side = "1"
-        size = "70"
-    }; 
- 
-    const payload = { 
-        userId: USER_ID, 
-        tokenId: "USDT", 
-        currencyId: "RUB", 
-        payment: [], 
-        side: side, 
-        size: size, 
-        page: String(pageNum), 
-        amount: "", 
-        vaMaker: false, 
-        bulkMaker: false, 
-        canTrade: true, 
-        verificationFilter: 0, 
-        sortType: "OVERALL_RANKING", 
-        paymentPeriod: [], 
-        itemRegion: 1 
-    }; 
- 
-    try { 
-        const res = await fetch("https://www.bybit.com/x-api/fiat/otc/item/online", { 
-            method: "POST", 
-            headers: { "Content-Type": "application/json" }, 
-            body: JSON.stringify(payload) 
-        }); 
- 
-        const json = await res.json(); 
-        const ads = json.result || json.data || []; 
- 
-        const tbody = document.querySelector(".trade-table__tbody"); 
-        if (!tbody) { 
-            console.log("Tbody не найден"); 
-            return; 
-        } 
- 
-        let addedCount = 0; 
-        
-
-        // 1. Создаем пустой фрагмент
-        const fragment = document.createDocumentFragment();
-
-        ads.items.forEach(ad => {
-            // Создаем newRow
-            if (!adShouldBeFiltered(ad)) {
-                const newRow = createRowFromTemplate(ad);
-                if (newRow) { 
-                    // 2. Добавляем строки во фрагмент в правильном порядке
-                    fragment.appendChild(newRow); 
-                    addedCount++;
-                }
-            }
-        });
-
-        // 3. Добавляем весь фрагмент (со всеми строками) в начало tbody за один раз
-        tbody.prepend(fragment);
-
-    } catch (e) { 
-        console.error("Ошибка при подгрузке:", e); 
-    } 
- 
-    appState.isLoading = false; 
-} 
+import { appState, setStopLoading } from "../state.js"; 
+import { fetchAndAppendPage } from "../api/bybitApi.js";
  
 // Загружаем все страницы подряд 
 export async function loadAllPagesSequentially() { 
@@ -96,18 +15,8 @@ export async function loadAllPagesSequentially() {
  
     appState.isSequentialLoadingActive = true; 
     setStopLoading(false); 
-    await fetchAndAppendPage(1);
-    // while (appState.currentPage <= appState.MAX_PAGES && !appState.shouldStopLoading) { 
-    //     await fetchAndAppendPage(appState.currentPage); 
- 
-    //     if (appState.shouldStopLoading) break; 
- 
-    //     appState.currentPage++; 
-    //     if (appState.currentPage <= appState.MAX_PAGES && !appState.shouldStopLoading) { 
-    //         await new Promise(resolve => setTimeout(resolve, DELAY_MS)); 
-    //     } 
-    // } 
- 
+    await fetchAndAppendPage();
+
     appState.isSequentialLoadingActive = false; 
  
     if (!appState.shouldStopLoading) { 
@@ -135,11 +44,6 @@ export async function handleUrlChange() {
     tbody.querySelectorAll('.dynamic-row').forEach(row => row.remove());
     tbody.querySelector('.completion-indicator')?.remove();
 
-    // Сбрасываем состояние
-    const currentUrl = window.location.href;
-    if (currentUrl.includes("/sell/USDT/RUB")) {
-        setCurrentPage(1)
-    } else setCurrentPage(1);
     
     setStopLoading(false);
     
