@@ -4,7 +4,7 @@ import { handleUrlChange } from "./logic/loader";
 
 // Единый объект состояния приложения
 export const appState = {
-    MIN_LEFT_VALUE: 9000,
+    MIN_LEFT_VALUE: 10000,
     MAX_RIGHT_VALUE: 80000,
     currentPage: 0,
     isLoading: false,

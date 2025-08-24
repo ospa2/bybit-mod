@@ -1,5 +1,5 @@
 import { disableBodyScroll, enableBodyScroll } from '../utils/domHelpers.js';
-import { loadAndDisplayReviews } from './Review.js';
+import { loadAndDisplayReviews } from './review.js';
 import { startPriceTimer } from '../utils/timers.js';
 import { showNotification } from '../utils/notifications.js';
 import { paymentNames } from '../config.js';
@@ -90,7 +90,7 @@ export async function openTradingModal(originalAd) {
                     <label class="input-label">Я получу</label>
                     <div class="input-container"><div class="input-wrapper">
                         <div style="width: 24px;">₽</div>
-                        <input type="text" class="amount-input" id="receive-input" placeholder="0.00" readonly>
+                        <input type="text" class="amount-input" id="receive-input" placeholder="0.00">
                         <div class="input-suffix"><span>${originalAd.currencyId || 'RUB'}</span></div>
                     </div></div>
                 </div>
@@ -164,7 +164,6 @@ function closeModal() {
 }
 
 export function setupModalEvents(apiResult) {
-
     const overlay = document.querySelector('.bybit-modal-overlay');
     const amountInput = overlay.querySelector('#amount-input');
     const receiveInput = overlay.querySelector('#receive-input');
@@ -172,8 +171,10 @@ export function setupModalEvents(apiResult) {
     const cancelButton = overlay.querySelector('#cancel-button');
     const maxButton = overlay.querySelector('#max-button');
     const closeButton = overlay.querySelector('.bybit-modal-close');
-    
-    // Функция валидации и активации кнопки
+
+    // Выносим цену в общую область видимости для удобства
+    const price = parseFloat(apiResult.price) || 0;
+
     function validateAndToggleButton() {
         const amount = parseFloat(amountInput.value) || 0;
         const minAmount = parseFloat(apiResult.minAmount) || 0;
@@ -181,26 +182,54 @@ export function setupModalEvents(apiResult) {
         const availableBalance = overlay.querySelector('.balance-info');
         const textContent = availableBalance.textContent;
 
-        // Шаг 1: Извлечение текста и очистка
-        const cleanedString = textContent.replace('Доступно для ', '').replace('покупки:', '').replace('продажи:', '') // Удаляем префикс
-                                        .replace('USDT', '') // Удаляем суффикс
-                                        .replace(/\s+/g, '') // Удаляем все пробелы, включая &nbsp;
-                                        .replace(',', '.') // Заменяем запятую на точку
-                                        .trim(); // Удаляем пробелы по краям
-        
-
-        // Шаг 2: Преобразование в число
+        const cleanedString = textContent.replace('Доступно для ', '').replace('покупки:', '').replace('продажи:', '')
+                                        .replace('USDT', '')
+                                        .replace(/\s+/g, '')
+                                        .replace(',', '.')
+                                        .trim();
         const balance = parseFloat(cleanedString);
-        const price = parseFloat(apiResult.price) || 0;
-        const receiveAmount = amount * price;       
-        receiveInput.value = receiveAmount.toFixed(2);
+
+        const minAmountInUSDT = price > 0 ? (minAmount / price).toFixed(4) : 0;
+        const maxAmountInUSDT = price > 0 ? (maxAmount / price).toFixed(4) : 0;
+
+        const isValid = amount > 0 && amount >= minAmountInUSDT && amount <= maxAmountInUSDT && amount <= balance;
         
-        const isValid = amount > 0 &&  amount >= (minAmount/apiResult.price).toFixed(4) && amount <= (maxAmount/apiResult.price).toFixed(4) && amount <= balance;
-        console.log(amount, '> 0 &&' ,  amount, '>=', (minAmount/apiResult.price).toFixed(4) ," && ", amount,' <=' ,(maxAmount/apiResult.price).toFixed(4), '&&',amount, '<= ',balance);        
+        console.log(amount, '> 0 &&', amount, '>=', minAmountInUSDT, "&&", amount, '<=', maxAmountInUSDT, '&&', amount, '<=', balance);
+
         tradeButton.disabled = !isValid;
         tradeButton.style.opacity = isValid ? '1' : '0.6';
         tradeButton.style.cursor = isValid ? 'pointer' : 'not-allowed';
     }
+
+    // --- ОБРАБОТЧИКИ СОБЫТИЙ ---
+
+    function handleAmountChange() {
+        const amount = parseFloat(amountInput.value) || 0;
+        const receiveAmount = amount * price;
+        receiveInput.value = receiveAmount.toFixed(2);
+        validateAndToggleButton();
+    }
+
+    function handleReceiveChange() {
+        const receiveValue = parseFloat(receiveInput.value) || 0;
+        const amountValue = price > 0 ? receiveValue / price : 0;
+        amountInput.value = amountValue.toFixed(4);
+        validateAndToggleButton();
+    }
+    
+    // --- НОВАЯ ФУНКЦИЯ ФОРМАТИРОВАНИЯ ---
+    // Срабатывает, когда пользователь убирает фокус с поля RUB
+    function formatReceiveInputOnBlur() {
+        const currentValue = parseFloat(receiveInput.value) || 0;
+        receiveInput.value = currentValue.toFixed(2);
+    }
+
+    // --- УСТАНОВКА СЛУШАТЕЛЕЙ ---
+    amountInput.addEventListener('input', handleAmountChange);
+    receiveInput.addEventListener('input', handleReceiveChange);
+    
+    // Добавляем новый слушатель события 'blur'
+    receiveInput.addEventListener('blur', formatReceiveInputOnBlur);
 
     // === Покупка у продавца ===
     function createBuyPayload(apiResult) {
@@ -271,159 +300,159 @@ export function setupModalEvents(apiResult) {
         };
     }
         
-        // Обработка ввода суммы
-        amountInput.addEventListener('input', validateAndToggleButton);
-        amountInput.addEventListener('keyup', validateAndToggleButton);
+    // Обработка ввода суммы
+    amountInput.addEventListener('input', validateAndToggleButton);
+    amountInput.addEventListener('keyup', validateAndToggleButton);
 
-        // Кнопка "Все"
-        maxButton.addEventListener('click', () => {
-            const maxAmount = Math.min(
-                parseFloat(apiResult.maxAmount/apiResult.price) || 0
-            );
-            amountInput.value = maxAmount.toFixed(4);
-            console.log('apiResult: ', apiResult);
+    // Кнопка "Все"
+    maxButton.addEventListener('click', () => {
+        const maxAmount = Math.min(
+            parseFloat(apiResult.maxAmount/apiResult.price) || 0
+        );
+        amountInput.value = maxAmount.toFixed(4);
+        console.log('apiResult: ', apiResult);
 
-            validateAndToggleButton();
-        });
+        validateAndToggleButton();
+    });
 
-        // НОВАЯ ЛОГИКА: Обработчик для кнопки торговли
-        tradeButton.addEventListener('click', async () => {
-            
-            // Отключаем кнопку и показываем состояние загрузки
-            tradeButton.disabled = true;
-            const originalText = tradeButton.textContent;
-            tradeButton.textContent = 'Отправка заявки...';
-            tradeButton.style.opacity = '0.6';
-            
-            try {
-                if (apiResult.ret_code == 912100027) {
-                    showNotification("The ad status of your P2P order has been changed. Please try another ad.", "error");
-                    closeModal()
-                    throw new Error("The ad status of your P2P order has been changed. Please try another ad.");
+    // НОВАЯ ЛОГИКА: Обработчик для кнопки торговли
+    tradeButton.addEventListener('click', async () => {
+        
+        // Отключаем кнопку и показываем состояние загрузки
+        tradeButton.disabled = true;
+        const originalText = tradeButton.textContent;
+        tradeButton.textContent = 'Отправка заявки...';
+        tradeButton.style.opacity = '0.6';
+        
+        try {
+            if (apiResult.ret_code == 912100027) {
+                showNotification("The ad status of your P2P order has been changed. Please try another ad.", "error");
+                closeModal()
+                throw new Error("The ad status of your P2P order has been changed. Please try another ad.");
+            }
+            if (apiResult.ret_code == 912300001) {
+                showNotification("Insufficient ad inventory, please try other ads.", "error");
+                closeModal()
+                throw new Error("Insufficient ad inventory, please try other ads.");
+            }
+            // Формируем payload для создания ордера
+            const orderPayload = apiResult.side == 0 ? createSellPayload(apiResult) : createBuyPayload(apiResult);
+
+            console.log('Отправка ордера:', orderPayload);
+
+            // Отправляем POST запрос на создание ордера
+            const response = await fetch('https://www.bybit.com/x-api/fiat/otc/order/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                credentials: 'include', // Добавлено для куки авторизации
+                body: JSON.stringify(orderPayload)
+            });
+
+            const result = await response.json();
+            console.log('Первый ответ:', result);                    
+
+            // Проверяем, нужна ли верификация по риску
+            if (response.ok && result.result && result.result.needSecurityRisk) {
+                let riskToken = result.result.securityRiskToken; // Используем let вместо const
+
+
+                // Получить код с клавиатуры (нужно реализовать ввод)
+                const code = prompt("Введите код аутентификтор:"); // Или другой способ получения кода
+                
+                if (!code) {
+                    throw new Error("Код не введен");
                 }
-                if (apiResult.ret_code == 912300001) {
-                    showNotification("Insufficient ad inventory, please try other ads.", "error");
-                    closeModal()
-                    throw new Error("Insufficient ad inventory, please try other ads.");
-                }
-                // Формируем payload для создания ордера
-                const orderPayload = apiResult.side == 0 ? createSellPayload(apiResult) : createBuyPayload(apiResult);
 
-                console.log('Отправка ордера:', orderPayload);
-
-                // Отправляем POST запрос на создание ордера
-                const response = await fetch('https://www.bybit.com/x-api/fiat/otc/order/create', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
+                // Отправляем verify
+                const verifyRes = await fetch("https://www.bybit.com/x-api/user/public/risk/verify", {
+                    method: "POST",
+                    headers: { 
+                        "content-type": "application/json", 
+                        "accept": "application/json" 
                     },
-                    credentials: 'include', // Добавлено для куки авторизации
-                    body: JSON.stringify(orderPayload)
+                    credentials: "include",
+                    body: JSON.stringify({
+                        risk_token: riskToken,
+                        component_list: { 
+                            google2fa: code // Убрал JSON.stringify, код должен быть строкой
+                        }
+                    })
                 });
+                
+                const verifyResult = await verifyRes.json();
+                console.log("Verify response:", verifyResult);
 
-                const result = await response.json();
-                console.log('Первый ответ:', result);                    
-
-                // Проверяем, нужна ли верификация по риску
-                if (response.ok && result.result && result.result.needSecurityRisk) {
-                    let riskToken = result.result.securityRiskToken; // Используем let вместо const
-
-
-                    // Получить код с клавиатуры (нужно реализовать ввод)
-                    const code = prompt("Введите код аутентификтор:"); // Или другой способ получения кода
+                // Проверяем успешность верификации
+                if (verifyResult.ret_code === 0 && verifyResult.result) {
+                    // Обновляем riskToken из результата верификации
+                    riskToken = verifyResult.result.risk_token;
                     
-                    if (!code) {
-                        throw new Error("Код не введен");
-                    }
-
-                    // Отправляем verify
-                    const verifyRes = await fetch("https://www.bybit.com/x-api/user/public/risk/verify", {
+                    // Добавляем riskToken в orderPayload
+                    orderPayload.securityRiskToken = riskToken;
+                    //google2fa
+                    // Повторно создаём ордер с обновленным payload
+                    const finalResponse = await fetch("https://www.bybit.com/x-api/fiat/otc/order/create", {
                         method: "POST",
                         headers: { 
                             "content-type": "application/json", 
                             "accept": "application/json" 
                         },
                         credentials: "include",
-                        body: JSON.stringify({
-                            risk_token: riskToken,
-                            component_list: { 
-                                google2fa: code // Убрал JSON.stringify, код должен быть строкой
-                            }
-                        })
+                        body: JSON.stringify(orderPayload)
                     });
                     
-                    const verifyResult = await verifyRes.json();
-                    console.log("Verify response:", verifyResult);
-
-                    // Проверяем успешность верификации
-                    if (verifyResult.ret_code === 0 && verifyResult.result) {
-                        // Обновляем riskToken из результата верификации
-                        riskToken = verifyResult.result.risk_token;
-                        
-                        // Добавляем riskToken в orderPayload
-                        orderPayload.securityRiskToken = riskToken;
-                        //google2fa
-                        // Повторно создаём ордер с обновленным payload
-                        const finalResponse = await fetch("https://www.bybit.com/x-api/fiat/otc/order/create", {
-                            method: "POST",
-                            headers: { 
-                                "content-type": "application/json", 
-                                "accept": "application/json" 
-                            },
-                            credentials: "include",
-                            body: JSON.stringify(orderPayload)
-                        });
-                        
-                        const finalResult = await finalResponse.json();
-                        console.log("✅ Final create order:", finalResult);
-                        
-                        if (finalResult.ret_code === 0) {
-                            console.log("🎉 Ордер на продажу успешно создан!");
-                            showNotification('ордер успешно создан', 'success');
-                            closeModal()
-                            return finalResult;
-                        } else {
-                            console.error("❌ Ошибка при финальном создании ордера:", finalResult.ret_msg);
-                            showNotification('The transaction limit has been exceeded', 'error');
-                            throw new Error(`Order creation failed: ${finalResult.ret_msg}`);
-                            
-                        }
+                    const finalResult = await finalResponse.json();
+                    console.log("✅ Final create order:", finalResult);
+                    
+                    if (finalResult.ret_code === 0) {
+                        console.log("🎉 Ордер на продажу успешно создан!");
+                        showNotification('ордер успешно создан', 'success');
+                        closeModal()
+                        return finalResult;
                     } else {
-                        console.error("❌ Ошибка верификации:", verifyResult.ret_msg);
-                        throw new Error(`Verification failed: ${verifyResult.ret_msg}`);
+                        console.error("❌ Ошибка при финальном создании ордера:", finalResult.ret_msg);
+                        showNotification('The transaction limit has been exceeded', 'error');
+                        throw new Error(`Order creation failed: ${finalResult.ret_msg}`);
+                        
                     }
-                    
-                } else if (response.ok && result.ret_code === 0) {
-                    // Ордер создан успешно без верификации
-                    console.log("✅ Ордер на покупку создан успешно:", result);
-                    showNotification('ордер успешно создан', 'success');
-                    closeModal()
-                    return result;
-                    
                 } else {
-                    // Обработка других ошибок
-                    showNotification(result.ret_msg || result, 'error');
-                    closeModal()                       
-                    throw new Error(`Order creation failed: ${result.ret_msg || 'Unknown error'}`);
+                    console.error("❌ Ошибка верификации:", verifyResult.ret_msg);
+                    throw new Error(`Verification failed: ${verifyResult.ret_msg}`);
                 }
+                
+            } else if (response.ok && result.ret_code === 0) {
+                // Ордер создан успешно без верификации
+                console.log("✅ Ордер на покупку создан успешно:", result);
+                showNotification('ордер успешно создан', 'success');
+                closeModal()
+                return result;
+                
+            } else {
+                // Обработка других ошибок
+                showNotification(result.ret_msg || result, 'error');
+                closeModal()                       
+                throw new Error(`Order creation failed: ${result.ret_msg || 'Unknown error'}`);
+            }
 
-            } catch (error) {
-                console.error('Ошибка при создании ордера:', error);
-                throw error;
-            }  finally {
-                // Восстанавливаем состояние кнопки
-                tradeButton.disabled = false;
-                tradeButton.textContent = originalText;
-                tradeButton.style.opacity = '1';
-                setTimeout(() => {
-                    validateAndToggleButton()
-                },2000)
-                ; // Повторно валидируем
-                }
-            });
+        } catch (error) {
+            console.error('Ошибка при создании ордера:', error);
+            throw error;
+        }  finally {
+            // Восстанавливаем состояние кнопки
+            tradeButton.disabled = false;
+            tradeButton.textContent = originalText;
+            tradeButton.style.opacity = '1';
+            setTimeout(() => {
+                validateAndToggleButton()
+            },2000)
+            ; // Повторно валидируем
+            }
+        });
 
-        // Закрытие модального окна
+    // Закрытие модального окна
 
     cancelButton.addEventListener('click', () => closeModal());
     closeButton.addEventListener('click', () => closeModal());
@@ -451,6 +480,7 @@ export function setupModalEvents(apiResult) {
 
         // Вызов функции валидации
         validateAndToggleButton(); 
+        handleAmountChange()
 
         // Проверка состояния кнопки "trade"
         if (tradeButton && !tradeButton.disabled) {
@@ -458,7 +488,5 @@ export function setupModalEvents(apiResult) {
             clearInterval(intervalId);          
         }
     }, 50);
-    
-  
 }
 

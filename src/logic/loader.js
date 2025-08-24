@@ -57,16 +57,25 @@ export async function fetchAndAppendPage(pageNum) {
  
         let addedCount = 0; 
         
-        
-        ads.items.forEach(ad => { 
-            if (!adShouldBeFiltered(ad)) { 
-                const newRow = createRowFromTemplate(ad); 
+
+        // 1. Создаем пустой фрагмент
+        const fragment = document.createDocumentFragment();
+
+        ads.items.forEach(ad => {
+            // Создаем newRow
+            if (!adShouldBeFiltered(ad)) {
+                const newRow = createRowFromTemplate(ad);
                 if (newRow) { 
-                    tbody.appendChild(newRow); 
-                    addedCount++; 
-                } 
-            } 
-        }); 
+                    // 2. Добавляем строки во фрагмент в правильном порядке
+                    fragment.appendChild(newRow); 
+                    addedCount++;
+                }
+            }
+        });
+
+        // 3. Добавляем весь фрагмент (со всеми строками) в начало tbody за один раз
+        tbody.prepend(fragment);
+
     } catch (e) { 
         console.error("Ошибка при подгрузке:", e); 
     } 
@@ -150,7 +159,7 @@ export function observeUrlChanges() {
                 tableRows.forEach(row => {
                     row.classList.add('filtered-ad');
                 });
-            }, 1000);
+            }, 1500);
         }
     });
     observer.observe(document.body, { childList: true, subtree: true });
