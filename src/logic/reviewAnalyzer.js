@@ -13,6 +13,7 @@ export function analyzeReview(reviewText) {
             shouldHide = true;
         }
     });
+    if(reviewText.length<50)shouldHide = true
 
     const spamKeywords = ['медленный', 'грубый', 'просит оплатить дополнительные комиссии','нетерпеливый','slow','rude','asks for additional fees','impatient'];
 

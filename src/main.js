@@ -12,12 +12,12 @@ function waitForTableAndStart() {
     } else {
         tbody.querySelectorAll(".dynamic-row").forEach(row => row.remove());
         tbody.querySelector(".completion-indicator")?.remove();
-         document.addEventListener('keydown', (event) => {
+        document.addEventListener('keydown', (event) => {
                 // Проверяем, что нажата клавиша 'Z' (без учета регистра)
                 if (event.key === 'z' || event.key === 'Z' || event.key === 'я' || event.key === 'Я') {
                     handleUrlChange();
                 }
-            });
+        });
 
         setTimeout(() => {
             initSliderReplacement({
