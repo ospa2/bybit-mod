@@ -76,6 +76,9 @@ export async function fetchAndAppendPage() {
     };
 
     try {
+        if (payload.side==="1") {
+            
+        
         const res = await fetch("https://www.bybit.com/x-api/fiat/otc/item/online", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -130,7 +133,7 @@ export async function fetchAndAppendPage() {
 
         // 3. Добавляем весь фрагмент (со всеми строками) в начало tbody за один раз
         tbody.prepend(fragment);
-
+    }
     } catch (e) {
         console.error("Ошибка при подгрузке:", e);
     } finally {
