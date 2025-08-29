@@ -35,3 +35,32 @@ function waitForTableAndStart() {
 
 setTimeout(waitForTableAndStart, 100);
 console.log("Bybit P2P Filter Enhanced загружен");
+
+  const originalFetch = window.fetch;
+
+    window.fetch = async (...args) => {
+        // args[0] — URL, args[1] — опции (method, body и т.д.)
+        let shouldIntercept = false;
+
+        if (args[0].includes("/online") && args[1]?.body) {
+            try {
+                const body = JSON.parse(args[1].body);
+                if (body.side === "0") {
+                    shouldIntercept = true;
+                }
+            } catch (e) {
+                console.warn("Не удалось распарсить body:", args[1].body);
+            }
+        }
+
+        const response = await originalFetch(...args);
+
+        if (shouldIntercept) {
+            response.clone().json().then(data => {
+                console.log("Перехватил ответ /online с side=1:", data);
+                window.__bybitOnlineData = data; // сохраним глобально
+            });
+        }
+
+        return response;
+    };
