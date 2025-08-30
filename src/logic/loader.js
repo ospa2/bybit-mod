@@ -59,10 +59,14 @@ export function observeUrlChanges() {
             previousUrl = location.href;
             handleUrlChange();
             setTimeout(() => {
+                if (location.href==="https://www.bybit.com/ru-RU/p2p/buy/USDT/RUB") {
+                    
+                
                 const tableRows = document.querySelectorAll('.trade-table__tbody tr');
                 tableRows.forEach(row => {
                     row.classList.add('filtered-ad');
                 });
+                }
             }, 1500);
         }
     });

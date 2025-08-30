@@ -1,6 +1,6 @@
 import { analyzeReview } from '../logic/reviewAnalyzer.js';
 
-export function createReviewHTML(review, className) {
+function createReviewHTML(review, className) {
     function convertBybitTime(bybitTimestamp) {
         const date = new Date(bybitTimestamp);
         const d = String(date.getDate()).padStart(2, '0');
@@ -63,7 +63,6 @@ async function fetchAllReviews(userId) {
 
 export async function loadAndDisplayReviews(originalAd) {
     const reviewsContainer = document.getElementById('reviews-container');
-    
     try {
         // --- 1. ПАРАЛЛЕЛЬНАЯ ЗАГРУЗКА ДАННЫХ ---
         

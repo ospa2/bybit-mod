@@ -36,8 +36,8 @@ export async function openTradingModal(originalAd) {
                             <div class="avatar ${
                               originalAd.isOnline ? "online" : ""
                             }">${(originalAd.nickName || "U")
-    .charAt(0)
-    .toUpperCase()}</div>
+                            .charAt(0)
+                            .toUpperCase()}</div>
                         </div>
                         <div class="advertiser-info">
                             <div class="advertiser-name">${
