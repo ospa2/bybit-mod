@@ -241,10 +241,10 @@ export function setupModalEvents(apiResult) {
     const maxAmountInUSDT = price > 0 ? (maxAmount / price).toFixed(4) : 0;
 
     const isValid =
-      amount > 0 &&
+      (amount > 0 &&
       amount >= minAmountInUSDT &&
       amount <= maxAmountInUSDT &&
-      amount <= balance;
+      amount <= balance)||(window.location.href.includes("buy"));
 
     console.log(
       amount,

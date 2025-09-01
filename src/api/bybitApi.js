@@ -54,7 +54,7 @@ export async function fetchAndAppendPage() {
     }
     else if (currentUrl.includes("/buy/USDT/RUB")) {
         side = "1"
-        size = "70"
+        size = "150"
     };
 
     const payload = {

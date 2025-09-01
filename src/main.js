@@ -59,7 +59,7 @@ let currentButtonClickHandler = null;
 window.fetch = async (...args) => {
   // args[0] — URL, args[1] — опции (method, body и т.д.)
   let shouldIntercept = false;
-  
+
   if (args[0].includes("/x-api/fiat/otc/item/online") && args[1]?.body) {
     try {
       const body = JSON.parse(args[1].body);
@@ -70,9 +70,9 @@ window.fetch = async (...args) => {
       console.warn("Не удалось распарсить body:", args[1].body);
     }
   }
-  
+
   const response = await originalFetch(...args);
-  
+
   if (shouldIntercept) {
     response
       .clone()
@@ -86,12 +86,12 @@ window.fetch = async (...args) => {
               row.classList.add("filtered-ad");
               return;
             }
-            
+
             // Создаем новый td элемент
             const newTd = document.createElement("td");
             newTd.style.width = "100px";
             newTd.style.padding = "12px";
-            
+
             // Добавляем Lorem ipsum текст
             newTd.innerHTML = `
               <div class="lorem-content">
@@ -100,7 +100,7 @@ window.fetch = async (...args) => {
                 </p>
               </div>
             `;
-            
+
             // Добавляем новый td на индекс 1 (после первой ячейки)
             if (row.children.length > 5) {
               row.children[1].remove();
@@ -110,60 +110,95 @@ window.fetch = async (...args) => {
               row.insertBefore(newTd, secondCell);
             }
           });
-        
+
         console.log("Перехватил ответ /online с side=1:", data);
         window.__bybitOnlineData = data; // сохраним глобально
-        
+
         // Удаляем старый обработчик (если он был)
         if (currentButtonClickHandler) {
           document.removeEventListener("click", currentButtonClickHandler);
         }
-        
+
         // Создаем новый обработчик
         currentButtonClickHandler = function handleButtonClick(e) {
           const btn = e.target.closest("button");
           if (btn && btn.innerText.includes("Продать USDT")) {
             const index = getRowIndex(btn);
             console.log("Клик по кнопке в строке №", index, btn.closest("tr"));
-            
+
             // Ждем немного, чтобы модальное окно успело открыться
-            setTimeout(() => {
-              // Ищем модальное окно (может быть разные селекторы)
-              const modal = document.querySelector('[data-testid="advertiser-remark"]') || 
-                           document.querySelector('.advertiser-remark') ||
-                           document.querySelector('#advertiser-remark') ||
-                           document.querySelector('[class*="modal"]') ||
-                           document.querySelector('[class*="dialog"]');
-              
-              if (modal) {
-                // Проверяем, есть ли уже контейнер для отзывов
-                let reviewsContainer = document.getElementById('reviews-container');
-                
-                if (!reviewsContainer) {
-                  // Создаем контейнер для отзывов
-                  reviewsContainer = document.createElement("div");
-                  reviewsContainer.className = "terms-content";
-                  reviewsContainer.id = "reviews-container";
-                  reviewsContainer.innerHTML = '<div class="spinner">Загружаем отзывы...</div>';
-                  
-                  // Добавляем в модальное окно
-                  modal.appendChild(reviewsContainer);
-                }
-                
-                // Загружаем отзывы
-                loadAndDisplayReviews(ads[index]);
-              } else {
-                console.warn("Модальное окно не найдено");
-              }
-            }, 4000); // Небольшая задержка для открытия модального окна
+            // Ждем немного, чтобы модальное окно успело открыться             
+setTimeout(() => {   
+  // Ищем модальное окно более универсально   
+  const modal = document.querySelector('[role="dialog"], [aria-modal="true"]');   
+  console.log('modal:', modal);       
+
+  if (modal) {     
+    let reviewsContainer = document.getElementById("reviews-container");      
+
+    if (!reviewsContainer) {       
+      reviewsContainer = document.createElement("div");       
+      reviewsContainer.className = "terms-content";       
+      reviewsContainer.id = "reviews-container";       
+      reviewsContainer.style.marginTop = "20px";       
+      reviewsContainer.innerHTML = '<div class="spinner">Загружаем отзывы...</div>';        
+
+      // Ищем подходящее место внутри модального окна для вставки
+      const modalContent = modal.querySelector('.modal-content, .modal-body, [class*="content"]') || modal;
+      
+      // Вставляем контейнер отзывов в конец содержимого модального окна
+      modalContent.appendChild(reviewsContainer);
+    }      
+
+    loadAndDisplayReviews(ads[index]);   
+  } else {     
+    console.warn("Модальное окно не найдено");   
+  } 
+}, 1000);             
+
+// Альтернативный вариант - если нужно вставить в определенное место внутри модала
+setTimeout(() => {   
+  const modal = document.querySelector('[role="dialog"], [aria-modal="true"]');   
+  console.log('modal:', modal);       
+
+  if (modal) {     
+    let reviewsContainer = document.getElementById("reviews-container");      
+
+    if (!reviewsContainer) {       
+      reviewsContainer = document.createElement("div");       
+      reviewsContainer.className = "terms-content";       
+      reviewsContainer.id = "reviews-container";       
+      reviewsContainer.style.marginTop = "20px";       
+      reviewsContainer.innerHTML = '<div class="spinner">Загружаем отзывы...</div>';        
+
+      // Ищем конкретный элемент внутри модала (например, форму или кнопки)
+      const insertTarget = modal.querySelector('form, .modal-footer, .button-group') || 
+                           modal.querySelector('.modal-content, .modal-body, [class*="content"]') || 
+                           modal;
+      
+      // Вставляем перед найденным элементом или в конец
+      if (insertTarget && insertTarget !== modal) {
+        insertTarget.parentNode.insertBefore(reviewsContainer, insertTarget);
+      } else {
+        modal.appendChild(reviewsContainer);
+      }
+    }      
+
+    loadAndDisplayReviews(ads[index]);   
+  } else {     
+    console.warn("Модальное окно не найдено");   
+  } 
+}, 4000);
+
+
           }
         };
-        
+
         // Добавляем новый обработчик
         document.addEventListener("click", currentButtonClickHandler);
       });
   }
-  
+
   return response;
 };
 
