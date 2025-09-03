@@ -61,6 +61,79 @@ async function fetchAllReviews(userId) {
 }
 
 
+// Создаем объект для хранения статистики в памяти
+// Создаем объект для хранения статистики в памяти
+// Ключ в localStorage — при необходимости поменяйте (версионирование полезно при изменениях структуры)
+const STORAGE_KEY = 'reviewsStatistics_v1';
+
+const reviewsStatistics = {
+    // Загружаем из localStorage при создании объекта
+    data: (function loadFromStorage() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return [];
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            console.warn('Не удалось прочитать reviewsStatistics из localStorage:', e);
+            return [];
+        }
+    })(),
+
+    // Вспомогательная функция для записи в localStorage
+    _saveToStorage() {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
+        } catch (e) {
+            console.warn('Не удалось сохранить reviewsStatistics в localStorage:', e);
+        }
+    },
+
+    // Метод для добавления новой записи или замены существующей
+    add(stats) {
+        const existingIndex = this.data.findIndex(item => item.userId === stats.userId);
+
+        const newEntry = {
+            ...stats,
+            timestamp: new Date().toISOString()
+        };
+
+        if (existingIndex !== -1) {
+            // Заменяем существующую запись
+            this.data[existingIndex] = newEntry;
+        } else {
+            // Добавляем новую запись
+            this.data.push(newEntry);
+        }
+
+        // Сохраняем изменения в localStorage
+        this._saveToStorage();
+    },
+
+    // Метод для получения всех записей (возвращает копию массива)
+    getAll() {
+        return this.data.slice();
+    },
+
+    // Метод для получения последней записи
+    getLast() {
+        return this.data.length ? this.data[this.data.length - 1] : null;
+    },
+
+    // Метод для очистки данных
+    clear() {
+        this.data = [];
+        this._saveToStorage();
+    },
+
+    // Дополнительно: получить запись по userId (удобно)
+    getByUserId(userId) {
+        return this.data.find(item => item.userId === userId) || null;
+    }
+};
+
+export default reviewsStatistics;
+
 export async function loadAndDisplayReviews(originalAd) {
     const reviewsContainer = document.getElementById('reviews-container');
     try {
@@ -77,6 +150,7 @@ export async function loadAndDisplayReviews(originalAd) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ makerUserId: originalAd.userId, page: "1", size: "10", appraiseType: "1", })
         }).then(res => res.json());
+        
         // Вызываем новую асинхронную функцию для загрузки отзывов
         const reviewsPromise = fetchAllReviews(originalAd.userId);
 
@@ -98,6 +172,7 @@ export async function loadAndDisplayReviews(originalAd) {
         if (availableForTradeEl) {
             availableForTradeEl.textContent = `Доступно для ${originalAd.side === 1 ? 'покупки' : 'продажи'}: ${(balanceResponse.result[0]?.withdrawAmount || 0).toString()} ${originalAd.tokenId || 'USDT'}`;
         }
+        
         // --- 2. ОБНОВЛЕНИЕ ИНТЕРФЕЙСА ---
 
         // Обновляем баланс (код без изменений)
@@ -119,10 +194,10 @@ export async function loadAndDisplayReviews(originalAd) {
 
         // --- БЛОК ФОРМИРОВАНИЯ HTML (рефакторинг с использованием map) ---
         let reviewsHTML = '<div class="no-reviews">Плохих отзывов нет</div>';
+        let highlightedCount = 0;
 
         if (Array.isArray(allReviews) && allReviews.length > 0) {
             let filteredCount = 0;
-            let highlightedCount = 0;
 
             const reviewItemsHTML = allReviews
                 .map(review => {
@@ -152,6 +227,21 @@ export async function loadAndDisplayReviews(originalAd) {
                 reviewsHTML = `${statsHTML}<ul class="reviews-list">${reviewItemsHTML}</ul>`;
             }
         }
+
+        // --- СОХРАНЕНИЕ СТАТИСТИКИ ---
+        const statsObject = {
+            highlightedCount,
+            goodReviewsCount: goodReviewsCount.result.count,
+            allReviewsLength: allReviews.length,
+            userId: originalAd.userId
+        };
+        
+        // Добавляем объект в наш объект статистики
+        reviewsStatistics.add(statsObject);
+        
+        // Выводим в консоль для отладки
+        console.log('Saved statistics:', statsObject);
+        console.log('All statistics:', reviewsStatistics.getAll());
 
         if (reviewsContainer) {
             reviewsContainer.innerHTML = reviewsHTML;

@@ -78,28 +78,85 @@ window.fetch = async (...args) => {
       .clone()
       .json()
       .then((data) => {
-        const ads = data.result.items;
-        document
-          .querySelectorAll(".trade-table__tbody tr")
-          .forEach((row, i) => {
-            if (adShouldBeFiltered(ads[i])) {
-              row.classList.add("filtered-ad");
-              return;
-            }
+        const ads = data.result.items || [];
+  // Попытка загрузить статистику из localStorage один раз
+  let storedStats = [];
+  try {
+    const raw = localStorage.getItem('reviewsStatistics_v1');
+    storedStats = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(storedStats)) storedStats = [];
+  } catch (err) {
+    console.warn('Не удалось прочитать reviewsStatistics_v1 из localStorage:', err);
+    storedStats = [];
+  }
 
-            // Создаем новый td элемент
-            const newTd = document.createElement("td");
-            newTd.style.width = "100px";
-            newTd.style.padding = "12px";
+  document.querySelectorAll(".trade-table__tbody tr").forEach((row, i) => {
+    const ad = ads[i];
+    if (!ad) return; // защититься от рассинхрона длины списков
 
-            // Добавляем Lorem ipsum текст
-            newTd.innerHTML = `
-              <div class="lorem-content">
-                <p style="margin: 0; width: 300px; font-size: 14px; line-height: 1.4; color: #666;">
-                  ${filterRemark(ads[i].remark)}
-                </p>
-              </div>
-            `;
+    if (adShouldBeFiltered(ad)) {
+      row.classList.add("filtered-ad");
+      return;
+    }
+
+    // Создаем новый td элемент
+    const newTd = document.createElement("td");
+    newTd.style.width = "100px";
+    newTd.style.padding = "12px";
+
+    // Получаем статистику для текущего userId (строка/число — сравниваем как строки)
+    const stat = storedStats.find(s => String(s.userId) === String(ad.userId));
+
+    // Формируем базовый контент (remark)
+    let inner = `
+      <div class="lorem-content">
+        <p style="margin: 0; width: 300px; font-size: 14px; line-height: 1.4; color: #666;">
+          ${filterRemark(ad.remark)}
+        </p>
+      </div>
+    `;
+
+    // Если есть статистика — добавляем её под remark
+    if (stat) {
+      // безопасно достаём поля, которые могут отсутствовать
+      const highlightedCount = stat.highlightedCount ?? 0;
+      const goodReviewsCount = stat.goodReviewsCount ?? 0;
+      const allReviewsLength = stat.allReviewsLength ?? 0;
+
+      const target = row.querySelector(".moly-space-item.moly-space-item-first");
+      console.log('target:', target);
+      
+      if (target) {
+  // Проверяем, есть ли уже statsDiv после target
+  let statsDiv = target.nextElementSibling;
+  if (!statsDiv || !statsDiv.classList.contains("review-stats")) {
+    statsDiv = document.createElement("div");
+    statsDiv.className = "review-stats";
+    statsDiv.style.marginTop = "8px";
+    statsDiv.style.fontSize = "12px";
+    statsDiv.style.color = "#444";
+    target.insertAdjacentElement("afterend", statsDiv);
+  }
+
+  // Определяем цвет для highlightedCount
+  const highlightedColor = highlightedCount === 0 ? "#27F54D" : "#DC143C";
+
+  // Обновляем содержимое
+  statsDiv.innerHTML = `
+    <div style="display:grid; gap:8px; margin-top:4px;">
+      <span>+<strong>${goodReviewsCount}</strong></span>
+      <span>-<strong>${allReviewsLength}</strong></span>
+      <span><strong style="color:${highlightedColor}">${highlightedCount}</strong></span>
+    </div>
+  `;
+}
+
+
+      // пометим строку, чтобы можно было CSS-стилями выделить её
+      row.classList.add('has-review-stats');
+    }
+
+    newTd.innerHTML = inner;
 
             // Добавляем новый td на индекс 1 (после первой ячейки)
             if (row.children.length > 5) {
@@ -124,71 +181,47 @@ window.fetch = async (...args) => {
           const btn = e.target.closest("button");
           if (btn && btn.innerText.includes("Продать USDT")) {
             const index = getRowIndex(btn);
-            console.log("Клик по кнопке в строке №", index, btn.closest("tr"));
-
-            // Ждем немного, чтобы модальное окно успело открыться
-            // Ждем немного, чтобы модальное окно успело открыться             
-setTimeout(() => {   
-  // Ищем модальное окно более универсально   
-  const modal = document.querySelector('[role="dialog"], [aria-modal="true"]');   
-  console.log('modal:', modal);       
-
-  if (modal) {     
-    let reviewsContainer = document.getElementById("reviews-container");      
-
-    if (!reviewsContainer) {       
-      reviewsContainer = document.createElement("div");       
-      reviewsContainer.className = "terms-content";       
-      reviewsContainer.id = "reviews-container";       
-      reviewsContainer.style.marginTop = "20px";       
-      reviewsContainer.innerHTML = '<div class="spinner">Загружаем отзывы...</div>';        
-
-      // Ищем подходящее место внутри модального окна для вставки
-      const modalContent = modal.querySelector('.modal-content, .modal-body, [class*="content"]') || modal;
-      
-      // Вставляем контейнер отзывов в конец содержимого модального окна
-      modalContent.appendChild(reviewsContainer);
-    }      
-
-    loadAndDisplayReviews(ads[index]);   
-  } else {     
-    console.warn("Модальное окно не найдено");   
-  } 
-}, 1000);             
-
-// Альтернативный вариант - если нужно вставить в определенное место внутри модала
-setTimeout(() => {   
-  const modal = document.querySelector('[role="dialog"], [aria-modal="true"]');   
-  console.log('modal:', modal);       
-
-  if (modal) {     
-    let reviewsContainer = document.getElementById("reviews-container");      
-
-    if (!reviewsContainer) {       
-      reviewsContainer = document.createElement("div");       
-      reviewsContainer.className = "terms-content";       
-      reviewsContainer.id = "reviews-container";       
-      reviewsContainer.style.marginTop = "20px";       
-      reviewsContainer.innerHTML = '<div class="spinner">Загружаем отзывы...</div>';        
-
-      // Ищем конкретный элемент внутри модала (например, форму или кнопки)
-      const insertTarget = modal.querySelector('form, .modal-footer, .button-group') || 
-                           modal.querySelector('.modal-content, .modal-body, [class*="content"]') || 
-                           modal;
-      
-      // Вставляем перед найденным элементом или в конец
-      if (insertTarget && insertTarget !== modal) {
-        insertTarget.parentNode.insertBefore(reviewsContainer, insertTarget);
-      } else {
-        modal.appendChild(reviewsContainer);
-      }
-    }      
-
-    loadAndDisplayReviews(ads[index]);   
-  } else {     
-    console.warn("Модальное окно не найдено");   
-  } 
-}, 4000);
+            console.log("Клик по кнопке в строке №", index, btn.closest("tr"));                    
+            // Альтернативный вариант - если нужно вставить в определенное место внутри модала
+            const reviewsInterval = setInterval(() => {                  
+            const modal = document.querySelector('[role="dialog"], [aria-modal="true"]');                  
+            console.log('modal:', modal);                       
+            
+            if (modal) {
+                // Заменяем стиль width на w-full
+                modal.style.width = '';  // Убираем inline width
+                modal.classList.remove(...Array.from(modal.classList).filter(cls => cls.includes('width') || cls.includes('w-')));
+                modal.classList.add('w-full');
+                
+                let reviewsContainer = document.getElementById("reviews-container");                        
+                
+                if (!reviewsContainer) {                          
+                    reviewsContainer = document.createElement("div");                          
+                    reviewsContainer.className = "terms-content";                          
+                    reviewsContainer.id = "reviews-container";                          
+                    reviewsContainer.style.marginTop = "20px";                          
+                    reviewsContainer.innerHTML = '<div class="spinner">Загружаем отзывы...</div>';                            
+                    
+                    // Ищем конкретный элемент внутри модала (например, форму или кнопки)                   
+                    const insertTarget = modal.querySelector('form, .modal-footer, .button-group') ||                                        
+                                        modal.querySelector('.modal-content, .modal-body, [class*="content"]') ||                                        
+                                        modal;                                      
+                    
+                    // Вставляем перед найденным элементом или в конец                   
+                    if (insertTarget && insertTarget !== modal) {                     
+                        insertTarget.parentNode.insertBefore(reviewsContainer, insertTarget);                   
+                    } else {                     
+                        modal.appendChild(reviewsContainer);                   
+                    }                 
+                }                        
+                
+                loadAndDisplayReviews(ads[index]);                 
+                clearInterval(reviewsInterval);                  
+                console.log('отзывы вставлены, стиль обновлен');                                  
+            } else {                      
+                console.warn("Модальное окно не найдено");                  
+            }              
+        }, 100);
 
 
           }
