@@ -8,6 +8,18 @@ export function adShouldBeFiltered(ad) {
     
     if (parseFloat(ad.price) > 87) return true;
 
+    let storedStats = [];
+    try {
+        const raw = localStorage.getItem('reviewsStatistics_v1');
+        storedStats = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(storedStats)) storedStats = [];
+    } catch (err) {
+        console.warn('Не удалось прочитать reviewsStatistics_v1 из localStorage:', err);
+        storedStats = [];
+    }
+    if(storedStats.flatMap(item => item.userId).includes(ad.userId) && storedStats.find(item => item.userId === ad.userId).highlightedCount>=5) {
+        return true
+    }
     const min = parseFloat(ad.minAmount);
     const max = parseFloat(ad.maxAmount);
     const diff = max - min;

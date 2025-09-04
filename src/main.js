@@ -119,9 +119,9 @@ window.fetch = async (...args) => {
     // Если есть статистика — добавляем её под remark
     if (stat) {
       // безопасно достаём поля, которые могут отсутствовать
-      const highlightedCount = stat.highlightedCount ?? 0;
-      const goodReviewsCount = stat.goodReviewsCount ?? 0;
-      const allReviewsLength = stat.allReviewsLength ?? 0;
+      const highlightedCount = stat.highlightedCount ?? 'x';
+      const goodReviewsCount = stat.goodReviewsCount ?? 'x';
+      const allReviewsLength = stat.allReviewsLength ?? 'x';
 
       const target = row.querySelector(".moly-space-item.moly-space-item-first");
       console.log('target:', target);

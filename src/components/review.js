@@ -95,7 +95,6 @@ const reviewsStatistics = {
 
         const newEntry = {
             ...stats,
-            timestamp: new Date().toISOString()
         };
 
         if (existingIndex !== -1) {
