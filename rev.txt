@@ -1,10 +1,9 @@
 [
   {
     "highlightedCount": 3,
-    "goodReviewsCount": 831,
-    "allReviewsLength": 63,
-    "userId": "159469150",
-    "timestamp": "2025-09-02T15:54:57.006Z"
+    "goodReviewsCount": 844,
+    "allReviewsLength": 65,
+    "userId": "159469150"
   },
   {
     "highlightedCount": 2,
@@ -15,10 +14,9 @@
   },
   {
     "highlightedCount": 0,
-    "goodReviewsCount": 698,
+    "goodReviewsCount": 703,
     "allReviewsLength": 8,
-    "userId": "189341796",
-    "timestamp": "2025-09-03T16:06:44.089Z"
+    "userId": "189341796"
   },
   {
     "highlightedCount": 22,
@@ -155,10 +153,9 @@
   },
   {
     "highlightedCount": 1,
-    "goodReviewsCount": 231,
+    "goodReviewsCount": 238,
     "allReviewsLength": 1,
-    "userId": "318438355",
-    "timestamp": "2025-09-03T16:51:42.466Z"
+    "userId": "318438355"
   },
   {
     "highlightedCount": 1,
@@ -169,10 +166,9 @@
   },
   {
     "highlightedCount": 0,
-    "goodReviewsCount": 1053,
+    "goodReviewsCount": 1057,
     "allReviewsLength": 1,
-    "userId": "350822297",
-    "timestamp": "2025-09-03T14:28:07.576Z"
+    "userId": "350822297"
   },
   {
     "highlightedCount": 0,
@@ -183,17 +179,15 @@
   },
   {
     "highlightedCount": 1,
-    "goodReviewsCount": 946,
+    "goodReviewsCount": 958,
     "allReviewsLength": 4,
-    "userId": "182830948",
-    "timestamp": "2025-09-03T14:29:53.320Z"
+    "userId": "182830948"
   },
   {
     "highlightedCount": 1,
-    "goodReviewsCount": 571,
+    "goodReviewsCount": 572,
     "allReviewsLength": 25,
-    "userId": "442397605",
-    "timestamp": "2025-09-04T13:32:54.569Z"
+    "userId": "442397605"
   },
   {
     "highlightedCount": 0,
@@ -379,10 +373,9 @@
   },
   {
     "highlightedCount": 1,
-    "goodReviewsCount": 460,
+    "goodReviewsCount": 472,
     "allReviewsLength": 6,
-    "userId": "159537387",
-    "timestamp": "2025-09-03T15:18:49.234Z"
+    "userId": "159537387"
   },
   {
     "highlightedCount": 1,
@@ -504,11 +497,10 @@
     "timestamp": "2025-09-03T15:36:41.739Z"
   },
   {
-    "highlightedCount": 2,
-    "goodReviewsCount": 2002,
+    "highlightedCount": 1,
+    "goodReviewsCount": 2008,
     "allReviewsLength": 50,
-    "userId": "345854884",
-    "timestamp": "2025-09-03T15:37:04.945Z"
+    "userId": "345854884"
   },
   {
     "highlightedCount": 0,
@@ -708,10 +700,9 @@
   },
   {
     "highlightedCount": 0,
-    "goodReviewsCount": 513,
+    "goodReviewsCount": 514,
     "allReviewsLength": 3,
-    "userId": "417728478",
-    "timestamp": "2025-09-04T14:23:46.180Z"
+    "userId": "417728478"
   },
   {
     "highlightedCount": 0,
@@ -729,10 +720,9 @@
   },
   {
     "highlightedCount": 3,
-    "goodReviewsCount": 5217,
+    "goodReviewsCount": 5230,
     "allReviewsLength": 40,
-    "userId": "101108166",
-    "timestamp": "2025-09-03T16:44:11.078Z"
+    "userId": "101108166"
   },
   {
     "highlightedCount": 0,
@@ -815,8 +805,7 @@
     "highlightedCount": 0,
     "goodReviewsCount": 116,
     "allReviewsLength": 0,
-    "userId": "169617176",
-    "timestamp": "2025-09-04T13:32:47.477Z"
+    "userId": "169617176"
   },
   {
     "highlightedCount": 0,
@@ -974,10 +963,9 @@
   },
   {
     "highlightedCount": 1,
-    "goodReviewsCount": 295,
+    "goodReviewsCount": 296,
     "allReviewsLength": 10,
-    "userId": "134095319",
-    "timestamp": "2025-09-04T13:53:20.196Z"
+    "userId": "134095319"
   },
   {
     "highlightedCount": 4,
@@ -1046,7 +1034,276 @@
     "highlightedCount": 1,
     "goodReviewsCount": 154,
     "allReviewsLength": 6,
-    "userId": "458542119",
-    "timestamp": "2025-09-04T14:23:28.178Z"
+    "userId": "458542119"
+  },
+  {
+    "highlightedCount": 0,
+    "goodReviewsCount": 100,
+    "allReviewsLength": 0,
+    "userId": "470677508"
+  },
+  {
+    "highlightedCount": 0,
+    "goodReviewsCount": 89,
+    "allReviewsLength": 0,
+    "userId": "475582547"
+  },
+  {
+    "highlightedCount": 0,
+    "goodReviewsCount": 832,
+    "allReviewsLength": 19,
+    "userId": "422156855"
+  },
+  {
+    "highlightedCount": 0,
+    "goodReviewsCount": 836,
+    "allReviewsLength": 23,
+    "userId": "137490756"
+  },
+  {
+    "highlightedCount": 0,
+    "goodReviewsCount": 159,
+    "allReviewsLength": 5,
+    "userId": "446482688"
+  },
+  {
+    "highlightedCount": 1,
+    "goodReviewsCount": 113,
+    "allReviewsLength": 5,
+    "userId": "465119519"
+  },
+  {
+    "highlightedCount": 0,
+    "goodReviewsCount": 677,
+    "allReviewsLength": 1,
+    "userId": "23347606"
+  },
+  {
+    "highlightedCount": 0,
+    "goodReviewsCount": 717,
+    "allReviewsLength": 0,
+    "userId": "64642747"
+  },
+  {
+    "highlightedCount": 1,
+    "goodReviewsCount": 847,
+    "allReviewsLength": 8,
+    "userId": "3713777"
+  },
+  {
+    "highlightedCount": 0,
+    "goodReviewsCount": 585,
+    "allReviewsLength": 6,
+    "userId": "468555123"
+  },
+  {
+    "highlightedCount": 1,
+    "goodReviewsCount": 787,
+    "allReviewsLength": 1,
+    "userId": "112249724"
+  },
+  {
+    "highlightedCount": 30,
+    "goodReviewsCount": 969,
+    "allReviewsLength": 41,
+    "userId": "163228737"
+  },
+  {
+    "highlightedCount": 0,
+    "goodReviewsCount": 1753,
+    "allReviewsLength": 10,
+    "userId": "139764720"
+  },
+  {
+    "highlightedCount": 3,
+    "goodReviewsCount": 1744,
+    "allReviewsLength": 76,
+    "userId": "39396820"
+  },
+  {
+    "highlightedCount": 6,
+    "goodReviewsCount": 2388,
+    "allReviewsLength": 26,
+    "userId": "48254077"
+  },
+  {
+    "highlightedCount": 0,
+    "goodReviewsCount": 1539,
+    "allReviewsLength": 1,
+    "userId": "50215582"
+  },
+  {
+    "highlightedCount": 1,
+    "goodReviewsCount": 157,
+    "allReviewsLength": 1,
+    "userId": "467956565"
+  },
+  {
+    "highlightedCount": 5,
+    "goodReviewsCount": 478,
+    "allReviewsLength": 20,
+    "userId": "393298923"
+  },
+  {
+    "highlightedCount": 40,
+    "goodReviewsCount": 1740,
+    "allReviewsLength": 81,
+    "userId": "107733201"
+  },
+  {
+    "highlightedCount": 3,
+    "goodReviewsCount": 1430,
+    "allReviewsLength": 48,
+    "userId": "236954495"
+  },
+  {
+    "highlightedCount": 0,
+    "goodReviewsCount": 3053,
+    "allReviewsLength": 2,
+    "userId": "50115694"
+  },
+  {
+    "highlightedCount": 0,
+    "goodReviewsCount": 570,
+    "allReviewsLength": 4,
+    "userId": "58712327"
+  },
+  {
+    "highlightedCount": 0,
+    "goodReviewsCount": 687,
+    "allReviewsLength": 2,
+    "userId": "179338145"
+  },
+  {
+    "highlightedCount": 0,
+    "goodReviewsCount": 538,
+    "allReviewsLength": 29,
+    "userId": "14210702"
+  },
+  {
+    "highlightedCount": 5,
+    "goodReviewsCount": 4739,
+    "allReviewsLength": 49,
+    "userId": "151792844"
+  },
+  {
+    "highlightedCount": 1,
+    "goodReviewsCount": 3573,
+    "allReviewsLength": 14,
+    "userId": "103332573"
+  },
+  {
+    "highlightedCount": 8,
+    "goodReviewsCount": 2022,
+    "allReviewsLength": 71,
+    "userId": "148722731"
+  },
+  {
+    "highlightedCount": 1,
+    "goodReviewsCount": 2350,
+    "allReviewsLength": 19,
+    "userId": "162577378"
+  },
+  {
+    "highlightedCount": 5,
+    "goodReviewsCount": 2666,
+    "allReviewsLength": 46,
+    "userId": "41817103"
+  },
+  {
+    "highlightedCount": 0,
+    "goodReviewsCount": 3467,
+    "allReviewsLength": 24,
+    "userId": "26197660"
+  },
+  {
+    "highlightedCount": 3,
+    "goodReviewsCount": 807,
+    "allReviewsLength": 18,
+    "userId": "348365652"
+  },
+  {
+    "highlightedCount": 1,
+    "goodReviewsCount": 532,
+    "allReviewsLength": 7,
+    "userId": "164702216"
+  },
+  {
+    "highlightedCount": 0,
+    "goodReviewsCount": 341,
+    "allReviewsLength": 10,
+    "userId": "450113996"
+  },
+  {
+    "highlightedCount": 0,
+    "goodReviewsCount": 204,
+    "allReviewsLength": 1,
+    "userId": "444714391"
+  },
+  {
+    "highlightedCount": 0,
+    "goodReviewsCount": 688,
+    "allReviewsLength": 0,
+    "userId": "45554817"
+  },
+  {
+    "highlightedCount": 3,
+    "goodReviewsCount": 4408,
+    "allReviewsLength": 68,
+    "userId": "220737356"
+  },
+  {
+    "highlightedCount": 2,
+    "goodReviewsCount": 2967,
+    "allReviewsLength": 76,
+    "userId": "130715370"
+  },
+  {
+    "highlightedCount": 3,
+    "goodReviewsCount": 3228,
+    "allReviewsLength": 77,
+    "userId": "158883817"
+  },
+  {
+    "highlightedCount": 1,
+    "goodReviewsCount": 1440,
+    "allReviewsLength": 22,
+    "userId": "30649421"
+  },
+  {
+    "highlightedCount": 0,
+    "goodReviewsCount": 80,
+    "allReviewsLength": 1,
+    "userId": "182759232"
+  },
+  {
+    "highlightedCount": 2,
+    "goodReviewsCount": 131,
+    "allReviewsLength": 3,
+    "userId": "102925546"
+  },
+  {
+    "highlightedCount": 5,
+    "goodReviewsCount": 5513,
+    "allReviewsLength": 89,
+    "userId": "116888109"
+  },
+  {
+    "highlightedCount": 4,
+    "goodReviewsCount": 2814,
+    "allReviewsLength": 34,
+    "userId": "126495939"
+  },
+  {
+    "highlightedCount": 6,
+    "goodReviewsCount": 3412,
+    "allReviewsLength": 68,
+    "userId": "53340095"
+  },
+  {
+    "highlightedCount": 0,
+    "goodReviewsCount": 2686,
+    "allReviewsLength": 36,
+    "userId": "140071675"
   }
 ]
