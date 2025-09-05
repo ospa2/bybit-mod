@@ -93,11 +93,12 @@ export async function fetchAndAppendPage() {
             console.log("Tbody не найден");
             return;
         }
-
+        tbody.querySelectorAll('.dynamic-row').forEach(row => row.remove());
+        tbody.querySelector('.completion-indicator')?.remove();
         // 1. Создаем пустой фрагмент
         const fragment = document.createDocumentFragment();
         let prioritizedAds = []; // Переменная для хранения приоритетных объявлений
-
+        
         // Убедимся, что ads.items существует и является массивом
         if (ads.items && Array.isArray(ads.items)) {
             ads.items.forEach(ad => {

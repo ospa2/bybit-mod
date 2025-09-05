@@ -41,8 +41,8 @@ export async function handleUrlChange() {
     }
     
     // Очищаем таблицу
-    tbody.querySelectorAll('.dynamic-row').forEach(row => row.remove());
-    tbody.querySelector('.completion-indicator')?.remove();
+    // tbody.querySelectorAll('.dynamic-row').forEach(row => row.remove());
+    // tbody.querySelector('.completion-indicator')?.remove();
 
     
     setStopLoading(false);
