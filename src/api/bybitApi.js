@@ -41,104 +41,106 @@ const bestMerchants = [
     '9916647',//Kings bit
 
 ];
+function now() { return new Date().toISOString(); }
+
 export async function fetchAndAppendPage() {
-    if (appState.isLoading || appState.shouldStopLoading) return;
-    appState.isLoading = true;
+  // Защита от одновременных вызовов
+  if (appState.isLoading || appState.shouldStopLoading) return;
+  appState.isLoading = true;
 
-    let side = "1";
-    let size = "1"
+  try {
     const currentUrl = window.location.href;
+    const tbody = document.querySelector(".trade-table__tbody");
+    if (!tbody) {
+      console.log(`[${now()}] Tbody не найден — выходим.`);
+      return;
+    }
+
+    // Если мы на sell-странице — просто один раз очистить таблицу и выйти
     if (currentUrl.includes("/sell/USDT/RUB")) {
-        side = "0"
-        size = "300"
+      console.log(`[${now()}] sell — очищаю таблицу и не делаю fetch.`);
+      tbody.querySelectorAll('.dynamic-row').forEach(row => row.remove());
+      tbody.querySelector('.completion-indicator')?.remove();
+      return;
     }
-    else if (currentUrl.includes("/buy/USDT/RUB")) {
-        side = "1"
-        size = "150"
-    };
 
+    // Если мы здесь — это buy страница
+    if (!currentUrl.includes("/buy/USDT/RUB")) {
+      console.log(`[${now()}] Не на buy/sell страницах — ничего не делаю.`);
+      return;
+    }
+
+    console.log(`[${now()}] buy — выполняю запрос к API.`);
+
+    // Параметры (size и side для buy)
     const payload = {
-        userId: USER_ID,
-        tokenId: "USDT",
-        currencyId: "RUB",
-        payment: [],
-        side: side,
-        size: size,
-        page: "1",
-        amount: "",
-        vaMaker: false,
-        bulkMaker: false,
-        canTrade: true,
-        verificationFilter: 0,
-        sortType: "OVERALL_RANKING",
-        paymentPeriod: [],
-        itemRegion: 1
+      userId: USER_ID,
+      tokenId: "USDT",
+      currencyId: "RUB",
+      payment: [],
+      side: "1",      // buy
+      size: "150",
+      page: "1",
+      amount: "",
+      vaMaker: false,
+      bulkMaker: false,
+      canTrade: true,
+      verificationFilter: 0,
+      sortType: "OVERALL_RANKING",
+      paymentPeriod: [],
+      itemRegion: 1
     };
 
-    try {
-        if (payload.side==="1") {
-            
-        
-        const res = await fetch("https://www.bybit.com/x-api/fiat/otc/item/online", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        });
+    const res = await fetch("https://www.bybit.com/x-api/fiat/otc/item/online", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
 
-        const json = await res.json();
-        const ads = json.result || json.data || {};
+    const json = await res.json();
+    const ads = json.result || json.data || {};
 
-        const tbody = document.querySelector(".trade-table__tbody");
-        if (!tbody) {
-            console.log("Tbody не найден");
-            return;
-        }
-        tbody.querySelectorAll('.dynamic-row').forEach(row => row.remove());
-        tbody.querySelector('.completion-indicator')?.remove();
-        // 1. Создаем пустой фрагмент
-        const fragment = document.createDocumentFragment();
-        let prioritizedAds = []; // Переменная для хранения приоритетных объявлений
-        
-        // Убедимся, что ads.items существует и является массивом
-        if (ads.items && Array.isArray(ads.items)) {
-            ads.items.forEach(ad => {
-                // Если это искомое объявление, сохраняем его и пропускаем добавление в фрагмент на этом шаге
-                if (bestMerchants.includes(ad.userId)) {
-                    prioritizedAds.push(ad);
-                    return; // Переходим к следующему элементу массива
-                }
+    // Удаляем старые строки и индикатор
+    tbody.querySelectorAll('.dynamic-row').forEach(row => row.remove());
+    tbody.querySelector('.completion-indicator')?.remove();
 
-                // Обрабатываем все остальные объявления как обычно
-                if (!adShouldBeFiltered(ad)) {
-                    const newRow = createRowFromTemplate(ad);
-                    if (newRow) {
-                        // 2. Добавляем обычные строки во фрагмент
-                        fragment.appendChild(newRow);
-                    }
-                }
-            });
+    // Создаем фрагмент и добавляем строки (приоритетные — наверх)
+    const fragment = document.createDocumentFragment();
+    const prioritizedAds = [];
 
-            // Если приоритетное объявление было найдено, создаем для него строку
-            // и добавляем ее в самое начало фрагмента
-            if (prioritizedAds.length > 0) {
-                prioritizedAds.forEach(ad => {
-                    if (!adShouldBeFiltered(ad)) {
-                        const prioritizedRow = createRowFromTemplate(ad);
-                        if (prioritizedRow) {
-                            fragment.prepend(prioritizedRow);
-                        }
-                    }
-                })
-            }
+    if (ads.items && Array.isArray(ads.items)) {
+      for (const ad of ads.items) {
+        if (typeof bestMerchants !== 'undefined' && bestMerchants.includes && bestMerchants.includes(ad.userId)) {
+          prioritizedAds.push(ad);
+          continue;
         }
 
-        // 3. Добавляем весь фрагмент (со всеми строками) в начало tbody за один раз
-        tbody.prepend(fragment);
+        if (typeof adShouldBeFiltered === 'function' && adShouldBeFiltered(ad)) {
+          continue;
+        }
+
+        const newRow = typeof createRowFromTemplate === 'function' ? createRowFromTemplate(ad) : null;
+        if (newRow) fragment.appendChild(newRow);
+      }
+
+      // Добавляем приоритетные объявления в начало
+      if (prioritizedAds.length) {
+        for (const ad of prioritizedAds.reverse()) { // reverse чтобы сохранить порядок при prepend
+          if (typeof adShouldBeFiltered === 'function' && adShouldBeFiltered(ad)) continue;
+          const prRow = typeof createRowFromTemplate === 'function' ? createRowFromTemplate(ad) : null;
+          if (prRow) fragment.prepend(prRow);
+        }
+      }
+    } else {
+      console.warn(`[${now()}] Ответ API не содержит ads.items массив.`);
     }
-    } catch (e) {
-        console.error("Ошибка при подгрузке:", e);
-    } finally {
-        // Гарантированно сбрасываем флаг загрузки в любом случае
-        appState.isLoading = false;
-    }
+
+    // Вставляем в tbody
+    tbody.prepend(fragment);
+    console.log(`[${now()}] Вставил ${fragment.childNodes.length} строк(ы) в tbody.`);
+  } catch (e) {
+    console.error(`[${now()}] Ошибка при подгрузке:`, e);
+  } finally {
+    appState.isLoading = false;
+  }
 }
