@@ -3,7 +3,7 @@ import { loadAndDisplayReviews } from "./review.js";
 import { startPriceTimer } from "../utils/timers.js";
 import { showNotification } from "../utils/notifications.js";
 import { paymentNames } from "../config.js";
-
+import { GM_xmlhttpRequest } from "$";
 export async function openTradingModal(originalAd) {
   // 1. --- ФАЗА НЕМЕДЛЕННОГО ОТОБРАЖЕНИЯ ---
 
@@ -36,8 +36,8 @@ export async function openTradingModal(originalAd) {
                             <div class="avatar ${
                               originalAd.isOnline ? "online" : ""
                             }">${(originalAd.nickName || "U")
-                            .charAt(0)
-                            .toUpperCase()}</div>
+    .charAt(0)
+    .toUpperCase()}</div>
                         </div>
                         <div class="advertiser-info">
                             <div class="advertiser-name">${
@@ -186,6 +186,7 @@ export async function openTradingModal(originalAd) {
 
     const apiResult = apiRes.result;
     apiResult.side = originalAd.side;
+    apiResult.nickName = originalAd.nickName;
 
     // ВАЖНО: Только теперь, когда все данные загружены, мы "оживляем" модальное окно
     setupModalEvents(apiResult);
@@ -242,9 +243,10 @@ export function setupModalEvents(apiResult) {
 
     const isValid =
       (amount > 0 &&
-      amount >= minAmountInUSDT &&
-      amount <= maxAmountInUSDT &&
-      amount <= balance)||(window.location.href.includes("buy"));
+        amount >= minAmountInUSDT &&
+        amount <= maxAmountInUSDT &&
+        amount <= balance) ||
+      window.location.href.includes("buy");
 
     console.log(
       amount,
@@ -315,58 +317,50 @@ export function setupModalEvents(apiResult) {
       isFromAi: false,
     };
   }
+  async function saveOrder() {
+    // Загружаем текущие ордера
+    let orders = JSON.parse(localStorage.getItem("orders") || "[]");
 
-  // === Продажа покупателю ===
-  function createSellPayload(apiResult) {
-    const paymentIdMap = {
-      75: "16627518", // Тинькофф
-      377: "17762813", // Сбербанк
-      614: "", // ПСБ
-      382: "16627221", // SBP
-      383: "19032627", // MIR
-      616: "", // Альфа-Банк
-      617: "", // Райффайзен
-      581: "17201839", // Tinkoff
-      582: "16664034", // Sberbank
-      584: "", // Sberbank
-      585: "16664050", // Sberbank
-      612: "", // Уралсиб
-      613: "", // Уралсиб
-    };
+    // Создаём новый объект ордера
+   const newOrder = {
+     "Order No.": apiResult.id, // уникальный номер
+     Type: "BUY", // "BUY" или "SELL"
+     "Fiat Amount": (parseFloat(amountInput.value) * apiResult.price)
+       .toFixed(2)
+       .toString(), // фиат сумма
+     Price: apiResult.price, // цена за монету
+     "Coin Amount": parseFloat(amountInput.value).toString(), // количество монет
+     Counterparty: apiResult.nickName, // контрагент
+     Status: "Completed", // или "Canceled"
+     Time: new Date().toISOString(), // ISO формат даты
+   };
 
-    // Приоритетные методы оплаты
-    const priorityPayments = ["75", "377", "382"];
+   GM_xmlhttpRequest({
+     method: "POST",
+     url: "https://orders-finances-68zktfy1k-ospa2s-projects.vercel.app/api/orders",
+     headers: {
+       "Content-Type": "application/json",
+       Accept: "application/json",
+     },
+     data: JSON.stringify(newOrder),
+     onload: function (response) {
+       console.log("Запрос успешно отправлен!");
+       console.log("Статус ответа:", response.status);
+       console.log("Тело ответа:", response.responseText);
+       // Если сервер возвращает JSON, вы можете его распарсить:
+       // const responseData = JSON.parse(response.responseText);
+     },
+     onerror: function (response) {
+       console.error("Произошла ошибка при отправке запроса.");
+       console.error("Статус ответа:", response.status);
+       console.error("Текст ошибки:", response.statusText);
+     },
+   });
+    // Добавляем в массив
+    orders.push(newOrder);
 
-    // Ищем приоритетный метод оплаты в массиве apiResult.payments
-    let selectedPayment = apiResult.payments[0]; // по умолчанию первый
-    let selectedPaymentId = paymentIdMap[selectedPayment] || "";
-
-    for (const payment of apiResult.payments) {
-      if (priorityPayments.includes(payment)) {
-        selectedPayment = payment;
-        selectedPaymentId = paymentIdMap[payment] || "";
-        break;
-      }
-    }
-
-    return {
-      itemId: apiResult.id,
-      tokenId: "USDT", //originalAd.tokenId,
-      currencyId: "RUB", //originalAd.currencyId,
-      side: "1",
-      quantity: parseFloat(amountInput.value).toString(), // $$
-      amount: (parseFloat(amountInput.value) * apiResult.price)
-        .toFixed(2)
-        .toString(), //₽₽₽
-      curPrice: apiResult.curPrice,
-      flag: "amount",
-      version: "1.0",
-      securityRiskToken: "",
-      isFromAi: false,
-      paymentType: selectedPayment,
-      paymentId: selectedPaymentId,
-      online: "0",
-    };
+    // Сохраняем обратно
+    localStorage.setItem("orders", JSON.stringify(orders));
   }
 
   // Обработка ввода суммы
@@ -412,10 +406,7 @@ export function setupModalEvents(apiResult) {
         throw new Error("Insufficient ad inventory, please try other ads.");
       }
       // Формируем payload для создания ордера
-      const orderPayload =
-        apiResult.side == 0
-          ? createSellPayload(apiResult)
-          : createBuyPayload(apiResult);
+      const orderPayload = createBuyPayload(apiResult);
 
       console.log("Отправка ордера:", orderPayload);
 
@@ -434,101 +425,10 @@ export function setupModalEvents(apiResult) {
       );
 
       const result = await response.json();
-      console.log("Первый ответ:", result);
 
-      // Проверяем, нужна ли верификация по риску
-      if (response.ok && result.result && result.result.needSecurityRisk) {
-        let riskToken = result.result.securityRiskToken; // Используем let вместо const
-
-        // Получить код с клавиатуры (нужно реализовать ввод)
-        const code = prompt("Введите код аутентификтор:"); // Или другой способ получения кода
-
-        if (!code) {
-          throw new Error("Код не введен");
-        }
-
-        // Отправляем verify
-        const verifyRes = await fetch(
-          "https://www.bybit.com/x-api/user/public/risk/verify",
-          {
-            method: "POST",
-            headers: {
-              "content-type": "application/json",
-              accept: "application/json",
-            },
-            credentials: "include",
-            body: JSON.stringify({
-              risk_token: riskToken,
-              component_list: {
-                google2fa: code // Убрал JSON.stringify, код должен быть строкой
-              },
-            }),
-          }
-        );
-        //{"risk_token":"543720233058911264377030036#533b23ba-9",
-        // "component_list":
-        //   {"google2fa":"273075"}
-        // }
-        //{"risk_token":"090420159051317303137030036#c97a7e16-1",
-        // "component_list":
-        //   {"google2fa":"120875"}
-        // }
-        //{"itemId":"1956010538855088128","tokenId":"USDT","currencyId":"RUB","side":"1","quantity":"115.8615","amount":"10000.00","curPrice":"dd39c5ddbb68423eb7472864669b2eb7","flag":"quantity","version":"1.0","securityRiskToken":"543720233058911264377030036#533b23ba-9","isFromAi":false,"paymentType":"377","paymentId":"17762813","online":"0"}
-        const verifyResult = await verifyRes.json();
-        console.log("Verify response:", verifyResult);
-
-        // Проверяем успешность верификации
-        if (
-          verifyResult.ret_code === 0 &&
-          verifyResult.result &&
-          verifyResult.result.risk_token !== ""
-        ) {
-          // Обновляем riskToken из результата верификации
-          riskToken = verifyResult.result.risk_token;
-
-          // Добавляем riskToken в orderPayload
-          orderPayload.securityRiskToken = riskToken;
-          //google2fa
-          // Повторно создаём ордер с обновленным payload
-          const finalResponse = await fetch(
-            "https://www.bybit.com/x-api/fiat/otc/order/create",
-            {
-              method: "POST",
-              headers: {
-                "content-type": "application/json",
-                accept: "application/json",
-              },
-              credentials: "include",
-              body: JSON.stringify(orderPayload),
-            }
-          );
-
-          const finalResult = await finalResponse.json();
-          console.log("✅ Final create order:", finalResult);
-
-          if (finalResult.ret_code === 0) {
-            console.log("🎉 Ордер на продажу успешно создан!");
-            showNotification("ордер успешно создан", "success");
-            closeModal();
-            return finalResult;
-          } else {
-            console.error(
-              "❌ Ошибка при финальном создании ордера:",
-              finalResult.ret_msg
-            );
-            showNotification(
-              "The transaction limit has been exceeded",
-              "error"
-            );
-            throw new Error(`Order creation failed: ${finalResult.ret_msg}`);
-          }
-        } else {
-          console.error("❌ Ошибка верификации:", verifyResult.ret_msg);
-          showNotification("❌ Ошибка верификации", "error");
-          throw new Error(`Verification failed: ${verifyResult.ret_msg}`);
-        }
-      } else if (response.ok && result.ret_code === 0) {
+      if (response.ok && result.ret_code === 0) {
         // Ордер создан успешно без верификации
+        saveOrder();
         console.log("✅ Ордер на покупку создан успешно:", result);
         showNotification("ордер успешно создан", "success");
         closeModal();

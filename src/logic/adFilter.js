@@ -7,7 +7,7 @@ export function adShouldBeFiltered(ad) {
     if (parseInt(ad.finishNum) <= MIN_EXECUTED_COUNT) return true;
     
     if (parseFloat(ad.price) > 87) return true;
-
+    if (ad.payments.includes('593')) return true;
     let storedStats = [];
     try {
         const raw = localStorage.getItem('reviewsStatistics_v1');

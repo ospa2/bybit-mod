@@ -14,7 +14,7 @@ export function createRowFromTemplate(ad) {
     const rowHTML = `
             <div class="dynamic-row" style="display: contents;">
                 <div class="table-row" style="display: table-row;">
-                    <div class="table-cell" style="display: table-cell; width: 800px; padding: 16px; vertical-align: middle;">
+                    <div class="table-cell" style="display: table-cell; width: 500px; padding: 16px; vertical-align: middle;">
                         <div class="moly-space flex items-center" style="gap: 16px;">
                             <div class="moly-space-item moly-space-item-first moly-space-item-last">
                                 <div class="moly-space flex-col inline-flex moly-space-vertical items-start" style="gap: 0px;">
