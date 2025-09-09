@@ -180,7 +180,6 @@ export async function loadAndDisplayReviews(originalAd) {
             balanceElement.textContent = `${parseFloat(curBalance).toLocaleString('ru-RU', {minimumFractionDigits: 4, maximumFractionDigits: 4})} ${originalAd.tokenId || 'USDT'}`;
         }
         const titleElement = document.getElementById('reviews-titleee');
-        console.log(titleElement);
        
         if (titleElement) {
             titleElement.textContent = `Хороших отзывов: ${goodReviewsCount.result.count}`;
@@ -238,9 +237,6 @@ export async function loadAndDisplayReviews(originalAd) {
         // Добавляем объект в наш объект статистики
         reviewsStatistics.add(statsObject);
         
-        // Выводим в консоль для отладки
-        console.log('Saved statistics:', statsObject);
-        console.log('All statistics:', reviewsStatistics.getAll());
 
         if (reviewsContainer) {
             reviewsContainer.innerHTML = reviewsHTML;

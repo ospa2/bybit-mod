@@ -368,3 +368,162 @@ function getRowIndex(btn) {
   );
   return rows.indexOf(row);
 }
+
+// Вставьте этот код в консоль браузера для использования на любом сайте
+class AutoClickElements {
+  constructor() {
+    this.observer = null;
+    this.isActive = false;
+    this.start();
+  }
+
+  start() {
+    if (this.isActive) return;
+    this.isActive = true;
+
+    this.observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === "childList") {
+          mutation.addedNodes.forEach((node) => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              this.checkForElements(node);
+            }
+          });
+        }
+      });
+    });
+
+    this.observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+
+    this.checkForElements(document.body);
+    console.log("AutoClick: Мониторинг всех элементов запущен");
+  }
+
+  checkForElements(element) {
+    if (!this.isActive) return;
+
+    // 1. Ищем кнопки с текстом "Подтвердить с помощью ключа доступа"
+    const buttons = element.querySelectorAll
+      ? element.querySelectorAll("button")
+      : element.tagName === "BUTTON"
+      ? [element]
+      : [];
+
+    buttons.forEach((button) => {
+      const buttonText = button.textContent?.trim();
+      if (
+        buttonText &&
+        buttonText.includes("Подтвердить с помощью ключа доступа")
+      ) {
+        console.log("AutoClick: Найдена кнопка подтверждения, выполняю клик");
+        this.clickElement(button, "button");
+      }
+    });
+
+    // 2. Ищем span с текстом "Все"
+    const allSpans = element.querySelectorAll
+      ? element.querySelectorAll("span")
+      : element.tagName === "SPAN"
+      ? [element]
+      : [];
+
+    allSpans.forEach((span) => {
+      const spanText = span.textContent?.trim();
+      if (spanText === "Все" && span.classList.contains("amount-input-all")) {
+        console.log('AutoClick: Найден span "Все", выполняю клик');
+        this.clickElement(span, "span");
+      }
+    });
+
+    // 3. Ищем селект "Выбрать способ оплаты"
+    const paymentSelects = element.querySelectorAll
+      ? element.querySelectorAll("div")
+      : element.tagName === "DIV"
+      ? [element]
+      : [];
+
+    paymentSelects.forEach((div) => {
+      const selectText = div.textContent?.trim();
+      if (
+        selectText &&
+        selectText.includes("Выбрать способ оплаты") &&
+        div.classList.contains("cursor-pointer")
+      ) {
+        console.log("AutoClick: Найден селект способа оплаты, открываю список");
+        this.clickElement(div, "payment selector", () => {
+          // После клика ждем и ищем SBP
+          setTimeout(() => {
+            this.findAndClickSBP();
+          }, 2500);
+        });
+      }
+    });
+  }
+
+  findAndClickSBP() {
+    const sbpDivs = document.querySelectorAll(
+      "div.payment-select__list-wrapper"
+    );
+
+    sbpDivs.forEach((div) => {
+      const sbpSpan = div.querySelector("span");
+      if (
+        sbpSpan &&
+        (sbpSpan.textContent?.trim() === "SBP" ||
+          sbpSpan.textContent?.trim() === "Sberbank" ||
+          sbpSpan.textContent?.trim() === "Tinkoff" ||
+          sbpSpan.textContent?.trim() === "OZON Bank" ||
+          sbpSpan.textContent?.trim() === "Local Card(Yellow)")
+      ) {
+        console.log("AutoClick: Найден SBP, выполняю клик");
+        this.clickElement(div, "SBP div");
+      }
+    });
+
+    // Повторная попытка если не нашли
+    if (sbpDivs.length === 0) {
+      console.log("AutoClick: SBP еще не загрузился, повторная попытка...");
+      setTimeout(() => {
+        this.findAndClickSBP();
+      }, 1000);
+    }
+  }
+
+  clickElement(element, type, callback) {
+    try {
+      if (element.disabled) {
+        console.log(`AutoClick: ${type} отключен`);
+        return;
+      }
+
+      if (type == "span") {
+        let i = 0;
+        let interval = setInterval(() => {
+          if (i > 10) {
+            clearInterval(interval);
+          }
+          i++;
+          element.focus();
+          element.click();
+          console.log(`span`);
+        }, 300);
+      } else {
+        element.focus();
+        element.click();
+        console.log(`button`);
+      }
+
+      if (callback && typeof callback === "function") {
+        callback();
+      }
+    } catch (error) {
+      console.log(`AutoClick: Ошибка при клике на ${type}:`, error.message);
+    }
+  }
+}
+
+// Запуск
+window.autoClickElements = new AutoClickElements();
