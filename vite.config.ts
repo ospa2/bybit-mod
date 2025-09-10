@@ -13,7 +13,7 @@ export default defineConfig({
         version: '3.0', // Можешь начать с 1.0
         description: 'Продвинутый фильтр для Bybit P2P',
         match: 'https://www.bybit.com/*/p2p/*/USDT/RUB',
-        grant: ['GM_xmlhttpRequest'],
+        grant: ['GM_xmlhttpRequest', 'GM_getValue', 'GM_setValue'],
         'run-at': 'document-end',
       },
     }),

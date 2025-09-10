@@ -4,6 +4,7 @@ import { startPriceTimer } from "../utils/timers.js";
 import { showNotification } from "../utils/notifications.js";
 import { paymentNames } from "../config.js";
 import { GM_xmlhttpRequest } from "$";
+import { GM_getValue, GM_setValue } from "$";
 export async function openTradingModal(originalAd) {
   // 1. --- ФАЗА НЕМЕДЛЕННОГО ОТОБРАЖЕНИЯ ---
 

@@ -1,5 +1,5 @@
 // sliders.js
-
+import { GM_getValue, GM_setValue } from "$";
 /**
  * Инициализирует замену текстовых полей на двойные слайдеры.
  * @param {object} options - Объект с настройками.
@@ -38,7 +38,7 @@ function createDoubleSlider(originalInput, container, options) {
     originalInput.setAttribute('data-slider-id', sliderId);
 
     // Загружаем сохраненные значения из localStorage
-    const savedValues = JSON.parse(localStorage.getItem(sliderId));
+    const savedValues = GM_getValue(sliderId, null);
     let initialMin = savedValues ? savedValues.min : MIN_VALUE;
     let initialMax = savedValues ? savedValues.max : MAX_VALUE;
     
@@ -107,7 +107,7 @@ function createDoubleSlider(originalInput, container, options) {
         container.dispatchEvent(new Event('change', { bubbles: true }));
 
         // Сохраняем значения в localStorage
-        localStorage.setItem(sliderId, JSON.stringify({ min, max }));
+        GM_setValue(sliderId, { min, max });
 
     }
 

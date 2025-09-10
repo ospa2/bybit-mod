@@ -12,7 +12,7 @@ export async function loadOnceAndApply() {
     console.log(`[${now()}] Запрос уже в процессе — пропускаю новый вызов.`);
     return;
   }
-
+  
   console.log(`[${now()}] Начинаю загрузку (single request)...`);
   appState.isSequentialLoadingActive = true;
   setStopLoading(false);

@@ -4,12 +4,11 @@ import { updateGlobalValues } from "./state.js";
 import {
   loadOnceAndApply,
   observeUrlChanges,
-  handleUrlChange,
 } from "./logic/loader.js";
 import { filterRemark } from "./utils/formatters.js";
 import { adShouldBeFiltered } from "./logic/adFilter.js";
 import { loadAndDisplayReviews } from "./components/review.js";
-import { GM_xmlhttpRequest } from "$";
+import { GM_xmlhttpRequest, GM_getValue, GM_setValue } from "$";
 import { bestMerchants } from "./config.js";
 let periodicRefreshId = null;
 
@@ -140,12 +139,11 @@ window.fetch = async (...args) => {
         // Попытка загрузить статистику из localStorage один раз
         let storedStats = [];
         try {
-          const raw = localStorage.getItem("reviewsStatistics_v1");
-          storedStats = raw ? JSON.parse(raw) : [];
+          storedStats = GM_getValue("reviewsStatistics_v1", []);
           if (!Array.isArray(storedStats)) storedStats = [];
         } catch (err) {
           console.warn(
-            "Не удалось прочитать reviewsStatistics_v1 из localStorage:",
+            "Не удалось прочитать reviewsStatistics_v1 из GM-хранилища:",
             err
           );
           storedStats = [];
@@ -542,3 +540,4 @@ class AutoClickElements {
 
 // Запуск
 window.autoClickElements = new AutoClickElements();
+

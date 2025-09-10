@@ -1,5 +1,5 @@
 import { analyzeReview } from '../logic/reviewAnalyzer.js';
-
+import { GM_getValue, GM_setValue } from "$";
 function createReviewHTML(review, className) {
     function convertBybitTime(bybitTimestamp) {
         const date = new Date(bybitTimestamp);
@@ -67,68 +67,71 @@ async function fetchAllReviews(userId) {
 const STORAGE_KEY = 'reviewsStatistics_v1';
 
 const reviewsStatistics = {
-    // Загружаем из localStorage при создании объекта
-    data: (function loadFromStorage() {
-        try {
-            const raw = localStorage.getItem("reviewsStatistics_v1");
-            if (!raw) return [];
-            const parsed = JSON.parse(raw);
-            return Array.isArray(parsed) ? parsed : [];
-        } catch (e) {
-            console.warn('Не удалось прочитать reviewsStatistics из localStorage:', e);
-            return [];
-        }
-    })(),
-
-    // Вспомогательная функция для записи в localStorage
-    _saveToStorage() {
-        try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
-        } catch (e) {
-            console.warn('Не удалось сохранить reviewsStatistics в localStorage:', e);
-        }
-    },
-
-    // Метод для добавления новой записи или замены существующей
-    add(stats) {
-        const existingIndex = this.data.findIndex(item => item.userId === stats.userId);
-
-        const newEntry = {
-            ...stats,
-        };
-
-        if (existingIndex !== -1) {
-            // Заменяем существующую запись
-            this.data[existingIndex] = newEntry;
-        } else {
-            // Добавляем новую запись
-            this.data.push(newEntry);
-        }
-
-        // Сохраняем изменения в localStorage
-        this._saveToStorage();
-    },
-
-    // Метод для получения всех записей (возвращает копию массива)
-    getAll() {
-        return this.data.slice();
-    },
-
-    // Метод для получения последней записи
-    getLast() {
-        return this.data.length ? this.data[this.data.length - 1] : null;
-    },
-
-    // Метод для очистки данных
-    clear() {
-        this.data = [];
-        this._saveToStorage();
-    },
-
-    // Дополнительно: получить запись по userId (удобно)
-    getByUserId(userId) {
-        return this.data.find(item => item.userId === userId) || null;
+  // Загружаем из localStorage при создании объекта
+  data: (function loadFromStorage() {
+    try {
+      const parsed = GM_getValue("reviewsStatistics_v1", []);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      console.warn(
+        "Не удалось прочитать reviewsStatistics из GM-хранилища:",
+        e
+      );
+      return [];
     }
+  })(),
+
+  // Вспомогательная функция для записи
+  _saveToStorage() {
+    try {
+      GM_setValue(STORAGE_KEY, this.data);
+    } catch (e) {
+      console.warn("Не удалось сохранить reviewsStatistics в GM-хранилище:", e);
+    }
+  },
+
+  // Метод для добавления новой записи или замены существующей
+  add(stats) {
+    const existingIndex = this.data.findIndex(
+      (item) => item.userId === stats.userId
+    );
+
+    const newEntry = {
+      ...stats,
+    };
+
+    if (existingIndex !== -1) {
+      // Заменяем существующую запись
+      this.data[existingIndex] = newEntry;
+    } else {
+      // Добавляем новую запись
+      this.data.push(newEntry);
+    }
+
+    // Сохраняем изменения в localStorage
+    this._saveToStorage();
+  },
+
+  // Метод для получения всех записей (возвращает копию массива)
+  getAll() {
+    return this.data.slice();
+  },
+
+  // Метод для получения последней записи
+  getLast() {
+    return this.data.length ? this.data[this.data.length - 1] : null;
+  },
+
+  // Метод для очистки данных
+  clear() {
+    this.data = [];
+    this._saveToStorage();
+  },
+
+  // Дополнительно: получить запись по userId (удобно)
+  getByUserId(userId) {
+    return this.data.find((item) => item.userId === userId) || null;
+  },
 };
 
 export default reviewsStatistics;
