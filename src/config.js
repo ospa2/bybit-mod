@@ -560,3 +560,10 @@ export const paymentIdMap = {
     '612': '',         // Уралсиб
     '613': ''          // Уралсиб
 };
+
+export const bestMerchants = [
+  "149696147", //Love is….
+  "350822297", //ZolotayaScaha
+  "50115694", //Mansur S
+  "9916647", //Kings bit
+];

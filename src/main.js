@@ -10,6 +10,7 @@ import { filterRemark } from "./utils/formatters.js";
 import { adShouldBeFiltered } from "./logic/adFilter.js";
 import { loadAndDisplayReviews } from "./components/review.js";
 import { GM_xmlhttpRequest } from "$";
+import { bestMerchants } from "./config.js";
 let periodicRefreshId = null;
 
 function now() {
@@ -160,7 +161,15 @@ window.fetch = async (...args) => {
               row.classList.add("filtered-ad");
               return;
             }
-
+            
+            if (bestMerchants.includes(ad.userId)) {
+              const sellBtn = row.querySelector(
+                ".trade-list-action-button button"
+              );
+              if (sellBtn) {
+                sellBtn.click();
+              }
+            }
             // Создаем новый td элемент
             const newTd = document.createElement("td");
             newTd.style.width = "100px";
@@ -312,7 +321,7 @@ window.fetch = async (...args) => {
     response
       .clone()
       .json()
-      .then((data) => {
+      .then(() => {
         const body = JSON.parse(args[1].body)
         console.log('modal:', modal);//null почему то
         
@@ -457,6 +466,12 @@ class AutoClickElements {
           // После клика ждем и ищем SBP
           setTimeout(() => {
             this.findAndClickSBP();
+            const sellButton = modal.querySelector("button.moly-btn");
+            if (sellButton && sellButton.textContent.includes("Продажа")) {
+              sellButton.click();
+              console.log('sellButton:', sellButton);
+              
+            }
           }, 2500);
         });
       }

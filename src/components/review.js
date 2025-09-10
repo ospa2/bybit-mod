@@ -70,7 +70,7 @@ const reviewsStatistics = {
     // Загружаем из localStorage при создании объекта
     data: (function loadFromStorage() {
         try {
-            const raw = localStorage.getItem(STORAGE_KEY);
+            const raw = localStorage.getItem("reviewsStatistics_v1");
             if (!raw) return [];
             const parsed = JSON.parse(raw);
             return Array.isArray(parsed) ? parsed : [];
