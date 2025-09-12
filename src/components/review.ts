@@ -1,17 +1,21 @@
-import { analyzeReview } from '../logic/reviewAnalyzer.js';
+import { analyzeReview } from '../logic/reviewAnalyzer.ts';
 import { GM_getValue, GM_setValue } from "$";
-function createReviewHTML(review, className) {
-    function convertBybitTime(bybitTimestamp) {
-        const date = new Date(bybitTimestamp);
+import type { Review, ReviewStats } from '../types/reviews';
+import type { Ad } from '../types/ads';
+function createReviewHTML(review: Review, className: string) {
+    function convertBybitTime(bybitTimestamp: string) {
+        const bbtt = Number(bybitTimestamp)
+        const date = new Date(bbtt);
         const d = String(date.getDate()).padStart(2, '0');
         const m = String(date.getMonth() + 1).padStart(2, '0');
         const y = date.getFullYear();
+        
         return `${d}.${m}.${y}`;
     }
 
     const analysis = analyzeReview(review.appraiseContent);
     const highlightClass = analysis.shouldHighlight ? 'highlighted-review' : '';
-    const formattedDate = convertBybitTime(Number(review.updateDate));
+    const formattedDate = convertBybitTime(review.updateDate);
 
     return `
         <li class="${className} ${highlightClass}">
@@ -21,7 +25,7 @@ function createReviewHTML(review, className) {
 }
 
 // --- Вспомогательная функция для загрузки всех страниц отзывов ПАРАЛЛЕЛЬНО ---
-async function fetchAllReviews(userId) {
+async function fetchAllReviews(userId: string) {
     // Создаем массив номеров страниц [1, 2, 3, 4, 5, 6, 7]
     const pageNumbers = Array.from({ length: 7 }, (_, i) => i + 1);
 
@@ -43,19 +47,23 @@ async function fetchAllReviews(userId) {
         }).then(res => res.json());
     })
     // Ожидаем выполнения ВСЕХ запросов одновременно
-    const results = await Promise.all(reviewPromises, hiddenReviewPromises);
-    const hiddenResults = await Promise.all(hiddenReviewPromises)
+    const allPromises = [...reviewPromises, ...hiddenReviewPromises];
+    const results = await Promise.all(allPromises);
+    const hiddenResults = await Promise.all(hiddenReviewPromises);
     // Собираем отзывы из всех полученных страниц в один плоский массив
     // и сразу отсекаем пустые страницы
     const reviews = results.flatMap(json => 
         json.result?.appraiseInfoVo || []
     );
+    
+    
 
     const hiddenReviews = hiddenResults.flatMap(json => 
         json.result?.appraiseInfoVo || []
     );
     const allReviews = reviews.concat(hiddenReviews);
-    const sortedReviews = allReviews.sort((a, b) => b.updateDate - a.updateDate);
+    const uniqueReviews = allReviews.filter((item, index) => allReviews.indexOf(item) === index);
+    const sortedReviews = uniqueReviews.sort((a, b) => b.updateDate - a.updateDate);
     
     return sortedReviews;
 }
@@ -64,25 +72,20 @@ async function fetchAllReviews(userId) {
 // Создаем объект для хранения статистики в памяти
 // Создаем объект для хранения статистики в памяти
 // Ключ в localStorage — при необходимости поменяйте (версионирование полезно при изменениях структуры)
-const STORAGE_KEY = 'reviewsStatistics_v1';
+const STORAGE_KEY = "reviewsStatistics_v1";
 
 const reviewsStatistics = {
-  // Загружаем из localStorage при создании объекта
-  data: (function loadFromStorage() {
+  data: (function loadFromStorage(): ReviewStats[] {
     try {
-      const parsed = GM_getValue("reviewsStatistics_v1", []);
-      return Array.isArray(parsed) ? parsed : [];
+      const parsed = GM_getValue(STORAGE_KEY, []) as unknown;
+      return Array.isArray(parsed) ? (parsed as ReviewStats[]) : [];
     } catch (e) {
-      console.warn(
-        "Не удалось прочитать reviewsStatistics из GM-хранилища:",
-        e
-      );
+      console.warn("Не удалось прочитать reviewsStatistics из GM-хранилища:", e);
       return [];
     }
   })(),
 
-  // Вспомогательная функция для записи
-  _saveToStorage() {
+  _saveToStorage(): void {
     try {
       GM_setValue(STORAGE_KEY, this.data);
     } catch (e) {
@@ -90,53 +93,41 @@ const reviewsStatistics = {
     }
   },
 
-  // Метод для добавления новой записи или замены существующей
-  add(stats) {
-    const existingIndex = this.data.findIndex(
-      (item) => item.userId === stats.userId
-    );
+  add(stats: ReviewStats): void {
+    const existingIndex = this.data.findIndex((item) => item.userId === stats.userId);
 
-    const newEntry = {
-      ...stats,
-    };
+    const newEntry: ReviewStats = { ...stats };
 
     if (existingIndex !== -1) {
-      // Заменяем существующую запись
       this.data[existingIndex] = newEntry;
     } else {
-      // Добавляем новую запись
       this.data.push(newEntry);
     }
 
-    // Сохраняем изменения в localStorage
     this._saveToStorage();
   },
 
-  // Метод для получения всех записей (возвращает копию массива)
-  getAll() {
+  getAll(): ReviewStats[] {
     return this.data.slice();
   },
 
-  // Метод для получения последней записи
-  getLast() {
+  getLast(): ReviewStats | null {
     return this.data.length ? this.data[this.data.length - 1] : null;
   },
 
-  // Метод для очистки данных
-  clear() {
+  clear(): void {
     this.data = [];
     this._saveToStorage();
   },
 
-  // Дополнительно: получить запись по userId (удобно)
-  getByUserId(userId) {
+  getByUserId(userId: string): ReviewStats | null {
     return this.data.find((item) => item.userId === userId) || null;
   },
 };
 
 export default reviewsStatistics;
 
-export async function loadAndDisplayReviews(originalAd) {
+export async function loadAndDisplayReviews(originalAd: Ad) {
     const reviewsContainer = document.getElementById('reviews-container');
     try {
         // --- 1. ПАРАЛЛЕЛЬНАЯ ЗАГРУЗКА ДАННЫХ ---

@@ -1,43 +1,14 @@
-import { createRowFromTemplate } from "../components/AdRow.js";
-import { adShouldBeFiltered } from "../logic/adFilter.js";
-import { USER_ID } from "../config.js";
-import { appState } from "../state.js";
+import { createRowFromTemplate } from "../components/adRow.ts";
+import { adShouldBeFiltered } from "../logic/adFilter.ts";
+import { USER_ID } from "../config.ts";
+import { appState } from "../state.ts";
 
-/**
- * Функция подгрузки следующей страницы объявлений.
- *  * Если страница уже загружается, то ничего не делает.
- *  * Определяет, является ли текущая страница страницей продажи или покупки USDT/RUB.
- *  * Собирает payload для запроса на сервер, где:
- * - userId = USER_ID
- * - tokenId = "USDT"
- * - currencyId = "RUB"
- * - payment = [] (пустой массив)
- * - side = 0 (для продажи) или 1 (для покупки)
- * - size = 1 для покупки или 300 для продажи
- * - page = 1
- * - amount = ""
- * - vaMaker = false
- * - bulkMaker = false
- * - canTrade = true
- * - verificationFilter = 0
- * - sortType = "OVERALL_RANKING"
- * - paymentPeriod = []
- * - itemRegion = 1
- *  * Отправляет POST запрос на https://www.bybit.com/x-api/fiat/otc/item/online
- *  * Если запрос успешен, то:
- * - Берет из ответа ads.items
- * - Если в ответе есть объявление с accountId="3453456436", оно будет первым в списке.
- * - Создает из них строки для таблицы
- * - Добавляет эти строки в начало tbody
- *  * Если запрос неудачен, то выводит ошибку в консоль.
- *  * В конце всегда выставляет appState.isLoading = false.
- */
+
 const bestMerchants = [
     "149696147",//Love is….
     "350822297",//ZolotayaScaha
     "50115694",//Mansur S
     '123002421',//Super T
-    "194018609",//FonDip
     '9916647',//Kings bit
 
 ];

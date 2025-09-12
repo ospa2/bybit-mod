@@ -1,5 +1,5 @@
-export function startPriceTimer() {
-    const timerElement = document.querySelector('#price-timer');
+export function startPriceTimer(): void {
+    const timerElement = document.querySelector<HTMLElement>('#price-timer');
     if (!timerElement) return;
 
     let seconds = 29;
@@ -19,15 +19,15 @@ export function startPriceTimer() {
     }, 1000);
 
     // Очищаем интервал при закрытии модального окна
-    const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
+    const observer = new MutationObserver((mutations: MutationRecord[]) => {
+        for (const mutation of mutations) {
             mutation.removedNodes.forEach((node) => {
-                if (node.querySelector && node.querySelector('#price-timer')) {
+                if (node instanceof HTMLElement && node.querySelector('#price-timer')) {
                     clearInterval(interval);
                     observer.disconnect();
                 }
             });
-        });
+        }
     });
 
     observer.observe(document.body, { childList: true, subtree: true });

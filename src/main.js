@@ -1,15 +1,15 @@
 import "./style.css";
-import { initSliderReplacement } from "C:/Web/bybitmod/bybit-mod/src/components/rangeSlider.js";
-import { updateGlobalValues } from "./state.js";
+import { initSliderReplacement } from "C:/Web/bybitmod/bybit-mod/src/components/rangeSlider.ts";
+import { updateGlobalValues } from "./state.ts";
 import {
   loadOnceAndApply,
   observeUrlChanges,
-} from "./logic/loader.js";
-import { filterRemark } from "./utils/formatters.js";
-import { adShouldBeFiltered } from "./logic/adFilter.js";
-import { loadAndDisplayReviews } from "./components/review.js";
+} from "./logic/loader.ts";
+import { filterRemark } from "./utils/formatters.ts";
+import { adShouldBeFiltered } from "./logic/adFilter.ts";
+import { loadAndDisplayReviews } from "./components/review.ts";
 import { GM_xmlhttpRequest, GM_getValue } from "$";
-import { bestMerchants } from "./config.js";
+import { bestMerchants } from "./config.ts";
 let periodicRefreshId = null;
 
 function now() {

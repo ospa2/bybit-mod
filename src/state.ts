@@ -1,7 +1,6 @@
-// src/state.js
+// src/state.ts
 
-import { handleUrlChange } from "./logic/loader";
-
+import { handleUrlChange } from "./logic/loader.ts";
 // Единый объект состояния приложения
 export const appState = {
     MIN_LEFT_VALUE: 10000,
@@ -14,7 +13,7 @@ export const appState = {
 /**
  * Обновляет граничные значения фильтра.
  */
-export function updateGlobalValues(min, max, onChangeCallback) {
+export function updateGlobalValues(min: number, max: number, onChangeCallback: () => void) {
     if (min === appState.MIN_LEFT_VALUE && max === appState.MAX_RIGHT_VALUE) return;
 
     appState.MIN_LEFT_VALUE = min;
@@ -31,11 +30,12 @@ export function updateGlobalValues(min, max, onChangeCallback) {
 }
 
 /** Устанавливает состояние загрузки. */
-export function setLoading(status) {
+export function setLoading(status: boolean) {
     appState.isLoading = status;
 }
 
 /** Устанавливает флаг для остановки цикла загрузки. */
-export function setStopLoading(status) {
+export function setStopLoading(status: boolean) {
     appState.shouldStopLoading = status;
 }
+

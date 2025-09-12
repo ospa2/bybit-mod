@@ -1,10 +1,10 @@
 // src/logic/loader.js 
-import { appState, setStopLoading } from "../state.js"; 
-import { fetchAndAppendPage } from "../api/bybitApi.js";
+import { appState, setStopLoading } from "../state.ts"; 
+import { fetchAndAppendPage } from "../api/bybitApi.ts";
  
 const DEBOUNCE_MS = 150;
 
-let handleUrlChangeDebounced;
+let handleUrlChangeDebounced: ReturnType<typeof setTimeout> | null = null;
 function now() { return new Date().toISOString(); }
 
 export async function loadOnceAndApply() {

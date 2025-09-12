@@ -1,4 +1,4 @@
-//src/config.js
+//src/config.ts
 export const USER_ID = 204412940//498960529 - id маминого акка;
 export const MIN_EXECUTED_COUNT = 100;
 export const MAX_PRICE_DIFFERENCE = 100000;
@@ -138,7 +138,7 @@ export const KEYWORDS_TO_HIGHLIGHT = [
   "уведомление от банка",
   "карту заблоч",
   'счет заблоч',
-  // '',
+  'я вернул деньги',
   // '',
   // '',
   // '',

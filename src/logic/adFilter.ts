@@ -1,15 +1,17 @@
-//src/logic/adFilter.js 
+//src/logic/adFilter.ts 
  
-import { forbiddenPhrases, MIN_EXECUTED_COUNT, MAX_PRICE_DIFFERENCE } from '../config.js';
-import { appState } from '../state.js';
+import { forbiddenPhrases, MIN_EXECUTED_COUNT, MAX_PRICE_DIFFERENCE } from '../config.ts';
+import { appState } from '../state.ts';
 import { GM_getValue } from '$';
+import type { Ad } from '../types/ads';
+import type { ReviewStats } from '../types/reviews';
 
-export function adShouldBeFiltered(ad) {
-    if (parseInt(ad.finishNum) <= MIN_EXECUTED_COUNT) return true;
+export function adShouldBeFiltered(ad: Ad) {
+    if (ad.finishNum <= MIN_EXECUTED_COUNT) return true;
     
     //if (parseFloat(ad.price) > 87) return true;
     if (ad.payments.includes('593')) return true;
-    let storedStats = [];
+    let storedStats: ReviewStats[] = [];
     try {
       storedStats = GM_getValue("reviewsStatistics_v1", []);
       if (!Array.isArray(storedStats)) storedStats = [];
@@ -21,8 +23,10 @@ export function adShouldBeFiltered(ad) {
       storedStats = [];
     }
 
-    if(storedStats.flatMap(item => item.userId).includes(ad.userId) && storedStats.find(item => item.userId === ad.userId).highlightedCount>=3) {
-        return true
+    const userStats = storedStats.find(item => item.userId === ad.userId);
+    
+    if(userStats && userStats.highlightedCount >= 3) {
+        return true;
     }
     const min = parseFloat(ad.minAmount);
     const max = parseFloat(ad.maxAmount);

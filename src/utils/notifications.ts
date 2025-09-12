@@ -1,6 +1,8 @@
-export function showNotification(message, type = 'info') {
+type NotificationType = 'info' | 'success' | 'error';
+
+export function showNotification(message: string, type: NotificationType = 'info'): void {
     // Удаляем существующие уведомления
-    const existingNotifications = document.querySelectorAll('.trade-notification');
+    const existingNotifications = document.querySelectorAll<HTMLDivElement>('.trade-notification');
     existingNotifications.forEach(notif => notif.remove());
 
     const notification = document.createElement('div');
