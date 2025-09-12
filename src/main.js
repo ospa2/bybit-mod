@@ -8,7 +8,7 @@ import {
 import { filterRemark } from "./utils/formatters.js";
 import { adShouldBeFiltered } from "./logic/adFilter.js";
 import { loadAndDisplayReviews } from "./components/review.js";
-import { GM_xmlhttpRequest, GM_getValue, GM_setValue } from "$";
+import { GM_xmlhttpRequest, GM_getValue } from "$";
 import { bestMerchants } from "./config.js";
 let periodicRefreshId = null;
 
@@ -197,7 +197,6 @@ window.fetch = async (...args) => {
               const target = row.querySelector(
                 ".moly-space-item.moly-space-item-first"
               );
-              console.log("target:", target);
 
               if (target) {
                 // Проверяем, есть ли уже statsDiv после target
@@ -260,7 +259,6 @@ window.fetch = async (...args) => {
               modal = document.querySelector(
                 '[role="dialog"], [aria-modal="true"]'
               );
-              console.log("modal:", modal);//корректно находит
 
               if (modal) {
                 // Заменяем стиль width на w-full
@@ -305,8 +303,6 @@ window.fetch = async (...args) => {
                 loadAndDisplayReviews(ads[index]);
                 clearInterval(reviewsInterval);
                 console.log("отзывы вставлены, стиль обновлен");
-              } else {
-                console.warn("Модальное окно не найдено");
               }
             }, 100);
           }
@@ -464,12 +460,12 @@ class AutoClickElements {
           // После клика ждем и ищем SBP
           setTimeout(() => {
             this.findAndClickSBP();
-            const sellButton = modal.querySelector("button.moly-btn");
-            if (sellButton && sellButton.textContent.includes("Продажа")) {
-              sellButton.click();
-              console.log('sellButton:', sellButton);
+            // const sellButton = modal.querySelector("button.moly-btn");
+            // if (sellButton && sellButton.textContent.includes("Продажа")) {
+            //   sellButton.click();
+            //   console.log('sellButton:', sellButton);
               
-            }
+            // }
           }, 2500);
         });
       }
@@ -541,3 +537,89 @@ class AutoClickElements {
 // Запуск
 window.autoClickElements = new AutoClickElements();
 
+
+
+ const API_KEY = "K8CPRLuqD302ftIfua";
+ const API_SECRET = "E86RybeO4tLjoXiR5YYtbVStHC9qXCHDBeOI";
+
+ // Подключение к приватному WebSocket
+ const ws = new WebSocket("wss://stream.bybit.com/v5/private");
+
+async function getAuthParams() {
+  const expires = Date.now() + 60_000;
+  const encoder = new TextEncoder();
+
+  // Импортируем секретный ключ
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(API_SECRET),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+
+  // Подписываем строку (apiKey + expires)
+  const signatureBuf = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    encoder.encode(API_KEY + expires)
+  );
+
+  // Преобразуем ArrayBuffer → hex строку
+  const signature = Array.from(new Uint8Array(signatureBuf))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+
+  return { api_key: API_KEY, expires, signature };
+}
+
+
+let pingInterval;
+
+ws.onopen = async () => {
+  console.log("✅ WS connected");
+
+  const { api_key, expires, signature } = await getAuthParams();
+
+  ws.send(
+    JSON.stringify({
+      op: "auth",
+      args: [api_key, expires, signature],
+    })
+  );
+
+  // Запускаем пинг каждые 20 секунд
+  pingInterval = setInterval(() => {
+    ws.send(JSON.stringify({ op: "ping", ts: Date.now() }));
+  }, 20_000);
+};
+
+ws.onmessage = (event) => {
+  const msg = JSON.parse(event.data);
+  console.log("📩 MSG:", msg);
+
+  if (msg.op === "auth" && msg.success) {
+    console.log("✅ Auth success, подписываемся на ордера...");
+    ws.send(JSON.stringify({ op: "subscribe", args: ["order"] }));
+  }
+
+  // Отвечаем на ping сервера
+  if (msg.op === "ping") {
+    ws.send(JSON.stringify({ op: "pong", ts: msg.ts }));
+  }
+
+  if (msg.topic === "order" && msg.data) {
+    msg.data.forEach((order) => {
+      console.log(`➡️ Ордер ${order.orderId} → статус: ${order.orderStatus}`);
+    });
+  }
+};
+
+ws.onclose = () => {
+  console.warn("⚠️ WS disconnected");
+  clearInterval(pingInterval);
+};
+
+ws.onerror = (err) => {
+  console.error("❌ WS error", err);
+};

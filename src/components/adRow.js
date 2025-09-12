@@ -69,7 +69,7 @@ export function createRowFromTemplate(ad) {
                     </div>
                     <div class="table-cell" style="display: table-cell; min-width: 120px; max-width: 180px; padding: 16px; vertical-align: middle;">
                         <span class="price-amount">
-                            ${parseFloat(ad.price).toFixed(2)} <span class="price-unit">${ad.currencyId || 'RUB'}</span>
+                            ${parseFloat(ad.price || 0).toFixed(2)} <span class="price-unit">${ad.currencyId || 'RUB'}</span>
                         </span>
                     </div>
                     <div class="table-cell" style="display: table-cell; min-width: 220px; padding: 16px; vertical-align: middle;">                     
@@ -94,9 +94,91 @@ export function createRowFromTemplate(ad) {
     tempDiv.innerHTML = rowHTML.trim();
     const newRow = tempDiv.firstChild;
 
-    newRow.querySelector('button')?.addEventListener('click', async () => {       
+    // --- Вспомогательные функции для попапа ---
+    function removeExistingPricePopup() {
+        const existing = document.querySelector('.price-popup');
+        if (existing) existing.remove();
+        document.removeEventListener('click', handleDocClickForPopup);
+    }
+
+    function handleDocClickForPopup(e) {
+        // если кликнули вне попапа и вне .price-amount — скрыть попап
+        const popup = document.querySelector('.price-popup');
+        if (!popup) return;
+        if (!popup.contains(e.target) && !e.target.closest('.price-amount')) {
+            removeExistingPricePopup();
+        }
+    }
+
+    function showPricePopup(anchorElem, valueStr) {
+        removeExistingPricePopup(); // убираем старый, если есть
+
+        const popup = document.createElement('div');
+        popup.className = 'price-popup';
+        popup.style.position = 'absolute';
+        popup.style.padding = '8px 10px';
+        popup.style.borderRadius = '6px';
+        popup.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)';
+        popup.style.background = 'white';
+        popup.style.color = 'black';
+        popup.style.fontSize = '13px';
+        popup.style.zIndex = 99999;
+        popup.style.whiteSpace = 'nowrap';
+        popup.style.transition = 'opacity 0.12s ease';
+        popup.style.opacity = '0';
+
+        popup.innerHTML = `<strong>+3%:</strong> ${valueStr}`;
+
+        // добавляем невидимо, чтобы узнать размеры
+        document.body.appendChild(popup);
+        // позиционирование относительно anchorElem
+        const rect = anchorElem.getBoundingClientRect();
+        const popupRect = popup.getBoundingClientRect();
+
+        // попробуем разместить сверху; если не помещается, разместим снизу
+        const margin = 8;
+        let top = rect.top + window.scrollY - popupRect.height - margin;
+        let left = rect.left + window.scrollX + (rect.width - popupRect.width) / 2;
+
+        // поправки, чтобы не вылезало за экран
+        if (left < 8) left = 8;
+        if (left + popupRect.width > window.scrollX + document.documentElement.clientWidth - 8) {
+            left = window.scrollX + document.documentElement.clientWidth - popupRect.width - 8;
+        }
+        if (top < window.scrollY + 8) { // если сверху не помещается — ставим снизу
+            top = rect.bottom + window.scrollY + margin;
+        }
+
+        popup.style.left = `${Math.round(left)}px`;
+        popup.style.top = `${Math.round(top)}px`;
+
+        // плавно показать
+        requestAnimationFrame(() => { popup.style.opacity = '1'; });
+
+        // закроется по клику вне или через 3 секунды
+        setTimeout(removeExistingPricePopup, 3000);
+        // слушатель клика по документу
+        setTimeout(() => { // даём небольшой таймаут, чтобы текущий клик не закрыл только что открытый попап
+            document.addEventListener('click', handleDocClickForPopup);
+        }, 0);
+    }
+
+    // --- Обработчики кнопки и цены ---
+    newRow.querySelector('button')?.addEventListener('click', async () => {
         openTradingModal(ad);
     });
+
+    const priceSpan = newRow.querySelector('.price-amount');
+    if (priceSpan) {
+        priceSpan.style.cursor = 'pointer';
+        priceSpan.addEventListener('click', (e) => {
+            e.stopPropagation(); // чтобы наш document-click хендлер не сработал сразу
+            const priceNum = parseFloat(ad.price) || 0;
+            const bumped = priceNum * 1.03;
+            const formatted = bumped.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + (ad.currencyId || 'RUB');
+            showPricePopup(priceSpan, formatted);
+        });
+    }
 
     return newRow;
 }

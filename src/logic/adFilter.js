@@ -2,6 +2,7 @@
  
 import { forbiddenPhrases, MIN_EXECUTED_COUNT, MAX_PRICE_DIFFERENCE } from '../config.js';
 import { appState } from '../state.js';
+import { GM_getValue } from '$';
 
 export function adShouldBeFiltered(ad) {
     if (parseInt(ad.finishNum) <= MIN_EXECUTED_COUNT) return true;
@@ -20,7 +21,7 @@ export function adShouldBeFiltered(ad) {
       storedStats = [];
     }
 
-    if(storedStats.flatMap(item => item.userId).includes(ad.userId) && storedStats.find(item => item.userId === ad.userId).highlightedCount>=5) {
+    if(storedStats.flatMap(item => item.userId).includes(ad.userId) && storedStats.find(item => item.userId === ad.userId).highlightedCount>=3) {
         return true
     }
     const min = parseFloat(ad.minAmount);
