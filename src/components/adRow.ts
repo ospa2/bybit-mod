@@ -1,5 +1,5 @@
 import { filterRemark } from '../utils/formatters';
-import { openTradingModal } from './TradingModal';
+import { openTradingModal } from './buyModal';
 import { paymentNames, paymentColors } from '../config';
 import type { Ad } from '../types/ads';
 

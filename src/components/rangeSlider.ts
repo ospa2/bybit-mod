@@ -1,11 +1,7 @@
 // src/components/rangeSlider.ts
 import { GM_getValue, GM_setValue } from "$";
+import type { SliderOptions } from "../types/ads";
 
-export interface SliderOptions {
-    min: number;
-    max: number;
-    onUpdate?: (min: number, max: number) => void;
-}
 
 /**
  * Инициализирует замену текстовых полей на двойные слайдеры.
@@ -111,7 +107,7 @@ function createDoubleSlider(
         const max = parseInt(maxSlider.value);
         if (onUpdate) {
             console.log("Колбэк onUpdate вызван.");
-            onUpdate(min, max);
+            onUpdate(min, max, () => {});
         }
     }
 

@@ -8,6 +8,7 @@ export const appState = {
     isLoading: false,
     isSequentialLoadingActive: false,
     shouldStopLoading: false, // Флаг для остановки
+    counterpartyNickname: "",
 };
 
 /**

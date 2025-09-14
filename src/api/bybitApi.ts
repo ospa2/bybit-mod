@@ -2,16 +2,8 @@ import { createRowFromTemplate } from "../components/adRow.ts";
 import { adShouldBeFiltered } from "../logic/adFilter.ts";
 import { USER_ID } from "../config.ts";
 import { appState } from "../state.ts";
-
-
-const bestMerchants = [
-    "149696147",//Love is….
-    "350822297",//ZolotayaScaha
-    "50115694",//Mansur S
-    '123002421',//Super T
-    '9916647',//Kings bit
-
-];
+import { GM_xmlhttpRequest } from "$";
+import { bestMerchants } from "../config.ts";
 function now() { return new Date().toISOString(); }
 
 export async function fetchAndAppendPage() {
@@ -114,4 +106,97 @@ export async function fetchAndAppendPage() {
   } finally {
     appState.isLoading = false;
   }
+}
+
+export function sendOrderData(body: any) {//отправляем данные ордера в базу данных 
+  
+  // Получаем имя из модального окна, сохраненного в appState
+
+  const nickName = appState.counterpartyNickname;
+  
+  const newOrder = {
+    "Order No.": body.itemId,
+    Type: "SELL",
+    "Fiat Amount": body.amount,
+    Price: (parseFloat(body.amount) / parseFloat(body.quantity)).toFixed(2),
+    "Coin Amount": body.quantity,
+    Counterparty: nickName,
+    Status: "Completed",
+    Time: new Date().toISOString(),
+  };
+
+  GM_xmlhttpRequest({
+    method: "POST",
+    url: "https://orders-finances-68zktfy1k-ospa2s-projects.vercel.app/api/orders",
+    headers: { "Content-Type": "application/json" },
+    data: JSON.stringify(newOrder),
+    onload: (response) =>
+      console.log("Ордер успешно отправлен:", response.status),
+    onerror: (response) =>
+      console.error("Ошибка отправки ордера:", response.error),
+  });
+}
+
+
+interface SendOrderMessageParams {
+  message: string;
+  orderId: string;
+}
+async function signRequest(
+  apiSecret: string,
+  payload: string
+): Promise<string> {
+  const encoder = new TextEncoder();
+
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(apiSecret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+
+  const signatureBuffer = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    encoder.encode(payload)
+  );
+
+  return Array.from(new Uint8Array(signatureBuffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+export async function sendOrderMessage(
+  { message, orderId }: SendOrderMessageParams
+): Promise<any> {
+  const apiKey = "K8CPRLuqD302ftIfua";
+  const apiSecret = "E86RybeO4tLjoXiR5YYtbVStHC9qXCHDBeOI";
+  
+  const url = "https://api-testnet.bybit.com/v5/p2p/item/online";
+  const timestamp = Date.now().toString();
+  const recvWindow = "5000";
+
+  const body = JSON.stringify({
+    message,
+    contentType: "str",
+    orderId,
+  });
+
+  const payload = timestamp + apiKey + recvWindow + body;
+  const signature = await signRequest(apiSecret, payload);
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "X-BAPI-API-KEY": apiKey,
+      "X-BAPI-SIGN": signature,
+      "X-BAPI-TIMESTAMP": timestamp,
+      "X-BAPI-RECV-WINDOW": recvWindow,
+      "Content-Type": "application/json",
+    },
+    body,
+  });
+
+  return await response.json();
 }

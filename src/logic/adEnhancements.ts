@@ -1,0 +1,100 @@
+// src/features/adEnhancements.ts
+
+import { bestMerchants } from "../config";
+import { adShouldBeFiltered } from "../logic/adFilter"; // предполагаемый путь
+import { filterRemark } from "../utils/formatters"; // предполагаемый путь
+import { GM_getValue } from "$";
+import type { Ad } from "../types/ads";
+import type { ReviewStats } from "../types/reviews";
+
+
+// Хранилище уже кликнутых объявлений
+const clickedAdIds = new Set<string>();
+
+export function enhanceAdRows(ads: Ad[]) {
+  const storedStats: ReviewStats[] =
+    GM_getValue("reviewsStatistics_v1", []) || [];
+
+  let clickedThisPass = false; // Чтобы за один проход был только один авто-клик
+
+  document.querySelectorAll(".trade-table__tbody tr").forEach((row, i) => {
+    const ad = ads[i];
+    if (!ad) return;
+
+    if (adShouldBeFiltered(ad)) {
+      row.classList.add("filtered-ad");
+      return;
+    }
+
+    // Авто-клик по лучшим мерчантам
+    if (
+      !clickedThisPass && // кликаем только один раз за проход
+      bestMerchants.includes(ad.userId) &&
+      !clickedAdIds.has(ad.id) // проверяем, что по этому объявлению еще не кликали
+    ) {
+      const sellBtn = row.querySelector<HTMLElement>(
+        ".trade-list-action-button button"
+      );
+      if (sellBtn) {
+        sellBtn.click();
+        clickedAdIds.add(ad.id); // запоминаем, что кликнули
+        clickedThisPass = true;
+      }
+    }
+
+    // Вставка статистики и условий
+    const stat = storedStats.find((s) => s.userId === ad.userId);
+    if (stat) {
+      addStatsToRow(row as HTMLElement, stat);
+    }
+
+    addRemarkToRow(row as HTMLElement, ad.remark);
+  });
+}
+
+
+function addStatsToRow(row: HTMLElement, stat: any) {
+  const target = row.querySelector(".moly-space-item.moly-space-item-first");
+  if (!target) return;
+
+  let statsDiv = target.nextElementSibling;
+  if (!statsDiv || !statsDiv.classList.contains("review-stats")) {
+    statsDiv = document.createElement("div");
+    statsDiv.className = "review-stats";
+    // ... стили ...
+    target.insertAdjacentElement("afterend", statsDiv);
+  }
+
+  const highlightedCount = stat.highlightedCount ?? "x";
+  const highlightedColor = highlightedCount === 0 ? "#27F54D" : "#DC143C";
+
+  statsDiv.innerHTML = `
+        <div style="display:grid; gap:8px; margin-top:4px;">
+            <span>+<strong>${stat.goodReviewsCount ?? "x"}</strong></span>
+            <span>-<strong>${stat.allReviewsLength ?? "x"}</strong></span>
+            <span><strong style="color:${highlightedColor}">${highlightedCount}</strong></span>
+        </div>
+    `;
+  row.classList.add("has-review-stats");
+}
+
+function addRemarkToRow(row: HTMLElement, remark: string) {
+  const remarkCell = document.createElement("td");
+  // ... стили ...
+  remarkCell.innerHTML = `
+        <div class="lorem-content">
+            <p style="margin: 0; width: 300px; font-size: 14px; line-height: 1.4; color: #666;">
+                ${filterRemark(remark)}
+            </p>
+        </div>
+    `;
+
+  // Удаляем старую ячейку с условиями, если она есть
+  if (row.children.length > 5) {
+    row.children[1].remove();
+  }
+  // Вставляем новую
+  if (row.children[1] && row.children.length <= 5) {
+    row.insertBefore(remarkCell, row.children[1]);
+  }
+}

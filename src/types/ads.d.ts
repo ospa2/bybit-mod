@@ -162,3 +162,9 @@ export interface ApiResult {
   shareItem: boolean;
   nickName: string;
 }
+
+export type SliderOptions = {
+  min: number;
+  max: number;
+  onUpdate?: (min: number, max: number, onChangeCallback: () => void) => void;
+};

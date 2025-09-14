@@ -37,3 +37,15 @@ export function enableBodyScroll(): void {
     document.body.removeAttribute("data-scroll-y");
   }
 }
+
+export function getRowIndex(btn: HTMLElement): number {
+  const row = btn.closest("tr");
+  if (!row) return -1;
+
+  // Ищем все строки, которые являются валидными строками объявлений
+  const rows = [...document.querySelectorAll(".trade-table__tbody tr")].filter(
+    (r) => r.querySelector(".trade-list-action-button button")
+  );
+
+  return rows.indexOf(row);
+}
