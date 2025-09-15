@@ -180,6 +180,8 @@ export default reviewsStatistics;
 
 export async function loadAndDisplayReviews(originalAd: Ad) {
     const reviewsContainer = document.getElementById('reviews-container');
+    console.log('reviewsContainer:', reviewsContainer);
+    
     try {
         // --- 1. ПАРАЛЛЕЛЬНАЯ ЗАГРУЗКА ДАННЫХ ---
                

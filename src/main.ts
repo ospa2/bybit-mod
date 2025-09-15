@@ -4,13 +4,13 @@ import { updateGlobalValues } from "./state.ts";
 import {
   loadOnceAndApply,
   observeUrlChanges,
-} from "./logic/loader.ts";
+} from "./logic/buyLoader.ts";
 let periodicRefreshId: ReturnType<typeof setInterval> | null = null;
 
 import {connectPrivateWs} from "./api/wsPrivate.ts";
 import { initFetchInterceptor } from "./api/fetchInterceptor.ts";
-import { AutoClickElements } from "./automation/autoСlicker.ts";
 import { sendOrderMessage } from "./api/bybitApi.ts";
+import { AutoClickElements } from "./automation/autoсlicker.ts";
 
 function now() {
   return new Date().toISOString();
@@ -101,7 +101,7 @@ setTimeout(waitForTableAndStart, 100);
 initFetchInterceptor();
 
 // Запускаем автоматизацию кликов
-new AutoClickElements();
+new AutoClickElements()
 
 connectPrivateWs();
 

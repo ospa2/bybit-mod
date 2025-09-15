@@ -1,4 +1,4 @@
-import { createRowFromTemplate } from "../components/adRow.ts";
+import { createRowFromTemplate } from "../components/buyRow.ts";
 import { adShouldBeFiltered } from "../logic/adFilter.ts";
 import { USER_ID } from "../config.ts";
 import { appState } from "../state.ts";

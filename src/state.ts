@@ -1,6 +1,6 @@
 // src/state.ts
 
-import { handleUrlChange } from "./logic/loader.ts";
+import { handleUrlChange } from "./logic/buyLoader.ts";
 // Единый объект состояния приложения
 export const appState = {
     MIN_LEFT_VALUE: 10000,

@@ -1,6 +1,6 @@
 // src/services/fetchInterceptor.ts
 
-import { enhanceAdRows } from "../logic/adEnhancements";
+import { enhanceAdRows } from "../logic/sellAdProc";
 import { handleModalOpening } from "../logic/sellModal";
 import { sendOrderData } from "./bybitApi";
 import { getRowIndex } from "../utils/domHelpers";
@@ -40,9 +40,6 @@ export function initFetchInterceptor() {
         const response = await originalFetch(...args);
         const clonedResponse = response.clone();
         clonedResponse.json().then((data) => {
-          onlineAdsData = data.result.items || [];
-          enhanceAdRows(onlineAdsData);
-          setupSellButtonListener(); // Устанавливаем слушатель на кнопки
 
           onlineAdsData = data.result.items || [];
           enhanceAdRows(onlineAdsData);
