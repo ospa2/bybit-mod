@@ -5,7 +5,7 @@ import { handleModalOpening } from "../logic/sellModal";
 import { sendOrderData } from "./bybitApi";
 import { getRowIndex } from "../utils/domHelpers";
 import type { Ad } from "../types/ads";
-import { processUserReviews } from "../components/review";
+import reviewsStatistics, { processUserReviews } from "../components/review";
 import { adShouldBeFiltered } from "../logic/adFilter";
 
 let currentButtonClickHandler: ((e: MouseEvent) => void) | null = null;
@@ -25,10 +25,17 @@ async function backgroundProcessAds(ads: any[]) {
   console.log("▶ Запущен backgroundProcessAds");
 
   try {
-    for (const ad of ads) {
+    const newMerchantsAds = ads.filter(ad=> reviewsStatistics.getByUserId(ad.userId)===null)
+    const oldMerchantsAds = ads.filter(ad=> reviewsStatistics.getByUserId(ad.userId)!==null)
+    for (const ad of newMerchantsAds) {
       await processUserReviews(ad);
 
-      await delay(1000); // пауза 2 сек, чтобы не заблокировали IP
+      await delay(1000); // пауза 1 сек, чтобы не заблокировали IP
+    }
+    for (const ad of oldMerchantsAds) {
+      await processUserReviews(ad);
+
+      await delay(1000); // пауза 1 сек, чтобы не заблокировали IP
     }
 
   } finally {

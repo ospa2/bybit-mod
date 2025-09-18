@@ -8,6 +8,8 @@ import type { ReviewStats } from '../types/reviews';
 
 export function adShouldBeFiltered(ad: Ad) {
     if (ad.finishNum <= MIN_EXECUTED_COUNT) return true;
+
+    if(ad.side===0)
     
     //if (parseFloat(ad.price) > 87) return true;
     if (ad.payments.includes('593')) return true;

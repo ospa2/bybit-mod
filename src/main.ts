@@ -1,5 +1,5 @@
 import "./style.css";
-import { initSliderReplacement } from "C:/Web/bybitmod/bybit-mod/src/components/rangeSlider.ts";
+import { initSliderReplacement } from "./components/rangeSlider.ts";
 import { updateGlobalValues } from "./state.ts";
 import {
   loadOnceAndApply,
