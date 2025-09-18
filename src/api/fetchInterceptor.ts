@@ -14,16 +14,28 @@ function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function backgroundProcessAds(ads: any[]) {
-  for (const ad of ads) {
-    await processUserReviews(ad);
-    await delay(2000); // пауза 1 сек, чтобы не заблокировали IP
-  }
+let isBackgroundProcessRunning = false;
 
-  console.log("Фоновая загрузка отзывов завершена ✅");
+async function backgroundProcessAds(ads: any[]) {
+  if (isBackgroundProcessRunning) {
+    console.log("⚠ backgroundProcessAds уже выполняется, новый запуск отменён");
+    return;
+  }
+  isBackgroundProcessRunning = true;
+  console.log("▶ Запущен backgroundProcessAds");
+
+  try {
+    for (const ad of ads) {
+      await processUserReviews(ad);
+
+      await delay(1000); // пауза 2 сек, чтобы не заблокировали IP
+    }
+
+  } finally {
+    isBackgroundProcessRunning = false;
+  }
 }
 
-// 👉 Этот код сработает один раз
 
 export function initFetchInterceptor() {
   const originalFetch = window.fetch;

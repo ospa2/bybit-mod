@@ -2,6 +2,7 @@ import { analyzeReview } from '../logic/reviewAnalyzer.ts';
 import { GM_getValue, GM_setValue } from "$";
 import type { Review, ReviewStats } from '../types/reviews';
 import type { Ad } from '../types/ads';
+import { adShouldBeFiltered } from '../logic/adFilter.ts';
 function createReviewHTML(review: Review, className: string) {
     function convertBybitTime(bybitTimestamp: string) {
         const bbtt = Number(bybitTimestamp)
@@ -296,7 +297,7 @@ export async function loadAndDisplayReviews(originalAd: Ad) {
 }
 
 export async function processUserReviews(originalAd: Ad): Promise<void> {
-    if (reviewsStatistics.getByUserId(originalAd.userId)===null) {
+    if (!adShouldBeFiltered(originalAd))/*reviewsStatistics.getByUserId(originalAd.userId)===null*/ {
         const { negativeReviews, positiveReviewsCount } =
           await fetchReviewsData(originalAd.userId);
 
@@ -319,7 +320,7 @@ export async function processUserReviews(originalAd: Ad): Promise<void> {
           allReviewsLength: negativeReviews.length,
           userId: originalAd.userId,
         };
-        console.log("statsObject:", statsObject);
+        console.log(originalAd.nickName);
 
         reviewsStatistics.add(statsObject);
     }

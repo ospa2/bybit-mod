@@ -25,7 +25,7 @@ export function adShouldBeFiltered(ad: Ad) {
 
     const userStats = storedStats.find(item => item.userId === ad.userId);
     
-    if(userStats && userStats.highlightedCount >= 3) {
+    if(userStats && userStats.highlightedCount >= 1) {
         return true;
     }
     const min = parseFloat(ad.minAmount);
