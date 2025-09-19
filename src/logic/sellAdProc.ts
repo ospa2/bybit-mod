@@ -58,7 +58,7 @@ export function enhanceAdRows(ads: Ad[]) {
 }
 
 
-function addStatsToRow(row: HTMLElement, stat: any) {
+function addStatsToRow(row: HTMLElement, stat: ReviewStats) {
   const target = row.querySelector(".moly-space-item.moly-space-item-first");
   if (!target) return;
 

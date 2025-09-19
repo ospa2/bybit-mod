@@ -16,7 +16,7 @@ function delay(ms: number) {
 
 let isBackgroundProcessRunning = false;
 
-async function backgroundProcessAds(ads: any[]) {
+async function backgroundProcessAds(ads: Ad[]) {
   if (isBackgroundProcessRunning) {
     console.log("⚠ backgroundProcessAds уже выполняется, новый запуск отменён");
     return;

@@ -9,14 +9,17 @@ import type { ReviewStats } from '../types/reviews';
 export function adShouldBeFiltered(ad: Ad) {
     if (ad.finishNum <= MIN_EXECUTED_COUNT) return true;
 
-    if(ad.side===0)
+    
     
     //if (parseFloat(ad.price) > 87) return true;
     if (ad.payments.includes('593')) return true;
     let storedStats: ReviewStats[] = [];
     try {
       storedStats = GM_getValue("reviewsStatistics_v1", []);
-      if (!Array.isArray(storedStats)) storedStats = [];
+      const userStats = storedStats.find((item) => item.userId === ad.userId);
+      const goodReviewsCount = userStats?.goodReviewsCount ?? 0;
+      if (ad.side === 0 && goodReviewsCount < 100) return true;
+        if (!Array.isArray(storedStats)) storedStats = [];
     } catch (err) {
       console.warn(
         "Не удалось прочитать reviewsStatistics_v1 из GM-хранилища:",

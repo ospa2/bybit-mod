@@ -4,6 +4,7 @@ import { USER_ID } from "../config.ts";
 import { appState } from "../state.ts";
 import { GM_xmlhttpRequest } from "$";
 import { bestMerchants } from "../config.ts";
+import { openTradingModal } from "../components/buyModal.ts";
 function now() { return new Date().toISOString(); }
 
 export async function fetchAndAppendPage() {

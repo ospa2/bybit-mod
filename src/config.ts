@@ -585,5 +585,6 @@ export const bestMerchants = [
   "9916647", //Kings bit
   "179338145", //Irina M
   "38321508", //tulpar
-  "456969877",//criipto
+  "456969877", //criipto
+  "472596085", //the_Kot
 ];

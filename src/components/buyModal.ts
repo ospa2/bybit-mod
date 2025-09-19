@@ -53,7 +53,7 @@ export async function openTradingModal(originalAd: Ad, autoarbitrage: boolean) {
     modal.className = "bybit-modal";
 
     // Вставляем "скелет" модального окна с данными из originalAd и плейсхолдерами для загрузки
-    modal.innerHTML = `
+    modal.innerHTML = /* html */ `
         <div class="bybit-modal-header">
             <button class="bybit-modal-close" type="button">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M12.854 3.146a.5.5 0 0 1 0 .708l-9 9a.5.5 0 0 1-.708-.708l9-9a.5.5 0 0 1 .708 0z"/><path d="M3.146 3.146a.5.5 0 0 1 .708 0l9 9a.5.5 0 0 1-.708.708l-9-9a.5.5 0 0 1 0-.708z"/></svg>
@@ -191,6 +191,7 @@ export async function openTradingModal(originalAd: Ad, autoarbitrage: boolean) {
     startPriceTimer();
   }
   // Удаляем предыдущее модальное окно, если оно есть
+  console.log('originalAd:', originalAd);
   
   // 2. --- ФАЗА ФОНОВОЙ ЗАГРУЗКИ И ОБНОВЛЕНИЯ ---
   try {
@@ -203,12 +204,13 @@ export async function openTradingModal(originalAd: Ad, autoarbitrage: boolean) {
         body: JSON.stringify(payload),
       }
     );
-
+    
     if (!res.ok) {
       throw new Error(`Ошибка сети: ${res.statusText}`);
     }
 
     const apiRes = await res.json();
+    
 
     if (apiRes.ret_code !== 0) {
       // Если API вернуло ошибку, показываем ее и закрываем окно
@@ -352,12 +354,16 @@ export function setupModalEvents(
       tokenId: "USDT",
       currencyId: "RUB",
       side: "0",
-      quantity: amountInput ? parseFloat(amountInput.value).toString() : "0.00",
+      quantity: amountInput
+        ? parseFloat(amountInput.value).toString()
+        : apiResult.maxAmount,
       amount: amountInput
         ? (parseFloat(amountInput.value) * parseFloat(String(apiResult.price)))
             .toFixed(2)
             .toString()
-        : "0.00",
+        : (parseFloat(apiResult.maxAmount) * parseFloat(apiResult.price))
+            .toFixed(2)
+            .toString(),
       curPrice: apiResult.curPrice,
       flag: "amount",
       version: "1.0",
@@ -415,12 +421,14 @@ export function setupModalEvents(
   }
 
   async function executeTrade(): Promise<void> {
-    if (!tradeButton) return;
-    tradeButton.disabled = true;
-    const originalText: string = tradeButton.textContent || "";
-    tradeButton.textContent = "Отправка заявки...";
-    tradeButton.style.opacity = "0.6";
-
+    if (!tradeButton && !autoarbitrage) return;
+    const originalText: string = tradeButton?.textContent || "";
+    if (tradeButton) {
+      tradeButton.disabled = true;
+      
+      tradeButton.textContent = "Отправка заявки...";
+      tradeButton.style.opacity = "0.6";
+    }
     try {
       if (apiResult.ret_code === 912100027) {
         showNotification(
@@ -471,9 +479,11 @@ export function setupModalEvents(
     } catch (error) {
       console.error("Ошибка при создании ордера:", error);
     } finally {
-      tradeButton.disabled = false;
-      tradeButton.textContent = originalText;
-      tradeButton.style.opacity = "1";
+      if (tradeButton){
+        tradeButton.disabled = false;
+        tradeButton.textContent = originalText;
+        tradeButton.style.opacity = "1";
+      }
     }
   }
 
@@ -481,15 +491,16 @@ export function setupModalEvents(
     // Автоматический режим
     const maxAmount: number = Math.min(
       parseFloat(String(apiResult.maxAmount)) /
-        parseFloat(String(apiResult.price)) || 0
+        parseFloat(String(apiResult.price))
     );
     if (amountInput) {
       amountInput.value = maxAmount.toFixed(4);
     }
-    handleAmountChange();
-    if (validateAndToggleButton()) {
-      executeTrade();
-    }
+    console.log('autoarbitrage:', autoarbitrage);
+    
+    handleAmountChange();   
+    executeTrade();
+    
     return;
   }
 
