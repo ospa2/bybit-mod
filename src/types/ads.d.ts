@@ -168,3 +168,23 @@ export type SliderOptions = {
   max: number;
   onUpdate?: (min: number, max: number, onChangeCallback: () => void) => void;
 };
+
+export interface CreateResponse {
+   ret_code: number;
+   ret_msg: string;
+   result: {
+      orderId: string;
+      isNeedConfirm: boolean;
+      confirmId: string;
+      success: boolean;
+      securityRiskToken: string;
+      riskTokenType: string;
+      riskVersion: string;
+      needSecurityRisk: boolean;
+      isBulkOrder: boolean;
+      delayTime: string;
+   };
+   ext_code: string;
+   ext_info: Record<string, any>;
+   time_now: string;
+}

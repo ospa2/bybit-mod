@@ -13,13 +13,11 @@ export async function loadOnceAndApply() {
     return;
   }
   
-  console.log(`[${now()}] Начинаю загрузку (single request)...`);
   appState.isSequentialLoadingActive = true;
   setStopLoading(false);
 
   try {
     await fetchAndAppendPage();
-    console.log(`[${now()}] Загрузка завершена.`);
   } catch (e) {
     console.error(`[${now()}] Ошибка в fetchAndAppendPage:`, e);
   } finally {

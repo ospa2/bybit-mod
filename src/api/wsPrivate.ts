@@ -32,7 +32,7 @@ async function getAuthParams() {
 export function connectPrivateWs() {
   const ws = new WebSocket("wss://stream.bybit.com/v5/private");
   const pingInterval = setInterval(() => {
-    ws.send(JSON.stringify({ op: "ping", ts: Date.now() }));
+    //ws.send(JSON.stringify({ op: "ping", ts: Date.now() }));
   }, 20_000);;
 
   ws.onopen = async () => {

@@ -9,8 +9,6 @@ import type { ReviewStats } from '../types/reviews';
 export function adShouldBeFiltered(ad: Ad) {
     if (ad.finishNum <= MIN_EXECUTED_COUNT) return true;
 
-    
-    
     //if (parseFloat(ad.price) > 87) return true;
     if (ad.payments.includes('593')) return true;
     let storedStats: ReviewStats[] = [];
@@ -30,7 +28,7 @@ export function adShouldBeFiltered(ad: Ad) {
 
     const userStats = storedStats.find(item => item.userId === ad.userId);
     
-    if(userStats && userStats.highlightedCount >= 1) {
+    if(userStats && userStats.highlightedCount >= 3) {
         return true;
     }
     const min = parseFloat(ad.minAmount);
