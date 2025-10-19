@@ -5,14 +5,16 @@ import { loadOnceAndApply, observeUrlChanges } from "./logic/buyLoader.ts";
 let periodicRefreshId: ReturnType<typeof setInterval> | null = null;
 
 import { connectPrivateWs } from "./api/wsPrivate.ts";
-import { initFetchInterceptor} from "./api/sellInterceptor.ts";
+import { backgroundProcessAds, initFetchInterceptor} from "./api/sellInterceptor.ts";
 import { resumePendingOrders} from "./api/bybitApi.ts";
 import { AutoClickElements } from "./automation/autoсlicker.ts";
 
 function now() {
    return new Date().toISOString();
 }
+// Объявляем обработчик глобально, чтобы можно было его удалить
 
+initFetchInterceptor();
 function startPeriodicRefresh() {
    stopPeriodicRefresh();
    // Только на buy странице обновляем раз в 3000ms
@@ -95,9 +97,7 @@ function waitForTableAndStart() {
 
 setTimeout(waitForTableAndStart, 100);
 
-// Объявляем обработчик глобально, чтобы можно было его удалить
 
-initFetchInterceptor();
 
 // Запускаем автоматизацию кликов
 new AutoClickElements();
@@ -105,3 +105,5 @@ new AutoClickElements();
 connectPrivateWs();
 
 resumePendingOrders();
+
+backgroundProcessAds()

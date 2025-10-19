@@ -2,7 +2,6 @@ import { stopPhrases } from '../config.ts';
 
 export function filterRemark(description: string) {
   let filteredText = description;
-
   stopPhrases.forEach(phrase => {
     // Берём слово и убираем всё лишнее
     if (!phrase) return '';
@@ -19,6 +18,5 @@ export function filterRemark(description: string) {
     .replace(/\s+,/g, ',')
     .replace(/\.{2,}/g, '.')
     .trim();
-
   return filteredText;
 }

@@ -1,5 +1,4 @@
 // src/components/rangeSlider.ts
-import { GM_getValue, GM_setValue } from "$";
 import type { SliderOptions } from "../types/ads";
 
 
@@ -40,7 +39,8 @@ function createDoubleSlider(
     originalInput.setAttribute("data-slider-id", sliderId);
 
     // Загружаем сохраненные значения из GM
-    const savedValues = GM_getValue(sliderId, null) as { min: number; max: number } | null;
+    const savedValuesRaw = localStorage.getItem(sliderId);
+    const savedValues = savedValuesRaw ? JSON.parse(savedValuesRaw) : null;
     let initialMin = savedValues ? savedValues.min : MIN_VALUE;
     let initialMax = savedValues ? savedValues.max : MAX_VALUE;
 
@@ -99,7 +99,7 @@ function createDoubleSlider(
         originalInput.value = `${min}-${max}`;
         container.dispatchEvent(new Event("change", { bubbles: true }));
 
-        GM_setValue(sliderId, { min, max });
+        localStorage.setItem(sliderId, JSON.stringify({ min, max }));
     }
 
     function callOnUpdate(): void {
@@ -107,7 +107,7 @@ function createDoubleSlider(
         const max = parseInt(maxSlider.value);
         if (onUpdate) {
             console.log("Колбэк onUpdate вызван.");
-            onUpdate(min, max, () => {});
+            onUpdate(min, max, () => { });
         }
     }
 

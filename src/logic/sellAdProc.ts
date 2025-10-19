@@ -3,20 +3,21 @@
 import { bestMerchants } from "../config";
 import { adShouldBeFiltered } from "./adFilter"; // предполагаемый путь
 import { filterRemark } from "../utils/filterRemark"; // предполагаемый путь
-import { GM_getValue } from "$";
 import type { Ad } from "../types/ads";
 import type { ReviewStats } from "../types/reviews";
 
 
 // Хранилище уже кликнутых объявлений
 const clickedAdIds = new Set<string>();
-
 export function enhanceAdRows(ads: Ad[]) {
   let clickedThisPass = false;
-  const storedStats: ReviewStats[] =
-    GM_getValue("reviewsStatistics_v1", []) || [];
+  const storedStatsRaw = localStorage.getItem("reviewsStatistics_v1")
+  let storedStats: ReviewStats[] = [];
+  if (storedStatsRaw) {
+    storedStats = JSON.parse(storedStatsRaw);
+  }
 
-  ; // Чтобы за один проход был только один авто-клик
+  // Чтобы за один проход был только один авто-клик
 
   document.querySelectorAll(".trade-table__tbody tr").forEach((row, i) => {
     const ad = ads[i];
@@ -27,7 +28,7 @@ export function enhanceAdRows(ads: Ad[]) {
       return;
     }
     console.log('clickedThisPass:', clickedThisPass);
-    
+
     // Авто-клик по лучшим мерчантам
     if (
       !clickedThisPass && // кликаем только один раз за проход
@@ -48,18 +49,21 @@ export function enhanceAdRows(ads: Ad[]) {
     }
 
     // Вставка статистики и условий
-    const stat = storedStats.find((s) => s.userId === ad.userId);
+    const stat = storedStats.find((s: ReviewStats) => s.userId === ad.userId);
+
     if (stat) {
       addStatsToRow(row as HTMLElement, stat);
     }
 
     addRemarkToRow(row as HTMLElement, ad.remark);
   });
+
 }
 
 
 function addStatsToRow(row: HTMLElement, stat: ReviewStats) {
   const target = row.querySelector(".moly-space-item.moly-space-item-first");
+
   if (!target) return;
 
   let statsDiv = target.nextElementSibling;
@@ -74,10 +78,10 @@ function addStatsToRow(row: HTMLElement, stat: ReviewStats) {
   const negativeCount = stat.allReviewsLength ?? "x";
   const positiveCount = stat.goodReviewsCount ?? "x";
   let highlightedColor = highlightedCount === 0 ? "#27F54D" : "#DC143C";
-  (negativeCount <= 3 && highlightedCount===0 && positiveCount >150)
+  (negativeCount <= 3 && highlightedCount === 0 && positiveCount > 150)
     ? (highlightedColor = "#27e4f5ff")
     : highlightedColor;
-  
+
   const negativeColor =
     negativeCount <= 3 && highlightedCount === 0 && positiveCount > 150
       ? "#27e4f5ff"

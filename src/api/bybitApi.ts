@@ -3,19 +3,21 @@ import { adShouldBeFiltered } from "../logic/adFilter.ts";
 import { USER_ID } from "../config.ts";
 import { appState } from "../state.ts";
 import { GM_xmlhttpRequest } from "$";
-import { bestMerchants } from "../config.ts";
+
 import {
-   openTradingModal,
+   openBuyModal,
    type Order,
    type OrderPayload,
 } from "../components/buyModal.ts";
 import {
    findBestBuyAd,
    findSellCard,
+   loadCards,
    type Card,
 } from "../automation/adFinder.ts";
 import { watchOrder } from "./sellInterceptor.ts";
 import type { Ad, CreateResponse } from "../types/ads";
+import { getRowIndex } from "../utils/domHelpers.ts";
 function now() {
    return new Date().toISOString();
 }
@@ -35,7 +37,6 @@ export async function fetchAndAppendPage() {
 
       // Если мы на sell-странице — просто один раз очистить таблицу и выйти
       if (currentUrl.includes("/sell/USDT/RUB")) {
-         console.log(`[${now()}] sell — очищаю таблицу и не делаю fetch.`);
          tbody.querySelectorAll(".dynamic-row").forEach((row) => row.remove());
          tbody.querySelector(".completion-indicator")?.remove();
          return;
@@ -76,7 +77,7 @@ export async function fetchAndAppendPage() {
       );
 
       const json = await res.json();
-      const ads = json.result || json.data || {};
+      const ads: Ad[] = json.result.items || {};
 
       // Удаляем старые строки и индикатор
       tbody.querySelectorAll(".dynamic-row").forEach((row) => row.remove());
@@ -84,35 +85,29 @@ export async function fetchAndAppendPage() {
 
       // Создаем фрагмент и добавляем строки (приоритетные — наверх)
       const fragment = document.createDocumentFragment();
-      const prioritizedAds = [];
-      const minPrice = Math.min(...ads.items.filter((ad: Ad)=>!adShouldBeFiltered(ad)).map((a: Ad) => parseFloat(a.price)));
 
-      if (ads.items && Array.isArray(ads.items)) {
-         for (const ad of ads.items) {
-            if (
-               typeof bestMerchants !== "undefined" &&
-               bestMerchants.includes &&
-               bestMerchants.includes(ad.userId)
-            ) {
-               prioritizedAds.push(ad);
+      const minPrice = Math.min(...ads.filter((ad: Ad) => !adShouldBeFiltered(ad)).map((a: Ad) => parseFloat(a.price)));
+
+      if (ads) {
+         for (let i = 0; i < ads.length; i++) {
+
+            try {
+               const ad = ads[i];
+               if(adShouldBeFiltered(ad)) continue;
+               const newRow = createRowFromTemplate(ad, minPrice)
+
+               if (newRow) fragment.appendChild(newRow);
+            } catch (error) {
+               // !!! ЭТО ВЫЯВИТ ПРОБЛЕМУ !!!
+               console.error(`Ошибка на итерации i=${i} для объявления:`, ads[i], error);
+               // Продолжаем цикл, чтобы не прерывать весь процесс
                continue;
             }
-
-            if (
-               typeof adShouldBeFiltered === "function" &&
-               adShouldBeFiltered(ad)
-            ) {
-               continue;
-            }
-
-            const newRow =
-               typeof createRowFromTemplate === "function"
-                  ? createRowFromTemplate(ad, minPrice)
-                  : null;
-            if (newRow) fragment.appendChild(newRow);
          }
+         // После этого цикл гарантированно завершится
+         tbody.prepend(fragment); // Теперь этот код должен быть достигнут.
 
-         const adAndCard = findBestBuyAd(ads.items);
+         const adAndCard = findBestBuyAd(ads);
          console.log(
             "card:",
             adAndCard?.card.id,
@@ -120,51 +115,15 @@ export async function fetchAndAppendPage() {
             adAndCard?.ad.nickName
          );
 
-         const COOLDOWN_MS = 25 * 60 * 1000; // 5 минут
-
          if (adAndCard) {
-            const lastTime = Number(
-               localStorage.getItem("tradingModalCooldown") || "0"
-            );
-            const now = Date.now();
-
-            if (now - lastTime >= COOLDOWN_MS) {
-               openTradingModal(adAndCard, minPrice, true); // автоматическое создание ордера
-               localStorage.setItem("tradingModalCooldown", now.toString());
-            } else {
-               const remainingMs = COOLDOWN_MS - (now - lastTime);
-               const minutes = Math.floor(remainingMs / 1000 / 60);
-               const seconds = Math.floor((remainingMs / 1000) % 60);
-
-               console.log(
-                  `КД ещё не прошло (осталось ${minutes} мин ${seconds} сек)`
-               );
-            }
-
+            openBuyModal(adAndCard, minPrice, true); // автоматическое создание ордера
          }
 
-         // Добавляем приоритетные объявления в начало
-         if (prioritizedAds.length) {
-            for (const ad of prioritizedAds.reverse()) {
-               // reverse чтобы сохранить порядок при prepend
-               if (
-                  typeof adShouldBeFiltered === "function" &&
-                  adShouldBeFiltered(ad)
-               )
-                  continue;
-               const prRow =
-                  typeof createRowFromTemplate === "function"
-                     ? createRowFromTemplate(ad, minPrice)
-                     : null;
-               if (prRow) fragment.prepend(prRow);
-            }
-         }
       } else {
          console.warn(`[${now()}] Ответ API не содержит ads.items массив.`);
       }
 
-      // Вставляем в tbody
-      tbody.prepend(fragment);
+
    } catch (e) {
       console.error(`[${now()}] Ошибка при подгрузке:`, e);
    } finally {
@@ -173,32 +132,32 @@ export async function fetchAndAppendPage() {
 }
 
 export function resumePendingOrders(): void {
-   let cards: Card[] = JSON.parse(localStorage.getItem("cards_v1") || "[]");
+
    let orders: { order: Order; card: Card }[] = JSON.parse(
-      localStorage.getItem("orders") || "[]"
+      localStorage.getItem("!orders") || "[]"
    );
+
    console.log('запуск хуйни');
-   
 
    for (const order of orders) {
       if (order.order.Status === "pending") {
-         const card = cards.find((c) => c.id === order.card.id); // если сохраняешь id карты
+         const card = order.card;
          if (card) {
             watchOrder(order.order["Order No."], card);
             console.log(
                `♻️ Возобновил отслеживание ордера ${order.order["Order No."]}`
             );
          }
-      } 
+      }
    }
 }
 export function sendSellData(body: OrderPayload, result: CreateResponse) {
    //отправляем данные ордера в базу данных
    if (result.ret_code !== 0) return;
    let orders: { order: Order; card: Card }[] = JSON.parse(
-      localStorage.getItem("orders") || "[]"
+      localStorage.getItem("!orders") || "[]"
    );
-   let cards: Card[] = JSON.parse(localStorage.getItem("cards_v1") || "[]");
+   let cards: Card[] = loadCards()
 
    const card = findSellCard(body);
    const maxAmount = parseFloat(body.amount);
@@ -207,14 +166,14 @@ export function sendSellData(body: OrderPayload, result: CreateResponse) {
    cards = cards.map((c) =>
       c.id === card?.id
          ? {
-              ...c,
-              balance: c.balance + maxAmount,
-              turnover: c.turnover + maxAmount,
-              // Дата уже будет сегодняшней после вызова loadCards
-           }
+            ...c,
+            balance: c.balance + maxAmount,
+            turnover: c.turnover + maxAmount,
+            // Дата уже будет сегодняшней после вызова loadCards
+         }
          : c
    );
-   localStorage.setItem("cards_v1", JSON.stringify(cards));
+   localStorage.setItem("!cards", JSON.stringify(cards));
    // Получаем имя из модального окна, сохраненного в appState
 
    const nickName = appState.counterpartyNickname;
@@ -242,7 +201,7 @@ export function sendSellData(body: OrderPayload, result: CreateResponse) {
    });
    if (card) {
       orders.push({ order: newOrder, card: card });
-      localStorage.setItem("orders", JSON.stringify(orders));
+      localStorage.setItem("!orders", JSON.stringify(orders));
    }
 }
 

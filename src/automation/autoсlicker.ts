@@ -86,7 +86,7 @@ export class AutoClickElements {
         this.clickElement(div, "payment selector", () => {
           setTimeout(() => {
             this.findAndClickSBP();
-          }, 2500);
+          }, 500);
         });
       }
     });
@@ -103,11 +103,10 @@ export class AutoClickElements {
       if (
         text &&
         [
-          "SBP",
-          "Sberbank",
-          "Tinkoff",
-          "OZON Bank",
-          "Local Card(Yellow)",
+          "Наличные",
+          "Bank Transfer",
+          "Mobile Top-up",
+          "Cash Deposit to Bank",
         ].includes(text)
       ) {
         console.log("AutoClick: Найден SBP, выполняю клик");
@@ -117,7 +116,7 @@ export class AutoClickElements {
 
     if (sbpDivs.length === 0) {
       console.log("AutoClick: SBP еще не загрузился, повторная попытка...");
-      setTimeout(() => this.findAndClickSBP(), 1000);
+      setTimeout(() => this.findAndClickSBP(), 500);
     }
   }
 

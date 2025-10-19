@@ -4,7 +4,7 @@ import { startPriceTimer } from "../utils/priceTimer.ts";
 import { showNotification } from "../utils/notifications.ts";
 import { paymentNames } from "../config.ts";
 import type { Ad, ApiResult, CreateResponse } from "../types/ads";
-import { findBuyCard, type Card } from "../automation/adFinder.ts";
+import { findBuyCard, loadCards, markCardAsUsed, type Card } from "../automation/adFinder.ts";
 import { watchOrder } from "../api/sellInterceptor.ts";
 
 export interface OrderPayload {
@@ -32,7 +32,7 @@ export interface Order {
    Time: string;
 }
 
-export async function openTradingModal(data: { ad: Ad; card: Card | null }, minPrice?: number, autoarbitrage?: boolean) {
+export async function openBuyModal(data: { ad: Ad; card: Card | null }, minPrice: number, autoarbitrage: boolean) {
    const ad = data.ad;
 
    if (!ad) {
@@ -65,26 +65,21 @@ export async function openTradingModal(data: { ad: Ad; card: Card | null }, minP
                 <div> 
                     <div class="advertiser-header">
                         <div class="avatar-container">
-                            <div class="avatar ${
-                               ad.isOnline ? "online" : ""
-                            }">${(ad.nickName || "U")
-         .charAt(0)
-         .toUpperCase()}</div>
+                            <div class="avatar ${ad.isOnline ? "online" : ""
+         }">${(ad.nickName || "U")
+            .charAt(0)
+            .toUpperCase()}</div>
                         </div>
                         <div class="advertiser-info">
-                            <div class="advertiser-name">${
-                               ad.nickName || "Unknown"
-                            }</div>
+                            <div class="advertiser-name">${ad.nickName || "Unknown"
+         }</div>
                             <div class="advertiser-stats">
-                                <span>${
-                                   ad.finishNum || 0
-                                } исполнено</span><span class="stats-divider">|</span><span>${
-         ad.recentExecuteRate || 0
-      }%</span>
+                                <span>${ad.finishNum || 0
+         } исполнено</span><span class="stats-divider">|</span><span>${ad.recentExecuteRate || 0
+         }%</span>
                             </div>
-                            <div class="online-status">${
-                               ad.isOnline ? "Онлайн" : "Офлайн"
-                            }</div>
+                            <div class="online-status">${ad.isOnline ? "Онлайн" : "Офлайн"
+         }</div>
                         </div>
                     </div>
                     <div class="verification-tags">
@@ -98,16 +93,15 @@ export async function openTradingModal(data: { ad: Ad; card: Card | null }, minP
                         <div class="crypto-info-item">
                             <span class="crypto-info-label">Лимиты</span>
                             <span class="crypto-info-value">${parseFloat(
-                               ad.minAmount || "0"
-                            ).toLocaleString("ru-RU")} ~ ${parseFloat(
-         ad.maxAmount || "0"
-      ).toLocaleString("ru-RU")} ${ad.currencyId || "RUB"}</span>
+            ad.minAmount || "0"
+         ).toLocaleString("ru-RU")} ~ ${parseFloat(
+            ad.maxAmount || "0"
+         ).toLocaleString("ru-RU")} ${ad.currencyId || "RUB"}</span>
                         </div>
                         <div class="crypto-info-item">
                             <span class="crypto-info-label">Длительность оплаты</span>
-                            <span class="crypto-info-value">${
-                               ad.paymentPeriod || 15
-                            } мин.</span>
+                            <span class="crypto-info-value">${ad.paymentPeriod || 15
+         } мин.</span>
                         </div>
                     </div>
                 </div>
@@ -123,60 +117,53 @@ export async function openTradingModal(data: { ad: Ad; card: Card | null }, minP
                         <span class="price-timer" id="price-timer">30s</span>
                     </div>
                     <div class="price-value">${parseFloat(ad.price).toFixed(
-                       2
-                    )} ${ad.currencyId || "RUB"}</div>
+            2
+         )} ${ad.currencyId || "RUB"}</div>
                 </div>
                 <div class="input-section">
-                    <label class="input-label">Я ${
-                       ad.side === 1 ? "куплю" : "продам"
-                    }</label>
+                    <label class="input-label">Я ${ad.side === 1 ? "куплю" : "продам"
+         }</label>
                     <div class="input-container" id="amount-container">
                         <div class="input-wrapper">
                             <input type="text" class="amount-input" id="amount-input" placeholder="0.0000" autocomplete="off">
                             <div class="input-suffix">
-                                <span>${
-                                   ad.tokenId || "USDT"
-                                }</span><span class="input-divider">|</span><button type="button" class="max-button" id="max-button">Все</button>
+                                <span>${ad.tokenId || "USDT"
+         }</span><span class="input-divider">|</span><button type="button" class="max-button" id="max-button">Все</button>
                             </div>
                         </div>
                     </div>
-                    <div class="balance-info" id="available-for-trade">Доступно для ${
-                       ad.side === 1 ? "покупки" : "продажи"
-                    }: <span class="spinner small"></span></div>
+                    <div class="balance-info" id="available-for-trade">Доступно для ${ad.side === 1 ? "покупки" : "продажи"
+         }: <span class="spinner small"></span></div>
                 </div>
                 <div class="input-section">
                     <label class="input-label">Я получу</label>
                     <div class="input-container"><div class="input-wrapper">
                         <div style="width: 24px;">₽</div>
                         <input type="text" class="amount-input" id="receive-input" placeholder="0.00">
-                        <div class="input-suffix"><span>${
-                           ad.currencyId || "RUB"
-                        }</span></div>
+                        <div class="input-suffix"><span>${ad.currencyId || "RUB"
+         }</span></div>
                     </div></div>
                 </div>
                 <div class="payment-section">
                     <label class="input-label">Способ оплаты</label>
                     <div class="payment-methods">
-                        ${
-                           ad.payments && ad.payments.length > 0
-                              ? ad.payments
-                                   .map(
-                                      (paymentId) =>
-                                         `<span class="payment-method">${
-                                            paymentNames[
-                                               paymentId as keyof typeof paymentNames
-                                            ] || paymentId
-                                         }</span>`
-                                   )
-                                   .join("")
-                              : '<span class="payment-method">Не указано</span>'
-                        }
+                        ${ad.payments && ad.payments.length > 0
+            ? ad.payments
+               .map(
+                  (paymentId) =>
+                     `<span class="payment-method">${paymentNames[
+                     paymentId as keyof typeof paymentNames
+                     ] || paymentId
+                     }</span>`
+               )
+               .join("")
+            : '<span class="payment-method">Не указано</span>'
+         }
                     </div>
                 </div>
                 <div class="button-section">
-                    <button type="button" class="trade-button" id="trade-button" disabled>${
-                       ad.side === 1 ? "Купить" : "Продать"
-                    } ${ad.tokenId || "USDT"}</button>
+                    <button type="button" class="trade-button" id="trade-button" disabled>${ad.side === 1 ? "Купить" : "Продать"
+         } ${ad.tokenId || "USDT"}</button>
                     <button type="button" class="cancel-button" id="cancel-button">Отмена</button>
                 </div>
             </div>
@@ -228,7 +215,8 @@ export async function openTradingModal(data: { ad: Ad; card: Card | null }, minP
       }
 
       // ВАЖНО: Только теперь, когда все данные загружены, мы "оживляем" модальное окно
-      if (data.card && autoarbitrage) {
+      if (data.card) {
+
          setupModalEvents(apiResult, data.card, autoarbitrage);
       }
    } catch (e) {
@@ -242,6 +230,7 @@ export async function openTradingModal(data: { ad: Ad; card: Card | null }, minP
    }
 }
 function closeModal() {
+
    const overlay = document.querySelector(".bybit-modal-overlay");
    if (overlay) {
       overlay.remove();
@@ -250,7 +239,7 @@ function closeModal() {
    enableBodyScroll();
 }
 
-export function setupModalEvents(apiResult: ApiResult, card: Card, autoarbitrage: boolean): void {
+function setupModalEvents(apiResult: ApiResult, card: Card, autoarbitrage: boolean): void {
 
    const overlay = document.querySelector(
       ".bybit-modal-overlay"
@@ -356,15 +345,15 @@ export function setupModalEvents(apiResult: ApiResult, card: Card, autoarbitrage
          quantity: amountInput
             ? parseFloat(amountInput.value).toString()
             : (parseFloat(apiResult.maxAmount) / parseFloat(apiResult.price))
-                 .toFixed(4)
-                 .toString(), //USDT
+               .toFixed(4)
+               .toString(), //USDT
          amount: amountInput
             ? (
-                 parseFloat(amountInput.value) *
-                 parseFloat(String(apiResult.price))
-              )
-                 .toFixed(2)
-                 .toString()
+               parseFloat(amountInput.value) *
+               parseFloat(String(apiResult.price))
+            )
+               .toFixed(2)
+               .toString()
             : apiResult.maxAmount, //RUB
          curPrice: apiResult.curPrice,
          flag: "amount",
@@ -376,21 +365,24 @@ export function setupModalEvents(apiResult: ApiResult, card: Card, autoarbitrage
 
    // ==== Сохранение нового ордера ====
    async function saveBuyOrder(orderId: string, card: Card): Promise<void> {
+      //если ордер создался, то карта помечается как использованная(эта функция гарантирует, что ордер был создан)
+      markCardAsUsed(card.id);
+
       let orders: { order: Order; card: Card }[] = JSON.parse(
-         localStorage.getItem("orders") || "[]"
+         localStorage.getItem("!orders") || "[]"
       );
-      let cards: Card[] = JSON.parse(localStorage.getItem("cards_v1") || "[]");
+      let cards: Card[] = loadCards();
 
       const newOrder: Order = {
          "Order No.": orderId,
          Type: "BUY",
          "Fiat Amount": amountInput
             ? (
-                 parseFloat(amountInput.value) *
-                 parseFloat(String(apiResult.price))
-              )
-                 .toFixed(2)
-                 .toString()
+               parseFloat(amountInput.value) *
+               parseFloat(String(apiResult.price))
+            )
+               .toFixed(2)
+               .toString()
             : "0",
          Price: apiResult.price,
          "Coin Amount": amountInput
@@ -412,17 +404,17 @@ export function setupModalEvents(apiResult: ApiResult, card: Card, autoarbitrage
       cards = cards.map((c) =>
          c.id === card?.id
             ? {
-                 ...c,
-                 balance: c.balance - maxAmount,
-                 turnover: c.turnover + maxAmount,
-              }
+               ...c,
+               balance: c.balance - maxAmount,
+               turnover: c.turnover + maxAmount,
+            }
             : c
       );
-      localStorage.setItem("cards_v1", JSON.stringify(cards));
+      localStorage.setItem("!cards", JSON.stringify(cards));
 
       // сохраняем ордер локально
       orders.push({ order: newOrder, card: card });
-      localStorage.setItem("orders", JSON.stringify(orders));
+      localStorage.setItem("!orders", JSON.stringify(orders));
    }
 
    async function executeTrade(): Promise<void> {
@@ -463,15 +455,16 @@ export function setupModalEvents(apiResult: ApiResult, card: Card, autoarbitrage
                   Accept: "application/json",
                },
                credentials: "include",
-               body: JSON.stringify("orderPayload"),
+               body: JSON.stringify(orderPayload),
             }
          );
 
          const result: CreateResponse = await response.json();
 
          if (response.ok && result.ret_code === 0 && card) {
-            await saveBuyOrder(result.result.orderId, card);
 
+            await saveBuyOrder(result.result.orderId, card);
+         
             showNotification("ордер успешно создан", "success");
             closeModal();
          } else {
@@ -492,18 +485,18 @@ export function setupModalEvents(apiResult: ApiResult, card: Card, autoarbitrage
       }
    }
 
-   if (autoarbitrage) {
+   if (autoarbitrage && !cancelButton) {
       // Автоматический режим
       const maxAmount: number = Math.min(
          parseFloat(String(apiResult.maxAmount)) /
-            parseFloat(String(apiResult.price))
+         parseFloat(String(apiResult.price))
       );
       if (amountInput) {
          amountInput.value = maxAmount.toFixed(4);
       }
 
       handleAmountChange();
-      executeTrade();
+      //executeTrade();
 
       return;
    }
@@ -525,9 +518,10 @@ export function setupModalEvents(apiResult: ApiResult, card: Card, autoarbitrage
    });
 
    maxButton?.addEventListener("click", () => {
+
       const maxAmount: number = Math.min(
          parseFloat(String(apiResult.maxAmount)) /
-            parseFloat(String(apiResult.price)) || 0
+         parseFloat(String(apiResult.price)) || 0
       );
       if (amountInput) {
          amountInput.value = maxAmount.toFixed(4);
@@ -536,7 +530,10 @@ export function setupModalEvents(apiResult: ApiResult, card: Card, autoarbitrage
    });
 
    tradeButton?.addEventListener("click", executeTrade);
-   cancelButton?.addEventListener("click", () => closeModal());
+   cancelButton?.addEventListener("click", () => {
+
+      closeModal()
+   });
    closeButton?.addEventListener("click", () => closeModal());
 
    overlay?.addEventListener("click", (e: MouseEvent) => {
@@ -547,6 +544,7 @@ export function setupModalEvents(apiResult: ApiResult, card: Card, autoarbitrage
       "keydown",
       function escHandler(e: KeyboardEvent): void {
          if (e.key === "Escape") {
+
             closeModal();
             document.removeEventListener("keydown", escHandler);
          }

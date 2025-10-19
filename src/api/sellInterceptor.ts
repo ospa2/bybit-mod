@@ -6,9 +6,8 @@ import { sendSellData } from "./bybitApi";
 import { getRowIndex } from "../utils/domHelpers";
 import type { Ad, CreateResponse } from "../types/ads";
 import reviewsStatistics, { processUserReviews } from "../components/review";
-import { adShouldBeFiltered } from "../logic/adFilter";
 import type { Order, OrderPayload } from "../components/buyModal";
-import type { Card } from "../automation/adFinder";
+import { loadCards, type Card } from "../automation/adFinder";
 import { GM_xmlhttpRequest } from "$";
 
 let currentButtonClickHandler: ((e: MouseEvent) => void) | null = null;
@@ -19,7 +18,10 @@ function delay(ms: number) {
 
 let isBackgroundProcessRunning = false;
 
-async function backgroundProcessAds(ads: Ad[]) {
+export async function backgroundProcessAds() {
+
+   const newSellersAdsRaw = localStorage.getItem("unknownUserIds") || "[]";//объявления от новых продавцов
+   const ads: Ad[] = JSON.parse(newSellersAdsRaw);
    if (isBackgroundProcessRunning) {
       console.log(
          "⚠ backgroundProcessAds уже выполняется, новый запуск отменён"
@@ -30,15 +32,18 @@ async function backgroundProcessAds(ads: Ad[]) {
    console.log("▶ Запущен backgroundProcessAds");
 
    try {
-      const newMerchantsAds = ads.filter(
-         (ad) => reviewsStatistics.getByUserId(ad.userId) === null
-      );
       const oldMerchantsAds = ads.filter(
          (ad) => reviewsStatistics.getByUserId(ad.userId) !== null
       );
-      for (const ad of newMerchantsAds) {
+      for (const ad of ads) {
          await processUserReviews(ad);
+         const newValue = localStorage.getItem("unknownUserIds") || "[]";
+         const newSellerAds: Ad[] = JSON.parse(newValue);
 
+         
+         const nextSellerAds = newSellerAds.filter((item: Ad) => item.userId !== ad.userId);
+ 
+         localStorage.setItem("unknownUserIds", JSON.stringify(nextSellerAds));
          await delay(1000); // пауза 1 сек, чтобы не заблокировали IP
       }
       for (const ad of oldMerchantsAds) {
@@ -78,137 +83,382 @@ async function getOrderStatus(orderId: string): Promise<OrderStatus> {
       return result.result.status === 50
          ? "completed"
          : result.result.status === 40
-         ? "cancelled"
-         : "pending";
+            ? "cancelled"
+            : "pending";
    } catch (err) {
       console.error("❌ Fetch error:", err);
       return "error";
    }
 }
 
+export async function getUsedCard(orderId: string): Promise<Card | null> {
+   try {
+      const cards: Card[] = loadCards()
+
+      const res = await fetch(
+         "https://www.bybit.com/x-api/fiat/otc/order/message/listpage",
+         {
+            method: "POST",
+            headers: {
+               "Content-Type": "application/json;charset=UTF-8",
+               accept: "application/json",
+               origin: "https://www.bybit.com",
+            },
+            body: JSON.stringify({
+               orderId: orderId,
+               currentPage: "1",
+               size: "100",
+            }),
+            credentials: "include",
+         }
+      ).then((response) => response.json());
+
+      console.log("📨 Ответ от API:", res);
+
+      const messages = res.result.result.map((m: any) => m.message);
+      console.log("💬 Messages:", messages);
+
+      let foundCard: Card | null = null;
+
+      messages.forEach((message: string) => {
+         console.log("➡️ Обрабатываем message:", message);
+
+         switch (message) {
+            case "79525176865 Татьяна Г сбер":
+            case "2202208354725872":
+            case "Взаимный лайк💚":
+               foundCard = cards.find((c: Card) => c.id === "mamaSber") || null
+               break;
+
+            case "79525181633 Никита К сбер":
+            case "2202208354718000":
+            case "Взaимный лайк💚":
+               foundCard = cards.find((c: Card) => c.id === "papaSber") || null
+               break;
+
+            case "79514513792 Серафим Г сбер":
+            case "2202208034462813":
+            case "Взаимный лaйк💚":
+               foundCard = cards.find((c: Card) => c.id === "seraphimSber") || null
+               break;
+
+            case "79514513792 Серафим Г тбанк":
+            case "2200701913770423":
+            case "Взаимный лaйк💛":
+               foundCard = cards.find((c: Card) => c.id === "seraphimTbank") || null
+               break;
+
+            case "79227518402 Галина Г тбанк":
+            case "2200701940041368":
+            case "Взaимный лайк💛":
+               foundCard = cards.find((c: Card) => c.id === "galyaTbank") || null
+               break;
+         }
+
+         if (foundCard) {
+            console.log("✅ Найдена карта:", foundCard);
+         } else {
+            console.log("❌ Карта не найдена для message:", message);
+         }
+      });
+
+      return foundCard;
+   } catch (error) {
+      console.error("🔥 Ошибка в getOrderCard:", error);
+   }
+
+   return null;
+}
+
+
 // ==== Основной вотчер ====
-export function watchOrder(orderId: string, card: Card): void {
+// Константы
+const CHECK_INTERVAL = 5000; // 5 секунд
+const MAX_ATTEMPTS = 360; // 30 минут
+const API_URL = "https://orders-finances-68zktfy1k-ospa2s-projects.vercel.app/api/orders";
+
+// Типы
+interface OrderData {
+   order: Order;
+   card: Card;
+}
+
+// Утилиты для работы с localStorage
+class StorageHelper {
+   static safeGetJSON<T>(key: string, fallback: T): T {
+      try {
+         const data = localStorage.getItem(key);
+         return data ? JSON.parse(data) : fallback;
+      } catch (error) {
+         console.error(`Ошибка чтения ${key} из localStorage:`, error);
+         return fallback;
+      }
+   }
+
+   static safeSetJSON(key: string, value: any): boolean {
+      try {
+         localStorage.setItem(key, JSON.stringify(value));
+         return true;
+      } catch (error) {
+         console.error(`Ошибка записи ${key} в localStorage:`, error);
+         return false;
+      }
+   }
+
+   static getOrders(): OrderData[] {
+      return this.safeGetJSON<OrderData[]>("!orders", []);
+   }
+
+   static setOrders(orders: OrderData[]): void {
+      this.safeSetJSON("!orders", orders);
+   }
+
+   static getCards(): Card[] {
+      return this.safeGetJSON<Card[]>("!cards", []);
+   }
+
+   static setCards(cards: Card[]): void {
+      this.safeSetJSON("!cards", cards);
+   }
+}
+
+// Отправка данных на сервер
+async function sendOrderToServer(orderData: OrderData): Promise<void> {
+   return new Promise((resolve, reject) => {
+      GM_xmlhttpRequest({
+         method: "POST",
+         url: API_URL,
+         headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+         },
+         data: JSON.stringify(orderData),
+         onload: (response: any): void => {
+            console.log(
+               "✅ Заказ отправлен на сервер:",
+               response.status,
+               response.responseText
+            );
+            resolve();
+         },
+         onerror: (response: any): void => {
+            console.error(
+               "❌ Ошибка отправки на сервер:",
+               response.status,
+               response.statusText
+            );
+            reject(new Error(response.statusText));
+         },
+      });
+   });
+}
+
+// Удаление ордера из хранилища
+function removeOrderFromStorage(orderId: string): OrderData | null {
+   const orders = StorageHelper.getOrders();
+   const orderData = orders.find((o) => o.order["Order No."] === orderId);
+
+   if (!orderData) {
+      console.warn(`Ордер ${orderId} не найден в localStorage`);
+      return null;
+   }
+
+   const filteredOrders = orders.filter(
+      (order) => order.order["Order No."] !== orderId
+   );
+   StorageHelper.setOrders(filteredOrders);
+
+   return orderData;
+}
+
+// Обновление баланса карты
+function updateCardBalance(cardId: string, balanceChange: number): void {
+   const cards: Card[] = loadCards()
+   const updatedCards = cards.map((c) => {
+      if (c.id === cardId) {
+         return {
+            ...c,
+            balance: c.balance + balanceChange,
+            turnover: c.turnover + Math.abs(balanceChange),
+         };
+      }
+      return c;
+   });
+   StorageHelper.setCards(updatedCards);
+}
+
+// Восстановление баланса карты до исходного значения
+function restoreCardBalance(originalCard: Card): void {
+   // originalCard - это данные карты до создания ордера
+   const cards: Card[] = loadCards()
+   const updatedCards = cards.map((c) =>
+      c.id === originalCard.id ? { ...originalCard } : c
+   );
+   StorageHelper.setCards(updatedCards);
+}
+
+// Обработка завершённого ордера
+async function handleCompletedOrder(
+   orderId: string,
+   originalCard: Card,
+   orderData: OrderData
+): Promise<void> {
+   console.log(`✅ Ордер ${orderId} завершён`);
+
+   try {
+      const actuallyUsedCard = await getUsedCard(orderId);
+
+      if (actuallyUsedCard) {
+         restoreCardBalance(originalCard);// баланс предложенной карты восстанавливаем
+         let rubleAmount = parseFloat(orderData.order["Fiat Amount"]);
+         orderData.order.Type === "BUY" ? rubleAmount = -rubleAmount : rubleAmount = rubleAmount
+         updateCardBalance(actuallyUsedCard.id, rubleAmount);// баланс использованной карты обновляем.
+      }
+
+      // Отправляем на сервер
+      orderData.order.Status = "Completed";
+      await sendOrderToServer(orderData);
+   } catch (error) {
+      console.error(`Ошибка при обработке завершённого ордера ${orderId}:`, error);
+      throw error;
+   }
+}
+
+// Обработка отменённого ордера
+async function handleCancelledOrder(
+   orderId: string,
+   originalCard: Card,
+   orderData: OrderData
+): Promise<void> {
+   console.log(`❌ Ордер ${orderId} отменён`);
+
+   try {
+      // Возвращаем баланс карты
+      restoreCardBalance(originalCard);
+
+      // Отправляем на сервер
+      orderData.order.Status = "Cancelled";
+      await sendOrderToServer(orderData);
+   } catch (error) {
+      console.error(`Ошибка при обработке отменённого ордера ${orderId}:`, error);
+      throw error;
+   }
+}
+
+// Обработка завершения ордера (completed или cancelled)
+async function handleOrderCompletion(
+   orderId: string,
+   originalCard: Card,
+   status: string
+): Promise<void> {
+   const orderData = removeOrderFromStorage(orderId);
+
+   if (!orderData) {
+      console.error(`Не удалось найти данные ордера ${orderId}`);
+      return;
+   }
+
+   if (status === "completed") {
+      await handleCompletedOrder(orderId, originalCard, orderData);
+   } else if (status === "cancelled") {
+      await handleCancelledOrder(orderId, originalCard, orderData);
+   }
+}
+
+// Основная функция наблюдения за ордером
+export function watchOrder(orderId: string, card: Card): () => void {
+   let attemptCount = 0;
+   let consecutiveErrors = 0;
+   const MAX_CONSECUTIVE_ERRORS = 5;
+
    const interval = setInterval(async () => {
       try {
-         const status = await getOrderStatus(orderId);
-         console.log(`Статус ордера ${orderId}:`, status);
+         // Проверка таймаута
+         if (attemptCount++ >= MAX_ATTEMPTS) {
+            console.error(`⏱️ Превышено время ожидания для ордера ${orderId}`);
+            clearInterval(interval);
+            return;
+         }
 
+         // Получение статуса
+         const status = await getOrderStatus(orderId);
+         console.log(`📊 Статус ордера ${orderId}: ${status} (попытка ${attemptCount}/${MAX_ATTEMPTS})`);
+
+         // Сброс счётчика ошибок при успешном запросе
+         consecutiveErrors = 0;
+
+         // Обработка финальных статусов
          if (status === "completed" || status === "cancelled") {
             clearInterval(interval);
-
-            // обновляем статус в localStorage
-
-            let orders: { order: Order; card: Card }[] = JSON.parse(
-               localStorage.getItem("orders") || "[]"
-            );
-            let newOrder = orders.find((o) => o.order["Order No."] === orderId);
-            orders = orders.filter(
-               (order) => order.order["Order No."] !== orderId
-            );
-            localStorage.setItem("orders", JSON.stringify(orders));
-
-            if (status === "completed" && newOrder) {
-               console.log(`✅ Ордер ${orderId} завершён`);
-               // отправляем на сервер
-               newOrder.order.Status = "Completed";
-               GM_xmlhttpRequest({
-                  method: "POST",
-                  url: "https://orders-finances-68zktfy1k-ospa2s-projects.vercel.app/api/orders",
-                  headers: {
-                     "Content-Type": "application/json",
-                     Accept: "application/json",
-                  },
-                  data: JSON.stringify(newOrder),
-                  onload: (response: any): void => {
-                     console.log(
-                        "Запрос успешно отправлен!",
-                        response.status,
-                        response.responseText
-                     );
-                  },
-                  onerror: (response: any): void => {
-                     console.error(
-                        "Ошибка при отправке запроса:",
-                        response.status,
-                        response.statusText
-                     );
-                  },
-               });
-            } else if (status === "cancelled" && newOrder) {
-               console.log(`❌ Ордер ${orderId} отменён`);
-               // отправляем на сервер
-               newOrder.order.Status = "Cancelled";
-               GM_xmlhttpRequest({
-                  method: "POST",
-                  url: "https://orders-finances-68zktfy1k-ospa2s-projects.vercel.app/api/orders",
-                  headers: {
-                     "Content-Type": "application/json",
-                     Accept: "application/json",
-                  },
-                  data: JSON.stringify(newOrder),
-                  onload: (response: any): void => {
-                     console.log(
-                        "Запрос успешно отправлен!",
-                        response.status,
-                        response.responseText
-                     );
-                  },
-                  onerror: (response: any): void => {
-                     console.error(
-                        "Ошибка при отправке запроса:",
-                        response.status,
-                        response.statusText
-                     );
-                  },
-               });
-               // обновляем карты
-               let cards: Card[] = JSON.parse(
-                  localStorage.getItem("cards_v1") || "[]"
-               );
-               cards = cards.map((c) => (c.id === card.id ? card : c));
-               localStorage.setItem("cards_v1", JSON.stringify(cards));
-            }
+            await handleOrderCompletion(orderId, card, status);
          }
       } catch (error) {
-         console.error("Ошибка при проверке статуса:", error);
+         consecutiveErrors++;
+         console.error(
+            `❌ Ошибка при проверке статуса ордера ${orderId} (${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}):`,
+            error
+         );
+
+         // Остановка после серии ошибок
+         if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+            console.error(`🛑 Слишком много ошибок подряд для ордера ${orderId}. Остановка наблюдения.`);
+            clearInterval(interval);
+         }
       }
-   }, 5000);
+   }, CHECK_INTERVAL);
+
+   // Возвращаем функцию для ручной остановки наблюдения
+   return () => {
+      console.log(`🛑 Остановка наблюдения за ордером ${orderId}`);
+      clearInterval(interval);
+   };
 }
+
 // ==== Восстановление при загрузке страницы ====
 
 export function initFetchInterceptor() {
+   // Этот код перехватывает XHR, а не fetch.
+
+   function watchCurAds() {
+      let lastValue = localStorage.getItem("curAds");
+
+      setInterval(async () => {
+         const newValue = localStorage.getItem("curAds");//текущие уже отфильтрованные объявления на продажу(около 20 штук обычно)
+
+         if (newValue !== lastValue && newValue) {
+            lastValue = newValue;
+
+            try {
+               const body = JSON.parse(newValue);
+
+               // 0 = Sell
+
+               const onlineAdsData = body || [];
+
+               enhanceAdRows(onlineAdsData);
+               setupSellButtonListener();
+               
+               backgroundProcessAds();
+
+
+            } catch (err) {
+               console.error("Ошибка при обработке unknownUserIds:", err);
+            }
+         }
+      }, 1000); // проверка раз в секунду
+   }
+
+   watchCurAds();
    const originalFetch = window.fetch;
 
    window.fetch = async (...args) => {
       const url = args[0].toString();
       const options = args[1];
 
-      // Перехват списка объявлений на продажу
-      if (url.includes("/x-api/fiat/otc/item/online") && options?.body) {
-         const body = JSON.parse(options.body as string);
-
-         if (body.side === "0") {
-            // 0 = Sell
-
-            const response = await originalFetch(...args);
-            const clonedResponse = response.clone();
-            clonedResponse.json().then((data) => {
-               onlineAdsData = data.result.items || [];
-               enhanceAdRows(onlineAdsData);
-               setupSellButtonListener();
-
-               // Запускаем фоновый процесс
-               const filteredAds = onlineAdsData.filter(
-                  (ad) => !adShouldBeFiltered(ad)
-               );
-               backgroundProcessAds(filteredAds);
-            });
-            return response;
-         }
-      }
-
       // Перехват создания ордера на продажу и отправлям данные ордера в базу
       if (url.includes("x-api/fiat/otc/order/create") && options?.body) {
+         console.log('12:', 12);
+
          const body: OrderPayload = JSON.parse(options.body as string);
 
          if (body.side === "1" && body.securityRiskToken !== "") {

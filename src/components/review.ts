@@ -1,5 +1,4 @@
 import { analyzeReview } from "../logic/reviewAnalyzer.ts";
-import { GM_getValue, GM_setValue } from "$";
 import type { Review, ReviewStats } from "../types/reviews";
 import type { Ad } from "../types/ads";
 import { adShouldBeFiltered } from "../logic/adFilter.ts";
@@ -124,13 +123,13 @@ export async function fetchReviewsData(
 }
 // Создаем объект для хранения статистики в памяти
 // Ключ в localStorage — при необходимости поменяйте (версионирование полезно при изменениях структуры)
-const STORAGE_KEY = "reviewsStatistics_v1";
 
 export const reviewsStatistics = {
    data: (function loadFromStorage(): ReviewStats[] {
       try {
-         const parsed = GM_getValue(STORAGE_KEY, []) as unknown;
-         return Array.isArray(parsed) ? (parsed as ReviewStats[]) : [];
+         const raw = localStorage.getItem("reviewsStatistics_v1");
+         const parsed = raw ? JSON.parse(raw) : [];
+         return parsed
       } catch (e) {
          console.warn(
             "Не удалось прочитать reviewsStatistics из GM-хранилища:",
@@ -142,7 +141,7 @@ export const reviewsStatistics = {
 
    _saveToStorage(): void {
       try {
-         GM_setValue(STORAGE_KEY, this.data);
+         localStorage.setItem("reviewsStatistics_v1", JSON.stringify(this.data));
       } catch (e) {
          console.warn(
             "Не удалось сохранить reviewsStatistics в GM-хранилище:",
@@ -209,11 +208,9 @@ export async function loadAndDisplayReviews(originalAd: Ad) {
       }
 
       if (availableForTradeEl) {
-         availableForTradeEl.textContent = `Доступно для ${
-            originalAd.side === 1 ? "покупки" : "продажи"
-         }: ${(currentBalance || 0).toString()} ${
-            originalAd.tokenId || "USDT"
-         }`;
+         availableForTradeEl.textContent = `Доступно для ${originalAd.side === 1 ? "покупки" : "продажи"
+            }: ${(currentBalance || 0).toString()} ${originalAd.tokenId || "USDT"
+            }`;
       }
 
       // --- 2. ОБНОВЛЕНИЕ ИНТЕРФЕЙСА ---
@@ -236,11 +233,10 @@ export async function loadAndDisplayReviews(originalAd: Ad) {
          "available-for-trade"
       );
       if (availableBalanceElement) {
-         availableBalanceElement.textContent = `Доступно для ${
-            originalAd.side === 1 ? "покупки" : "продажи"
-         }: ${currentBalance.toLocaleString("ru-RU", {
-            minimumFractionDigits: 4,
-         })} ${originalAd.tokenId || "USDT"}`;
+         availableBalanceElement.textContent = `Доступно для ${originalAd.side === 1 ? "покупки" : "продажи"
+            }: ${currentBalance.toLocaleString("ru-RU", {
+               minimumFractionDigits: 4,
+            })} ${originalAd.tokenId || "USDT"}`;
       }
 
       // --- БЛОК ФОРМИРОВАНИЯ HTML (рефакторинг с использованием map) ---
@@ -273,16 +269,14 @@ export async function loadAndDisplayReviews(originalAd: Ad) {
                filteredCount > 0 || highlightedCount > 0
                   ? `
                     <div class="filter-info">                    
-                        ${
-                           filteredCount > 0
-                              ? `<span class="filtered-info">Скрыто спам-отзывов: ${filteredCount}</span>`
-                              : ""
-                        }
-                        ${
-                           highlightedCount > 0
-                              ? `<span class="highlighted-info">Подсвечено подозрительных: ${highlightedCount}</span>`
-                              : ""
-                        }
+                        ${filteredCount > 0
+                     ? `<span class="filtered-info">Скрыто спам-отзывов: ${filteredCount}</span>`
+                     : ""
+                  }
+                        ${highlightedCount > 0
+                     ? `<span class="highlighted-info">Подсвечено подозрительных: ${highlightedCount}</span>`
+                     : ""
+                  }
                     </div>
                 `
                   : "";
@@ -314,13 +308,15 @@ export async function loadAndDisplayReviews(originalAd: Ad) {
    }
 }
 
+
 export async function processUserReviews(originalAd: Ad): Promise<void> {
-   if (!adShouldBeFiltered(originalAd)) {
+    if(1){ //(!adShouldBeFiltered(originalAd)) {
       /*reviewsStatistics.getByUserId(originalAd.userId)===null*/ const {
          negativeReviews,
          positiveReviewsCount,
       } = await fetchReviewsData(originalAd.userId);
-
+      console.log('negativereviewsCount:', negativeReviews.length);
+      
       let highlightedCount = 0;
 
       negativeReviews.forEach((review) => {
