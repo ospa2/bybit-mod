@@ -40,9 +40,9 @@ export async function backgroundProcessAds() {
          const newValue = localStorage.getItem("unknownUserIds") || "[]";
          const newSellerAds: Ad[] = JSON.parse(newValue);
 
-         
+
          const nextSellerAds = newSellerAds.filter((item: Ad) => item.userId !== ad.userId);
- 
+
          localStorage.setItem("unknownUserIds", JSON.stringify(nextSellerAds));
          await delay(1000); // пауза 1 сек, чтобы не заблокировали IP
       }
@@ -425,7 +425,7 @@ export function initFetchInterceptor() {
       setInterval(async () => {
          const newValue = localStorage.getItem("curAds");//текущие уже отфильтрованные объявления на продажу(около 20 штук обычно)
 
-         if (newValue !== lastValue && newValue) {
+         if (newValue !== lastValue && newValue && window.location.href.includes("sell")) {
             lastValue = newValue;
 
             try {
@@ -433,11 +433,11 @@ export function initFetchInterceptor() {
 
                // 0 = Sell
 
-               const onlineAdsData = body || [];
+               onlineAdsData = body || [];
 
                enhanceAdRows(onlineAdsData);
                setupSellButtonListener();
-               
+
                backgroundProcessAds();
 
 
@@ -451,13 +451,43 @@ export function initFetchInterceptor() {
    watchCurAds();
    const originalFetch = window.fetch;
 
+
+
+   function watchCurOrders() {
+      setInterval(async () => {
+         const newValue = localStorage.getItem("tempSellData");
+
+         if (newValue) {
+
+            try {
+               const curOrders = JSON.parse(newValue);
+               const data = curOrders[0];
+
+               const req = data.req;
+
+               const res = data.res;
+
+               // 0 = Sell
+
+               sendSellData(req, res);
+               curOrders.shift();
+               localStorage.setItem("tempSellData", JSON.stringify(curOrders));
+
+
+            } catch (err) {
+               console.error("Ошибка при обработке unknownUserIds:", err);
+            }
+         }
+      }, 1000); // проверка раз в секунду
+   }
+
+   watchCurOrders();
    window.fetch = async (...args) => {
       const url = args[0].toString();
       const options = args[1];
-
+      // логика сохранения данных ордера перенесена в Requestly, т.к. здесь скрипт перестал видеть перехваченные запросы
       // Перехват создания ордера на продажу и отправлям данные ордера в базу
       if (url.includes("x-api/fiat/otc/order/create") && options?.body) {
-         console.log('12:', 12);
 
          const body: OrderPayload = JSON.parse(options.body as string);
 
@@ -485,9 +515,11 @@ function setupSellButtonListener() {
    }
 
    currentButtonClickHandler = (e: MouseEvent) => {
+
       const btn = (e.target as HTMLElement).closest("button");
       if (btn && btn.innerText.includes("Продать USDT")) {
          const index = getRowIndex(btn);
+
          if (index !== -1 && onlineAdsData[index]) {
             handleModalOpening(onlineAdsData[index], e);
          }

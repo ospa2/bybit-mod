@@ -2,7 +2,8 @@ import { filterRemark } from "../utils/filterRemark";
 import { openBuyModal } from "./buyModal";
 import { paymentNames, paymentColors } from "../config";
 import type { Ad } from "../types/ads";
-import { availableBanks, findBuyCard } from "../automation/adFinder";
+import {  calculateValue, findBuyCard } from "../automation/adFinder";
+import { availableBanks } from "../utils/bankParser";
 
 export function createRowFromTemplate(ad: Ad, minPrice?: number): ChildNode | null {
    function getPaymentStyle(paymentId: string): string {
@@ -12,7 +13,11 @@ export function createRowFromTemplate(ad: Ad, minPrice?: number): ChildNode | nu
    }
 
    const filteredRemark = ad.remark//легаси 
-
+   let value=0
+   let card = findBuyCard(ad, minPrice || 0);
+   if (card) {
+      value = calculateValue(ad, card, minPrice || 0);
+   }
    const rowHTML = /*html*/ `
         <div class="dynamic-row" style="display: contents;">
             <div class="table-row" style="display: table-row;">
@@ -126,9 +131,9 @@ export function createRowFromTemplate(ad: Ad, minPrice?: number): ChildNode | nu
          ? "bg-greenColor-bds-green-700-normal"
          : "bg-redColor-bds-red-700-normal"
       } text-base-bds-static-white px-[16px] py-[8px] rounded">
-                        <span>${ad.side === 1 ? "Купить" : "Продать"} ${ad.tokenId ?? "USDT"
-      }</span>
+                        <span>${card ? card.id : "нет карт"}</span>
                     </button>
+                    <div >${value}</div>
                 </div>
             </div>
         </div>
@@ -209,6 +214,7 @@ export function createRowFromTemplate(ad: Ad, minPrice?: number): ChildNode | nu
          let card = null
          if (minPrice) {
             card = findBuyCard(ad, minPrice)
+            console.log("🚀 ~ createRowFromTemplate ~ card:", card)
             openBuyModal({ ad: ad, card: card }, minPrice, false);
          }
          

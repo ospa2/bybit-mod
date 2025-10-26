@@ -89,6 +89,22 @@ export async function fetchAndAppendPage() {
       const minPrice = Math.min(...ads.filter((ad: Ad) => !adShouldBeFiltered(ad)).map((a: Ad) => parseFloat(a.price)));
 
       if (ads) {
+         try {
+            const adAndCard = findBestBuyAd(ads);
+            console.log(
+               "card:",
+               adAndCard?.card.id,
+               "counterparty: ",
+               adAndCard?.ad.nickName
+            );
+            if (adAndCard) {
+               //openBuyModal(adAndCard, minPrice, true); // автоматическое создание ордера
+            }
+         } catch (error) {
+            console.log('error:', error);
+            
+         }
+         
          for (let i = 0; i < ads.length; i++) {
 
             try {
@@ -106,18 +122,9 @@ export async function fetchAndAppendPage() {
          }
          // После этого цикл гарантированно завершится
          tbody.prepend(fragment); // Теперь этот код должен быть достигнут.
-
-         const adAndCard = findBestBuyAd(ads);
-         console.log(
-            "card:",
-            adAndCard?.card.id,
-            "counterparty: ",
-            adAndCard?.ad.nickName
-         );
-
-         if (adAndCard) {
-            openBuyModal(adAndCard, minPrice, true); // автоматическое создание ордера
-         }
+      
+         
+         
 
       } else {
          console.warn(`[${now()}] Ответ API не содержит ads.items массив.`);

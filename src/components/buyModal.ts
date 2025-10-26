@@ -178,6 +178,46 @@ export async function openBuyModal(data: { ad: Ad; card: Card | null }, minPrice
       loadAndDisplayReviews(ad);
       startPriceTimer();
    }
+   document.addEventListener(
+      "keydown",
+      function escHandler(e: KeyboardEvent): void {
+         if (e.key === "Escape") {
+
+            closeModal();
+            document.removeEventListener("keydown", escHandler);
+         }
+      }
+   );
+   const overlay = document.querySelector(
+      ".bybit-modal-overlay"
+   ) as HTMLElement | null;
+   const closeButton = overlay?.querySelector(
+      ".bybit-modal-close"
+   ) as HTMLButtonElement | null;
+   const cancelButton = overlay?.querySelector(
+      "#cancel-button"
+   ) as HTMLButtonElement | null;
+   const receiveInput = overlay?.querySelector(
+      "#receive-input"
+   ) as HTMLInputElement | null;
+
+   cancelButton?.addEventListener("click", () => {
+      closeModal()
+   });
+
+   closeButton?.addEventListener("click", () => closeModal());
+
+   overlay?.addEventListener("click", (e: MouseEvent) => {
+      if (e.target === overlay) closeModal();
+   });
+
+   receiveInput?.addEventListener("blur", () => {
+      if (receiveInput) {
+         const currentValue: number = parseFloat(receiveInput.value) || 0;
+         receiveInput.value = currentValue.toFixed(2);
+      }
+   });
+
 
    // 2. --- ФАЗА ФОНОВОЙ ЗАГРУЗКИ И ОБНОВЛЕНИЯ ---
    try {
@@ -218,6 +258,12 @@ export async function openBuyModal(data: { ad: Ad; card: Card | null }, minPrice
       if (data.card) {
 
          setupModalEvents(apiResult, data.card, autoarbitrage);
+      } else {
+         showNotification(
+            "нет подходящей карты под это объявление",
+            "error"
+         );
+         closeModal()
       }
    } catch (e) {
       console.error("Ошибка при подгрузке деталей объявления:", e);
@@ -235,11 +281,13 @@ function closeModal() {
    if (overlay) {
       overlay.remove();
    }
+
    document.body.style.overflow = "";
    enableBodyScroll();
 }
 
 function setupModalEvents(apiResult: ApiResult, card: Card, autoarbitrage: boolean): void {
+
 
    const overlay = document.querySelector(
       ".bybit-modal-overlay"
@@ -464,7 +512,7 @@ function setupModalEvents(apiResult: ApiResult, card: Card, autoarbitrage: boole
          if (response.ok && result.ret_code === 0 && card) {
 
             await saveBuyOrder(result.result.orderId, card);
-         
+
             showNotification("ордер успешно создан", "success");
             closeModal();
          } else {
@@ -496,12 +544,12 @@ function setupModalEvents(apiResult: ApiResult, card: Card, autoarbitrage: boole
       }
 
       handleAmountChange();
-      //executeTrade();
+      executeTrade();
 
       return;
    }
 
-   // === Ручной режим (старое поведение) ===
+   // === модальное окно ===
    amountInput?.addEventListener("input", handleAmountChange);
    receiveInput?.addEventListener("input", () => {
       if (!amountInput || !receiveInput) return;
@@ -510,12 +558,7 @@ function setupModalEvents(apiResult: ApiResult, card: Card, autoarbitrage: boole
       amountInput.value = amountValue.toFixed(4);
       validateAndToggleButton();
    });
-   receiveInput?.addEventListener("blur", () => {
-      if (receiveInput) {
-         const currentValue: number = parseFloat(receiveInput.value) || 0;
-         receiveInput.value = currentValue.toFixed(2);
-      }
-   });
+
 
    maxButton?.addEventListener("click", () => {
 
@@ -526,28 +569,13 @@ function setupModalEvents(apiResult: ApiResult, card: Card, autoarbitrage: boole
       if (amountInput) {
          amountInput.value = maxAmount.toFixed(4);
       }
+      handleAmountChange()
       validateAndToggleButton();
    });
 
    tradeButton?.addEventListener("click", executeTrade);
-   cancelButton?.addEventListener("click", () => {
 
-      closeModal()
-   });
-   closeButton?.addEventListener("click", () => closeModal());
 
-   overlay?.addEventListener("click", (e: MouseEvent) => {
-      if (e.target === overlay) closeModal();
-   });
 
-   document.addEventListener(
-      "keydown",
-      function escHandler(e: KeyboardEvent): void {
-         if (e.key === "Escape") {
-
-            closeModal();
-            document.removeEventListener("keydown", escHandler);
-         }
-      }
-   );
+   maxButton?.click()
 }

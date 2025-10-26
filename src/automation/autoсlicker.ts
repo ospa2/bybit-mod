@@ -38,8 +38,8 @@ export class AutoClickElements {
     const buttons: HTMLButtonElement[] = element.querySelectorAll?.("button")
       ? Array.from(element.querySelectorAll("button"))
       : element.tagName === "BUTTON"
-      ? [element as HTMLButtonElement]
-      : [];
+        ? [element as HTMLButtonElement]
+        : [];
 
 
     buttons.forEach((button) => {//клик на подтвердить с помощью ключа доступа(ордер на продажу)
@@ -57,8 +57,8 @@ export class AutoClickElements {
     const spans: HTMLSpanElement[] = element.querySelectorAll?.("span")
       ? Array.from(element.querySelectorAll("span"))
       : element.tagName === "SPAN"
-      ? [element as HTMLSpanElement]
-      : [];
+        ? [element as HTMLSpanElement]
+        : [];
 
     spans.forEach((span) => {//найти кнопку выбрать способ оплаты
       const spanText = span.textContent?.trim();
@@ -72,8 +72,8 @@ export class AutoClickElements {
     const divs: HTMLDivElement[] = element.querySelectorAll?.("div")
       ? Array.from(element.querySelectorAll("div"))
       : element.tagName === "DIV"
-      ? [element as HTMLDivElement]
-      : [];
+        ? [element as HTMLDivElement]
+        : [];
 
     divs.forEach((div) => {//клик на селект "Выбрать способ оплаты"
       const selectText = div.textContent?.trim();
@@ -109,13 +109,13 @@ export class AutoClickElements {
           "Cash Deposit to Bank",
         ].includes(text)
       ) {
-        console.log("AutoClick: Найден SBP, выполняю клик");
+        console.log("AutoClick: Найден способ оплаты, кликаю");
         this.clickElement(div, "SBP div");
       }
     });
 
     if (sbpDivs.length === 0) {
-      console.log("AutoClick: SBP еще не загрузился, повторная попытка...");
+      console.log("AutoClick: способы оплаты ещё не загрузились, повторная попытка...");
       setTimeout(() => this.findAndClickSBP(), 500);
     }
   }
@@ -135,7 +135,7 @@ export class AutoClickElements {
       if (type === "span") {
         let i = 0;
         const interval = setInterval(() => {
-          if (i > 10) {
+          if (i > 1) {
             clearInterval(interval);
           }
           i++;
