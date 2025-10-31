@@ -1,13 +1,14 @@
 import "./style.css";
-import { initSliderReplacement } from "./components/rangeSlider.ts";
-import { updateGlobalValues } from "./state.ts";
-import { loadOnceAndApply, observeUrlChanges } from "./logic/buyLoader.ts";
+import { initSliderReplacement } from "./shared/components/rangeSlider.ts";
+import { updateGlobalValues } from "./core/state.ts";
+import { loadOnceAndApply, observeUrlChanges } from "./features/buy/logic/buyLoader.ts";
 let periodicRefreshId: ReturnType<typeof setInterval> | null = null;
 
-import { connectPrivateWs } from "./api/wsPrivate.ts";
-import { backgroundProcessAds, initFetchInterceptor} from "./api/sellInterceptor.ts";
-import { resumePendingOrders} from "./api/bybitApi.ts";
-import { AutoClickElements } from "./automation/autoсlicker.ts";
+import { connectPrivateWs } from "./shared/api/wsPrivate.ts";
+import { initFetchInterceptor } from "./features/sell/logic/sellInterceptor.ts";
+import { resumePendingOrders } from "./features/buy/api/buyApi.ts";
+import { AutoClickElements } from "./features/sell/automation/autoсlicker.ts";
+import { backgroundProcessAds } from "./features/sell/logic/sellBackgroundProc.ts";
 
 function now() {
    return new Date().toISOString();

@@ -20,7 +20,7 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
-    "typeRoots": ["./src/types"]
+    "typeRoots": ["src/shared/types"]
     
   },
   "include": ["src"]
