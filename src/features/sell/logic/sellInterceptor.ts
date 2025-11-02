@@ -50,34 +50,70 @@ export function initFetchInterceptor() {
 
 
    function watchCurOrders() {
-      setInterval(async () => {
-         const newValue = localStorage.getItem("tempSellData");
-         console.log("🚀 ~ watchCurOrders ~ newValue:", newValue)
-         
+      let isProcessing = false; // защита от повторного выполнения
+      const interval = 1000; // интервал проверки
 
-         if (newValue) {
+      setInterval(async () => {
+         if (isProcessing) return;
+         isProcessing = true;
+
+         try {
+            const newValue = localStorage.getItem("tempSellData");
+            if (!newValue) {
+               isProcessing = false;
+               return;
+            }
+
+            let curOrders:{ req: OrderPayload, res: CreateResponse }[] = [];
+            try {
+               curOrders = JSON.parse(newValue);
+            } catch (jsonErr) {
+               console.error("Ошибка парсинга tempSellData:", jsonErr);
+               localStorage.removeItem("tempSellData"); // сбрасываем повреждённые данные
+               isProcessing = false;
+               return;
+            }
+
+            if (!Array.isArray(curOrders) || curOrders.length === 0) {
+               localStorage.removeItem("tempSellData"); // чистим, если пусто
+               isProcessing = false;
+               return;
+            }
+
+            const data = curOrders[0];
+            if (!data?.req || !data?.res) {
+               console.warn("Некорректная структура данных:", data);
+               curOrders.shift(); // удаляем неверный элемент
+               localStorage.setItem("tempSellData", JSON.stringify(curOrders));
+               isProcessing = false;
+               return;
+            }
 
             try {
-               const curOrders: { req: OrderPayload, res: CreateResponse }[] = JSON.parse(newValue);
-               const data = curOrders[0];
-
-               const req = data.req;
-
-               const res = data.res;
-
-               // 0 = Sell
-
-               sendSellData(req, res);
-               curOrders.shift();
-               localStorage.setItem("tempSellData", JSON.stringify(curOrders));
-
-
+               // безопасный вызов sendSellData
+               sendSellData(data.req, data.res);
             } catch (err) {
-               console.error("Ошибка при обработке unknownUserIds:", err);
+               console.error("Ошибка при отправке данных:", err);
+               // если ошибка при отправке — не удаляем элемент, чтобы не потерять данные
+               isProcessing = false;
+               return;
             }
+
+            // удаляем успешно обработанный элемент
+            curOrders.shift();
+            if (curOrders.length > 0) {
+               localStorage.setItem("tempSellData", JSON.stringify(curOrders));
+            } else {
+               localStorage.removeItem("tempSellData");
+            }
+         } catch (err) {
+            console.error("Ошибка при обработке заказов:", err);
+         } finally {
+            isProcessing = false;
          }
-      }, 1000); // проверка раз в секунду
+      }, interval);
    }
+
 
    watchCurOrders();
    // window.fetch = async (...args) => {

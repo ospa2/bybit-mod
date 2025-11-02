@@ -1,8 +1,8 @@
-import { filterRemark } from "../../../shared/utils/filterRemark";
+//import { filterRemark } from "../../../shared/utils/filterRemark";
 import { openBuyModal } from "./buyModal";
 import { paymentNames, paymentColors } from "../../../core/config";
 import type { Ad } from "../../../shared/types/ads";
-import { calculateValue, findBuyCard } from "../automation/adFinder";
+import { findBuyCard } from "../automation/adFinder";
 import { availableBanks } from "../../../shared/utils/bankParser";
 
 export function createRowFromTemplate(ad: Ad, minPrice?: number): ChildNode | null {
@@ -13,11 +13,9 @@ export function createRowFromTemplate(ad: Ad, minPrice?: number): ChildNode | nu
    }
 
    const filteredRemark = ad.remark//легаси 
-   let value = 0
+
    let card = findBuyCard(ad, minPrice || 0);
-   if (card) {
-      value = calculateValue(ad, card, minPrice || 0);
-   }
+
    const rowHTML = /*html*/ `
         <div class="dynamic-row" style="display: contents;">
             <div class="table-row" style="display: table-row;">
@@ -80,10 +78,25 @@ export function createRowFromTemplate(ad: Ad, minPrice?: number): ChildNode | nu
                                     <div class="moly-space flex items-baseline" style="gap: 16px;">
                                         <div class="moly-space-item moly-space-item-first" style="margin-top: 6px;">
                                             <div class="inline-block" style="max-width: 400px;">
-                                                <span class="moly-text text-[var(--bds-gray-t2)] font-[400] inline pointer">
-                                                    <img src="/fiat/trade/gw/static/media/clock.8fb8bc6c6fe17cf175ba8a0abda873f5.svg" alt="" width="14" style="vertical-align: -2px;">
-                                                    ${filteredRemark}
-                                                </span>
+                                                <span
+                                                   class="moly-text text-[var(--bds-gray-t2)] font-[400] inline cursor-text transition-colors duration-300"
+                                                   ondblclick="
+                                                      navigator.clipboard.writeText(this.textContent.trim());
+                                                      this.classList.add('copied');
+                                                      setTimeout(() => this.classList.remove('copied'), 800);
+                                                   "
+                                                   >
+                                                   <img
+                                                      src="/fiat/trade/gw/static/media/clock.8fb8bc6c6fe17cf175ba8a0abda873f5.svg"
+                                                      alt=""
+                                                      width="14"
+                                                      style="vertical-align: -2px;"
+                                                   >
+                                                   ${filteredRemark}
+                                                   </span>
+
+
+
                                             </div>
                                         </div>
                                     </div>
@@ -130,7 +143,7 @@ export function createRowFromTemplate(ad: Ad, minPrice?: number): ChildNode | nu
                     <button class="moly-btn ${card
          ? "bg-greenColor-bds-green-700-normal"
          : "bg-gray-500"
-}
+      }
  text-base-bds-static-white px-[16px] py-[8px] rounded">
                         <span>${card ? card.id : "нет карт"}</span>
                     </button>

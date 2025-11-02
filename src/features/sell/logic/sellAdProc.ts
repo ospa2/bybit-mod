@@ -6,6 +6,48 @@ import { filterRemark } from "../../../shared/utils/filterRemark";
 import type { Ad } from "../../../shared/types/ads";
 import type { ReviewStats } from "../../../shared/types/reviews";
 
+// app.ts
+
+/**
+ * Создает и проигрывает короткий звуковой сигнал (бип).
+ */
+export function generateBeep(frequency: number = 440, duration: number = 500): void {
+  // 1. Создаем контекст аудио.
+  // Это основной объект для управления звуком.
+  const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+
+  // 2. Создаем осциллятор (источник звука).
+  const oscillator = audioContext.createOscillator();
+
+  // 3. Создаем GainNode (для контроля громкости и плавного затухания).
+  const gainNode = audioContext.createGain();
+
+  // --- Настройки звука ---
+
+  // Устанавливаем тип волны: 'sine' (чистый тон), 'square', 'sawtooth' или 'triangle'.
+  oscillator.type = 'sine';
+
+  // Устанавливаем частоту (в Герцах). 440 Гц - стандартная нота "Ля".
+  oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+
+  // Устанавливаем громкость (от 0.0 до 1.0).
+  gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+
+  // --- Соединение узлов ---
+  // Соединяем: Источник -> Громкость -> Выход (динамики)
+  oscillator.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+
+  // --- Воспроизведение ---
+
+  // Запускаем осциллятор немедленно
+  oscillator.start();
+
+  // Останавливаем звук через заданное время (duration в миллисекундах)
+  // Используем scheduleImmediate для плавного выключения
+  oscillator.stop(audioContext.currentTime + duration / 1000);
+}
+
 
 // Хранилище уже кликнутых объявлений
 const clickedAdIds = new Set<string>();
@@ -36,6 +78,7 @@ export function enhanceAdRows(ads: Ad[]) {
       !clickedAdIds.has(ad.id) // проверяем, что по этому объявлению еще не кликали
     ) {
       clickedThisPass = true;
+      generateBeep()
       const sellBtn = row.querySelector<HTMLElement>(
         ".trade-list-action-button button"
       );

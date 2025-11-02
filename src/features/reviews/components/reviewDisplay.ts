@@ -1,7 +1,7 @@
 import { analyzeReview } from "../logic/reviewAnalyzer.ts";
 import type { Review } from "../../../shared/types/reviews";
 import type { Ad } from "../../../shared/types/ads";
-import { adShouldBeFiltered } from "../../../shared/utils/adFilter.ts";
+//import { adShouldBeFiltered } from "../../../shared/utils/adFilter.ts";
 import { fetchReviewsData } from "../api/reviewsApi.ts";
 import reviewsStatistics from "../../../shared/storage/storageHelper.ts";
 import { convertBybitTime } from "../../../shared/utils/timeStuff.ts";

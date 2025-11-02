@@ -3,7 +3,7 @@
 import { showNotification } from "../../../shared/utils/notifications.ts";
 
 import { closeModal } from "../components/buyModalDOM.ts";
-import { validateAndToggleButton, handleAmountChange, createBuyPayload, executeTrade } from "./buyTradeLogic.ts"; // ⭐ НОВЫЙ ИМПОРТ
+import { validateAndToggleButton, handleAmountChange, executeTrade } from "./buyTradeLogic.ts"; // ⭐ НОВЫЙ ИМПОРТ
 
 import type { Ad, ApiResult } from "../../../shared/types/ads";
 import { findBuyCard, type Card } from "../automation/adFinder.ts";

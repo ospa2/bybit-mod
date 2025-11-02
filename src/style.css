@@ -904,3 +904,8 @@ body.modal-open {
     position: relative;
     top: 20px;
 }
+
+.moly-text.copied {
+  color: var(--bds-green, #22c55e);
+  transition: color 0.01s 0.2s ease;
+}
