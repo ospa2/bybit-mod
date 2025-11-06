@@ -5,6 +5,8 @@ import { adShouldBeFiltered } from "../../../shared/utils/adFilter";
 import { filterRemark } from "../../../shared/utils/filterRemark";
 import type { Ad } from "../../../shared/types/ads";
 import type { ReviewStats } from "../../../shared/types/reviews";
+import { sendTelegramMessage } from "../api/confirmOrder";
+import { AutoClickElements } from "../automation/autoсlicker";
 
 // app.ts
 
@@ -78,7 +80,24 @@ export function enhanceAdRows(ads: Ad[]) {
       !clickedAdIds.has(ad.id) // проверяем, что по этому объявлению еще не кликали
     ) {
       clickedThisPass = true;
-      generateBeep()
+      // 1. Проверяем, есть ли разрешение
+      if (Notification.permission === "granted") {
+        // 2. Если есть, показываем уведомление
+        new Notification("Новый ордер на продажу", {
+          body: `от ${ad.nickName} на ${ad.quantity} руб. `,
+          icon: 'URL_картинки' // Опционально
+        });
+      } else if (Notification.permission !== "denied") {
+        // 3. Если нет, запрашиваем разрешение
+        Notification.requestPermission().then(function (permission) {
+          if (permission === "granted") {
+            new Notification("Web API Уведомление", {
+              body: "Спасибо за разрешение! Уведомление показано."
+            });
+          }
+        });
+      }
+      sendTelegramMessage(ad)
       const sellBtn = row.querySelector<HTMLElement>(
         ".trade-list-action-button button"
       );
@@ -89,6 +108,8 @@ export function enhanceAdRows(ads: Ad[]) {
         sellBtn.click();
         clickedAdIds.add(ad.id); // запоминаем, что кликнули
       }
+
+      setTimeout(() => AutoClickElements.findAndClickCancel((window as any).autoClicker, modal), 60 * 1000);
     }
 
     // Вставка статистики и условий

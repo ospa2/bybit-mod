@@ -101,7 +101,9 @@ setTimeout(waitForTableAndStart, 100);
 
 
 // Запускаем автоматизацию кликов
-new AutoClickElements();
+const autoClicker = new AutoClickElements();
+// Делаем экземпляр доступным глобально
+(window as any).autoClicker = autoClicker;
 
 connectPrivateWs();
 

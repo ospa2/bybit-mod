@@ -55,7 +55,7 @@ export function handleModalOpening(ad: Ad, e: MouseEvent) {
             modal.appendChild(reviewsContainer);
           }
         }
-
+        
         loadAndDisplayReviews(ad);
         clearInterval(reviewsInterval);
         console.log("отзывы вставлены, стиль обновлен");

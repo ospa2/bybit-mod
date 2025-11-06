@@ -1,5 +1,6 @@
 // src/logic/loader.js 
 import { appState, setStopLoading } from "../../../core/state";
+import { AutoClickElements } from "../../sell/automation/autoсlicker.ts";
 import { fetchAndAppendPage } from "../api/buyApi.ts";
 
 const DEBOUNCE_MS = 150;
@@ -33,7 +34,9 @@ export async function handleUrlChange() {
   }
 
   console.log(`[${now()}] handleUrlChange — очищаю таблицу один раз и перезапускаю загрузку по правилу страницы.`);
-
+  if(window.location.href === "https://www.bybit.com/ru-RU/p2p/sell/USDT/RUB") {
+    AutoClickElements.findAndClickRefreshSelector((window as any).autoClicker)
+  }
   // Останавливаем текущие операции
   setStopLoading(true);
   // Ждём пока текущие загрузки закончатся

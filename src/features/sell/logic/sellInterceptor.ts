@@ -6,6 +6,7 @@ import type { Ad, CreateResponse, OrderPayload } from "../../../shared/types/ads
 import { sendSellData } from "../api/sellApi";
 import { backgroundProcessAds } from "./sellBackgroundProc";
 import { setupSellButtonListener } from "../components/sellDOMHandlers";
+import { checkTelegramResponse } from "../api/confirmOrder";
 
 let onlineAdsData: Ad[] = []; // Локальное хранилище данных об объявлениях на продажу
 
@@ -48,7 +49,26 @@ export function initFetchInterceptor() {
    // const originalFetch = window.fetch;
 
 
+   async function runBotPolling() {
+      // Внутри цикла while(true) для постоянного опроса
+      while (true) {
+         try {
+            await checkTelegramResponse();
 
+            // Если Telegram вернул пустой массив (timeout long polling), 
+            // новый запрос отправится немедленно, без задержки.
+
+         } catch (error) {
+            // Если произошла сетевая ошибка, или другая критическая ошибка, 
+            // делаем небольшую паузу, чтобы не спамить API.
+            console.error("Критическая ошибка в цикле опроса, пауза...", error);
+            await new Promise(resolve => setTimeout(resolve, 5000)); // Пауза 5 секунд
+         }
+      }
+   }
+
+   // Запуск бота
+   runBotPolling();
    function watchCurOrders() {
       let isProcessing = false; // защита от повторного выполнения
       const interval = 1000; // интервал проверки
@@ -64,7 +84,7 @@ export function initFetchInterceptor() {
                return;
             }
 
-            let curOrders:{ req: OrderPayload, res: CreateResponse }[] = [];
+            let curOrders: { req: OrderPayload, res: CreateResponse }[] = [];
             try {
                curOrders = JSON.parse(newValue);
             } catch (jsonErr) {
