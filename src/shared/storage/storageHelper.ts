@@ -152,4 +152,34 @@ export function restoreCardBalance(originalCard: Card): void {
    StorageHelper.setCards(updatedCards);
 }
 
+export const LS_KEY = "reviewsStatistics_v1";
+
+// ================== HELPERS ==================
+export function loadReviewsStatistics(): ReviewStats[] {
+   try {
+      const raw = localStorage.getItem(LS_KEY) || "[]";
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr : [];
+   } catch (e) {
+      console.warn("Не удалось прочитать reviewsStatistics_v1:", e);
+      return [];
+   }
+}
+
+export function saveReviewsStatistics(arr: ReviewStats[]) {
+   try {
+      localStorage.setItem(LS_KEY, JSON.stringify(arr));
+   } catch (e) {
+      console.warn("Не удалось сохранить reviewsStatistics_v1:", e);
+   }
+}
+
+export function upsertStats(newEntry: ReviewStats) {
+   const arr = loadReviewsStatistics();
+   const idx = arr.findIndex(x => x.userId === newEntry.userId);
+   if (idx >= 0) arr[idx] = { ...arr[idx], ...newEntry };
+   else arr.push(newEntry);
+   saveReviewsStatistics(arr);
+}
+
 export default reviewsStatistics;

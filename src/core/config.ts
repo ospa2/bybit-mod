@@ -610,5 +610,4 @@ export const bestMerchants = [
   "28862021", //Roman2505
   "261174228", //b3nw1k
   "67322958" //kibermanager
-
 ];

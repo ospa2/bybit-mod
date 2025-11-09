@@ -1,10 +1,11 @@
 export interface ReviewStats {
-  highlightedCount: number;
-  goodReviewsCount: number;
-  allReviewsLength: number;
   userId: string;
+  goodReviewsCount: number;
+  badReviewsCount: number;
+  highlightedCount: number;
+  lastUpdated: number;
+  priority: number;
 }
-
 export interface Review {
   anonymous: number;
   nickName: string;

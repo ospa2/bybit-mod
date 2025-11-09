@@ -1,37 +1,38 @@
-import reviewsStatistics from "../../../shared/storage/storageHelper";
+import { upsertStats } from "../../../shared/storage/storageHelper";
 import type { Ad } from "../../../shared/types/ads";
+import type { ReviewStats } from "../../../shared/types/reviews";
 import { fetchReviewsData } from "../api/reviewsApi";
+import { calculatePriority } from "./procHelper";
 import { analyzeReview } from "./reviewAnalyzer";
 
-export async function processUserReviews(originalAd: Ad): Promise<void> {
-   if (1) { //(!adShouldBeFiltered(originalAd)) {
-      /*reviewsStatistics.getByUserId(originalAd.userId)===null*/ const {
-         negativeReviews,
-         positiveReviewsCount,
-      } = await fetchReviewsData(originalAd.userId);
-      console.log('negativereviewsCount:', negativeReviews.length);
+export async function processUserReviews(originalAd: Ad | string): Promise<void> {
+   if (typeof originalAd === "string") originalAd = { userId: originalAd } as Ad;
+   try {
+      const { negativeReviews, positiveReviewsCount } = await fetchReviewsData(originalAd.userId);
 
       let highlightedCount = 0;
-
-      negativeReviews.forEach((review) => {
-         if (!review.appraiseContent) return;
-
+      for (const review of negativeReviews) {
+         if (!review.appraiseContent) continue;
          const analysis = analyzeReview(review.appraiseContent);
+         if (analysis.shouldHighlight) highlightedCount++;
+      }
 
-         if (analysis.shouldHighlight) {
-            highlightedCount++;
-         }
-      });
+      const badReviewsCount = negativeReviews.length;
+      const goodReviewsCount = Number(positiveReviewsCount || 0);
 
-      // --- СОХРАНЕНИЕ СТАТИСТИКИ ---
-      const statsObject = {
-         highlightedCount,
-         goodReviewsCount: positiveReviewsCount,
-         allReviewsLength: negativeReviews.length,
+      let entry: ReviewStats = {
          userId: originalAd.userId,
+         goodReviewsCount,
+         badReviewsCount,
+         highlightedCount,
+         lastUpdated: Date.now(),
+         priority: 0
       };
-      console.log(originalAd.nickName);
 
-      reviewsStatistics.add(statsObject);
+      entry.priority = calculatePriority(entry);
+
+      upsertStats(entry);
+   } catch (err) {
+      console.warn("processUserReviews error for", originalAd.userId, err);
    }
 }

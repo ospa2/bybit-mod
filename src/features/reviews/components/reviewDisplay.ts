@@ -1,10 +1,10 @@
 import { analyzeReview } from "../logic/reviewAnalyzer.ts";
-import type { Review } from "../../../shared/types/reviews";
+import type { Review, ReviewStats } from "../../../shared/types/reviews";
 import type { Ad } from "../../../shared/types/ads";
-//import { adShouldBeFiltered } from "../../../shared/utils/adFilter.ts";
 import { fetchReviewsData } from "../api/reviewsApi.ts";
 import reviewsStatistics from "../../../shared/storage/storageHelper.ts";
 import { convertBybitTime } from "../../../shared/utils/timeStuff.ts";
+import { calculatePriority } from "../logic/procHelper.ts";
 function createReviewHTML(review: Review, className: string) {
   
    const analysis = analyzeReview(review.appraiseContent);
@@ -119,15 +119,21 @@ export async function loadAndDisplayReviews(originalAd: Ad) {
       }
 
       // --- СОХРАНЕНИЕ СТАТИСТИКИ ---
-      const statsObject = {
+      const statsObject: ReviewStats = {
          highlightedCount,
          goodReviewsCount: positiveReviewsCount,
-         allReviewsLength: negativeReviews.length,
+         badReviewsCount: negativeReviews.length,
          userId: originalAd.userId,
+         lastUpdated: Date.now(),
+         priority: calculatePriority({
+            goodReviewsCount: positiveReviewsCount,
+            highlightedCount
+         }),
       };
 
-      // Добавляем объект в наш объект статистики
+      // Добавляем объект в статистику
       reviewsStatistics.add(statsObject);
+
 
       if (reviewsContainer) {
          reviewsContainer.innerHTML = reviewsHTML;

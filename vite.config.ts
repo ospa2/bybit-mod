@@ -1,10 +1,17 @@
+
 import { defineConfig } from 'vite';
 import monkey from 'vite-plugin-monkey';
 import mkcert from 'vite-plugin-mkcert'
 
-// https://vitejs.dev/config/
+// src/vite.config.ts
 export default defineConfig({
+  server: {
+    host: 'localhost', // <-- Добавьте это, чтобы сервер слушал localhost
+    https: true,
+    cors: true,
+  },
   plugins: [
+    
     monkey({
       entry: 'src/main.ts', // Указывает на твой главный файл
       
@@ -17,7 +24,7 @@ export default defineConfig({
         
         grant: ['GM_xmlhttpRequest', 'GM_getValue', 'GM_setValue'],
         'run-at': 'document-end',
-        
+        connect: 'localhost:5173',
       },
     }),
     mkcert()

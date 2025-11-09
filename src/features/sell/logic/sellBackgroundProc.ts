@@ -1,5 +1,7 @@
-import reviewsStatistics from "../../../shared/storage/storageHelper";
+import { LS_KEY } from "../../../shared/storage/storageHelper";
 import type { Ad } from "../../../shared/types/ads";
+import type { ReviewStats } from "../../../shared/types/reviews";
+import { shouldRefresh } from "../../reviews/logic/procHelper";
 import { processUserReviews } from "../../reviews/logic/reviewProcessor";
 
 function delay(ms: number) {
@@ -8,38 +10,44 @@ function delay(ms: number) {
 
 let isBackgroundProcessRunning = false;
 
-export async function backgroundProcessAds() {
+export async function backgroundProcessAds(): Promise<void> {
 
-   const newSellersAdsRaw = localStorage.getItem("unknownUserIds") || "[]";//объявления от новых продавцов
-   const ads: Ad[] = JSON.parse(newSellersAdsRaw);
+   const newSellersAdsRaw = localStorage.getItem("unknownUserIds") || "[]";
+   const newSellersAds: Ad[] = JSON.parse(newSellersAdsRaw);
+
    if (isBackgroundProcessRunning) {
-      console.log(
-         "⚠ backgroundProcessAds уже выполняется, новый запуск отменён"
-      );
+      console.log("⚠ backgroundProcessAds уже выполняется, новый запуск отменён");
       return;
    }
    isBackgroundProcessRunning = true;
-   console.log("▶ Запущен backgroundProcessAds");
 
    try {
-      const oldMerchantsAds = ads.filter(
-         (ad) => reviewsStatistics.getByUserId(ad.userId) !== null
-      );
-      for (const ad of ads) {
+      // 1️⃣ Новые продавцы — обрабатываем всех
+      for (const ad of newSellersAds) {
          await processUserReviews(ad);
-         const newValue = localStorage.getItem("unknownUserIds") || "[]";
-         const newSellerAds: Ad[] = JSON.parse(newValue);
 
+         // удаляем обработанного
+         const current = JSON.parse(localStorage.getItem("unknownUserIds") || "[]") as Ad[];
+         const next = current.filter(item => item.userId !== ad.userId);
+         localStorage.setItem("unknownUserIds", JSON.stringify(next));
 
-         const nextSellerAds = newSellerAds.filter((item: Ad) => item.userId !== ad.userId);
-
-         localStorage.setItem("unknownUserIds", JSON.stringify(nextSellerAds));
-         await delay(1000); // пауза 1 сек, чтобы не заблокировали IP
+         await delay(1000); // пауза для безопасности
       }
-      for (const ad of oldMerchantsAds) {
-         await processUserReviews(ad);
 
-         await delay(1000); // пауза 1 сек, чтобы не заблокировали IP
+
+      // 2️⃣ Уже известные продавцы — обновляем только при необходимости
+      const storedStats = (JSON.parse(localStorage.getItem(LS_KEY) || "[]") as any[]).filter((x): x is ReviewStats => x !== null).sort((a, b) => b.priority - a.priority);
+
+      for (const stat of storedStats) {
+         
+         if (stat) {
+            if (stat.priority === 0) continue; // больше не интересен
+            if (!shouldRefresh(stat)) continue; // ещё не пора
+         }
+
+         await processUserReviews(stat.userId);
+         
+         await delay(1000);
       }
    } finally {
       isBackgroundProcessRunning = false;

@@ -71,7 +71,6 @@ export function enhanceAdRows(ads: Ad[]) {
       row.classList.add("filtered-ad");
       return;
     }
-    console.log('clickedThisPass:', clickedThisPass);
 
     // Авто-клик по лучшим мерчантам
     if (
@@ -84,7 +83,7 @@ export function enhanceAdRows(ads: Ad[]) {
       if (Notification.permission === "granted") {
         // 2. Если есть, показываем уведомление
         new Notification("Новый ордер на продажу", {
-          body: `от ${ad.nickName} на ${ad.quantity} руб. `,
+          body: `от ${ad.nickName} на ${ad.maxAmount} руб. `,
           icon: 'URL_картинки' // Опционально
         });
       } else if (Notification.permission !== "denied") {
@@ -139,7 +138,7 @@ function addStatsToRow(row: HTMLElement, stat: ReviewStats) {
   }
 
   const highlightedCount = stat.highlightedCount ?? "x";
-  const negativeCount = stat.allReviewsLength ?? "x";
+  const negativeCount = stat.badReviewsCount ?? "x";
   const positiveCount = stat.goodReviewsCount ?? "x";
   let highlightedColor = highlightedCount === 0 ? "#27F54D" : "#DC143C";
   (negativeCount <= 3 && highlightedCount === 0 && positiveCount > 150)
@@ -151,13 +150,15 @@ function addStatsToRow(row: HTMLElement, stat: ReviewStats) {
       ? "#27e4f5ff"
       : "#000000ff";
 
-  statsDiv.innerHTML = `
-        <div style="display:grid; gap:8px; margin-top:4px;">
-            <span>+<strong>${stat.goodReviewsCount ?? "x"}</strong></span>
-            <span>-<strong style="color:${negativeColor}">${stat.allReviewsLength ?? "x"}</strong></span>
-            <span><strong style="color:${highlightedColor}">${highlightedCount}</strong></span>
-        </div>
-    `;
+  statsDiv.innerHTML = /* html */ `
+  <div style="display:grid; gap:8px; margin-top:4px; font-weight:700;">
+      <div>+${stat.goodReviewsCount ?? "x"}</div>
+      <div style="color:${negativeColor}">-${stat.badReviewsCount ?? "x"}</div>
+      <div style="color:${highlightedColor}">${highlightedCount}</div>
+  </div>
+`;
+
+
   row.classList.add("has-review-stats");
 }
 

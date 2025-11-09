@@ -17,6 +17,7 @@ export function initFetchInterceptor() {
    // Этот код перехватывает XHR, а не fetch.
 
    function watchCurAds() {
+      
       let lastValue = localStorage.getItem("curAds");
 
       setInterval(async () => {
@@ -34,7 +35,7 @@ export function initFetchInterceptor() {
 
                enhanceAdRows(onlineAdsData);
                setupSellButtonListener(onlineAdsData);
-
+               
                backgroundProcessAds();
 
 

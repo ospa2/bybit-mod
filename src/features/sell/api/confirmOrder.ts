@@ -1,16 +1,37 @@
-import type { Ad } from "../../../shared/types/ads";
+import type { Ad, OrderPayload } from "../../../shared/types/ads";
+import { findSellCard } from "../../buy/automation/adFinder";
 import { AutoClickElements } from "../automation/autoсlicker";
+
 
 const TELEGRAM_BOT_TOKEN = '8275350971:AAHt9lHxoe441wA4mfQIm9kUc-vJ769s00M';
 const TELEGRAM_CHAT_ID = '1233363326';
 
 export async function sendTelegramMessage(ad: Ad) {
+   // 1. Создаем новый объект OrderPayload на основе данных из ad
+   const payload: OrderPayload = {
+      itemId: ad.id, // Предполагаем, что itemId - это id из Ad
+      tokenId: ad.tokenId,
+      currencyId: ad.currencyId,
+      side: ad.side === 0 ? 'BUY' : 'SELL', // Примерное преобразование number в string
+      quantity: ad.quantity,
+      amount: ad.maxAmount, // Или ad.minAmount, или ad.price - вы должны знать, что сюда класть
+      curPrice: ad.price,
+      flag: "1", // Этих данных нет в Ad, вы должны указать их
+      version: String(ad.version), // Преобразование number в string
+      securityRiskToken: "", // Этих данных нет в Ad
+      isFromAi: false // Этих данных нет в Ad
+   };
+
+   // 2. Передаем в функцию *правильный* объект
+   const card = findSellCard(payload);
+
    const text =
       `🔥 Найден ордер на продажу\n\n` +
       `👤 Продавец: ${ad.nickName}\n` +
       `💰 Сумма: ${ad.maxAmount} ₽\n` +
       `💵 Цена: ${ad.price} ₽\n\n` +
       `📝 Описание:\n${ad.remark}\n\n` +
+      `    карта: ${card?.id}\n\n` +
       `❓ Создать ордер?`;
 
 
