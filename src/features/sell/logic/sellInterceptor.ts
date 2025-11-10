@@ -137,28 +137,4 @@ export function initFetchInterceptor() {
 
 
    watchCurOrders();
-   // window.fetch = async (...args) => {
-   //    const url = args[0].toString();
-   //    const options = args[1];
-   //    // логика сохранения данных ордера перенесена в Requestly, т.к. здесь скрипт перестал видеть перехваченные запросы
-   //    // Перехват создания ордера на продажу и отправлям данные ордера в базу
-   //    if (url.includes("x-api/fiat/otc/order/create") && options?.body) {
-
-   //       const body: OrderPayload = JSON.parse(options.body as string);
-
-   //       if (body.side === "1" && body.securityRiskToken !== "") {
-   //          // 1 = Sell
-   //          const response = await originalFetch(...args);
-   //          // Отправляем данные после успешного ответа от Bybit
-
-   //          response
-   //             .clone()
-   //             .json()
-   //             .then((res: CreateResponse) => sendSellData(body, res));
-   //          return response;
-   //       }
-   //    }
-
-   //    return originalFetch(...args);
-   // };
 }

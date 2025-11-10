@@ -30,17 +30,16 @@ export async function getUsedCard(orderId: string): Promise<Card | null> {
       let foundCard: Card | null = null;
 
       messages.forEach((message: string) => {
-         console.log("➡️ Обрабатываем message:", message);
 
          switch (message) {
             case "79525176865 Татьяна Г сбер":
-            case "2202208354725872":
+            case "2202208836068156":
             case "Взаимный лайк💚":
                foundCard = cards.find((c: Card) => c.id === "mamaSber") || null
                break;
 
             case "79525181633 Никита К сбер":
-            case "2202208354718000":
+            case "2202208821294064":
             case "Взaимный лайк💚":
                foundCard = cards.find((c: Card) => c.id === "papaSber") || null
                break;
@@ -64,13 +63,13 @@ export async function getUsedCard(orderId: string): Promise<Card | null> {
                break;
          }
 
-         if (foundCard) {
-            console.log("✅ Найдена карта:", foundCard);
-         } else {
+         if (!foundCard) {
             console.log("❌ Карта не найдена для message:", message);
+            return null;
          }
       });
 
+      console.log("✅ Найдена карта:", foundCard);
       return foundCard;
    } catch (error) {
       console.error("🔥 Ошибка в getOrderCard:", error);

@@ -609,5 +609,7 @@ export const bestMerchants = [
   "204412945", //dkraw
   "28862021", //Roman2505
   "261174228", //b3nw1k
-  "67322958" //kibermanager
+  "67322958", //kibermanager
+  "149356350", //KUCHER_P2P
+
 ];

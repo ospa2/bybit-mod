@@ -8,7 +8,9 @@ import { loadCards, findSellCard, type Card } from "../../buy/automation/adFinde
 const API_URL = "https://orders-finances-68zktfy1k-ospa2s-projects.vercel.app/api/orders";
 
 export function sendSellData(body: OrderPayload, result: CreateResponse) {
-   //отправляем данные ордера в базу данных
+
+   //функция вызывается при создании ордера
+
    if (result.ret_code !== 0) return;
    let orders: OrderData[] = StorageHelper.getOrders();
    let cards: Card[] = loadCards()
@@ -43,16 +45,6 @@ export function sendSellData(body: OrderPayload, result: CreateResponse) {
       Time: new Date().toISOString(),
    };
 
-   GM_xmlhttpRequest({
-      method: "POST",
-      url: "https://orders-finances-68zktfy1k-ospa2s-projects.vercel.app/api/orders",
-      headers: { "Content-Type": "application/json" },
-      data: JSON.stringify(newOrder),
-      onload: (response) =>
-         console.log("Ордер успешно отправлен:", response.status),
-      onerror: (response) =>
-         console.error("Ошибка отправки ордера:", response.error),
-   });
    if (card) {
       orders.push({ order: newOrder, card: card });
       StorageHelper.setOrders(orders);
@@ -70,10 +62,10 @@ export async function sendOrderToServer(orderData: OrderData): Promise<void> {
             "Content-Type": "application/json",
             Accept: "application/json",
          },
-         data: JSON.stringify(orderData),
+         data: JSON.stringify(orderData.order),
          onload: (response: any): void => {
             console.log(
-               "✅ Заказ отправлен на сервер:",
+               "✅ ордер отправлен на сервер:",
                response.status,
                response.responseText
             );
