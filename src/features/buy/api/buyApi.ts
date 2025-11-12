@@ -2,13 +2,11 @@ import { createRowFromTemplate } from "../components/buyRow.ts";
 import { adShouldBeFiltered } from "../../../shared/utils/adFilter.ts";
 import { USER_ID } from "../../../core/config.ts";
 import { appState } from "../../../core/state.ts";
-import {
-   findBestBuyAd
-} from "../automation/adFinder.ts";
 
 import type { Ad, ApiResult, GenericApiResponse, OrderData } from "../../../shared/types/ads";
 import { watchOrder } from "../../../shared/orders/orderWatcher.ts";
 import { StorageHelper } from "../../../shared/storage/storageHelper.ts";
+import { findBestBuyAd } from "../automation/buyCardSelector.ts";
 
 
 const BYBIT_AD_DETAILS_URL = "https://www.bybit.com/x-api/fiat/otc/item/simple";

@@ -2,9 +2,10 @@
 
 
 import { watchOrder } from "../../../shared/orders/orderWatcher.ts";
-import { StorageHelper } from "../../../shared/storage/storageHelper.ts";
+import { loadCards, StorageHelper } from "../../../shared/storage/storageHelper.ts";
 import type { ApiResult, Order, OrderData } from "../../../shared/types/ads";
-import { type Card, loadCards, markCardAsUsed } from "../automation/adFinder.ts";
+import type { Card } from "../../../shared/types/reviews";
+import { markCardAsUsed } from "../automation/adFinder.ts";
 
 
 /**

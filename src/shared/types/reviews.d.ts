@@ -22,3 +22,15 @@ export type FetchReviewsResult = {
   positiveReviewsCount: number;
   currentBalance: number;
 };
+
+export interface Card {
+  id: string;
+  bank: "tbank" | "sber";
+  balance: number; // остаток
+  turnover: number; // оборот за сегодня
+  date: Date; // дата последнего обновления оборота
+}
+
+export interface CardUsageMap {
+  [cardId: string]: number; // timestamp последнего использования
+}

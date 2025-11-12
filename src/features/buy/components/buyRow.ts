@@ -2,8 +2,8 @@
 import { openBuyModal } from "./buyModal";
 import { paymentNames, paymentColors } from "../../../core/config";
 import type { Ad } from "../../../shared/types/ads";
-import { findBuyCard } from "../automation/adFinder";
 import { availableBanks } from "../../../shared/utils/bankParser";
+import { findBuyCard } from "../automation/buyCardSelector";
 
 export function createRowFromTemplate(ad: Ad, minPrice?: number): ChildNode | null {
    function getPaymentStyle(paymentId: string): string {

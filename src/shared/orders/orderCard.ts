@@ -1,4 +1,5 @@
-import { type Card, loadCards } from "../../features/buy/automation/adFinder";
+import { loadCards } from "../storage/storageHelper";
+import type { Card } from "../types/reviews";
 
 export async function getUsedCard(orderId: string): Promise<Card | null> {
    try {

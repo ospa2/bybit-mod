@@ -3,7 +3,7 @@ import { enhanceAdRows } from "./sellAdProc";
 import type { Ad, CreateResponse, OrderPayload } from "../../../shared/types/ads";
 
 
-import { sendSellData } from "../api/sellApi";
+import { saveSellData } from "../api/sellApi";
 import { backgroundProcessAds } from "./sellBackgroundProc";
 import { setupSellButtonListener } from "../components/sellDOMHandlers";
 import { checkTelegramResponse } from "../api/confirmOrder";
@@ -17,7 +17,7 @@ export function initFetchInterceptor() {
    // Этот код перехватывает XHR, а не fetch.
 
    function watchCurAds() {
-      
+
       let lastValue = localStorage.getItem("curAds");
 
       setInterval(async () => {
@@ -29,15 +29,13 @@ export function initFetchInterceptor() {
             try {
                const body = JSON.parse(newValue);
 
-               // 0 = Sell
-
                onlineAdsData = body || [];
 
                enhanceAdRows(onlineAdsData);
-               setupSellButtonListener(onlineAdsData);
-               
-               backgroundProcessAds();
 
+               setupSellButtonListener(onlineAdsData);
+
+               backgroundProcessAds();
 
             } catch (err) {
                console.error("Ошибка при обработке unknownUserIds:", err);
@@ -54,7 +52,9 @@ export function initFetchInterceptor() {
       // Внутри цикла while(true) для постоянного опроса
       while (true) {
          try {
-            await checkTelegramResponse();
+            //if (window.location.href.includes("sell")) {
+               await checkTelegramResponse();
+          // }
 
             // Если Telegram вернул пустой массив (timeout long polling), 
             // новый запрос отправится немедленно, без задержки.
@@ -112,9 +112,9 @@ export function initFetchInterceptor() {
 
             try {
                // безопасный вызов sendSellData
-               sendSellData(data.req, data.res);
+               saveSellData(data.req, data.res);
             } catch (err) {
-               console.error("Ошибка при отправке данных:", err);
+               console.error("Ошибка при сохранении данных:", err);
                // если ошибка при отправке — не удаляем элемент, чтобы не потерять данные
                isProcessing = false;
                return;

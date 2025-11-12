@@ -1,6 +1,5 @@
 // ==== Основной вотчер ====
-
-import type { Card } from "../../features/buy/automation/adFinder";
+import type { Card } from "../types/reviews";
 import { handleOrderCompletion } from "./orderCompletionHandler";
 import { getOrderStatus } from "./orderStatusChecker";
 

@@ -1,7 +1,7 @@
-import type { Card } from "../../features/buy/automation/adFinder";
 import { sendOrderToServer } from "../../features/sell/api/sellApi";
 import { restoreCardBalance, updateCardBalance, removeOrderFromStorage } from "../storage/storageHelper";
 import type { OrderData } from "../types/ads";
+import type { Card } from "../types/reviews";
 import { getUsedCard } from "./orderCard";
 
 // Обработка завершённого ордера
@@ -42,7 +42,17 @@ export async function handleCancelledOrder(
    try {
       // Возвращаем баланс карты
       restoreCardBalance(originalCard);
+      
+      let cardLastUsedRaw = localStorage.getItem("!cards_last_used") ?? "{}";
+      let cardLastUsed = JSON.parse(cardLastUsedRaw);
 
+      if (cardLastUsed.hasOwnProperty(originalCard.id)) {
+         cardLastUsed[originalCard.id] -= 20 * 60 * 1000; // минус 20 минут
+      }
+
+      localStorage.setItem("!cards_last_used", JSON.stringify(cardLastUsed));
+
+      
       // Отправляем на сервер
       orderData.order.Status = "Cancelled";
       await sendOrderToServer(orderData);

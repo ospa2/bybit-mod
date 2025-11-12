@@ -6,8 +6,9 @@ import { closeModal } from "../components/buyModalDOM.ts";
 import { validateAndToggleButton, handleAmountChange, executeTrade } from "./buyTradeLogic.ts"; // ⭐ НОВЫЙ ИМПОРТ
 
 import type { Ad, ApiResult } from "../../../shared/types/ads";
-import { findBuyCard, type Card } from "../automation/adFinder.ts";
 import { fetchAdDetails } from "../api/buyApi.ts";
+import type { Card } from "../../../shared/types/reviews";
+import { findBuyCard } from "../automation/buyCardSelector.ts";
 
 
 /**

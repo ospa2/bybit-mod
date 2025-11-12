@@ -1,13 +1,14 @@
 import { GM_xmlhttpRequest } from "$";
 import { appState } from "../../../core/state";
 import { watchOrder } from "../../../shared/orders/orderWatcher";
-import { StorageHelper } from "../../../shared/storage/storageHelper";
-import type { OrderPayload, CreateResponse, OrderData } from "../../../shared/types/ads";
-import { loadCards, findSellCard, type Card } from "../../buy/automation/adFinder";
+import { loadCards, StorageHelper } from "../../../shared/storage/storageHelper";
+import type { CreateResponse, OrderData, OrderPayload } from "../../../shared/types/ads";
+import type { Card } from "../../../shared/types/reviews";
+import { findSellCard } from "../automation/sellCardSelector";
 
 const API_URL = "https://orders-finances-68zktfy1k-ospa2s-projects.vercel.app/api/orders";
 
-export function sendSellData(body: OrderPayload, result: CreateResponse) {
+export function saveSellData(body: OrderPayload, result: CreateResponse) {
 
    //функция вызывается при создании ордера
 

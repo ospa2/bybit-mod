@@ -6,9 +6,9 @@ import { fetchAdDetailsAndSetupEvents } from "../logic/buyModalProcessor.ts"; //
 import { setupInitialModalEvents, closeModal, createModalHTML } from "./buyModalDOM.ts"; // ⭐ НОВЫЙ ИМПОРТ
 
 import type { Ad } from "../../../shared/types/ads";
-import type { Card } from "../automation/adFinder.ts";
 import { startPriceTimer } from "../../../shared/utils/timeStuff.ts";
 import { loadAndDisplayReviews } from "../../reviews/components/reviewDisplay.ts";
+import type { Card } from "../../../shared/types/reviews";
 
 
 export async function openBuyModal(data: { ad: Ad; card: Card | null }, minPrice: number, autoarbitrage: boolean): Promise<void> {

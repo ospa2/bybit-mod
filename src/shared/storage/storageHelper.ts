@@ -1,10 +1,11 @@
 // src/shared/storage/StorageHelper.ts
 
-import { loadCards, type Card } from "../../features/buy/automation/adFinder";
 import type { OrderData } from "../types/ads";
-import type { ReviewStats } from "../types/reviews";
+import type { Card, CardUsageMap, ReviewStats } from "../types/reviews";
+import { isSameDay } from "../utils/timeStuff";
 
 const STORAGE_KEY = "reviewsStatistics_v1";
+const STORAGE_TIME_KEY = '!cards_last_used';
 
 export const reviewsStatistics = {
    data: (function loadFromStorage(): ReviewStats[] {
@@ -180,6 +181,58 @@ export function upsertStats(newEntry: ReviewStats) {
    if (idx >= 0) arr[idx] = { ...arr[idx], ...newEntry };
    else arr.push(newEntry);
    saveReviewsStatistics(arr);
+}
+
+export function getCardUsageData(): CardUsageMap {
+   try {
+      const data = localStorage.getItem(STORAGE_TIME_KEY);
+      return data ? JSON.parse(data) : {};
+   } catch (e) {
+      console.error('Error reading card usage data:', e);
+      return {};
+   }
+}
+
+export function setCardUsageData(data: CardUsageMap): void {
+   try {
+      localStorage.setItem(STORAGE_TIME_KEY, JSON.stringify(data));
+   } catch (e) {
+      console.error('Error saving card usage data:', e);
+   }
+}
+
+export function loadCards(): Card[] {
+   const raw = localStorage.getItem("!cards");
+   if (!raw) return [];
+
+   try {
+      const today = new Date();
+      // JSON.parse преобразует дату в строку, поэтому нам нужно обработать это
+      const cardsFromStorage: any[] = JSON.parse(raw);
+
+      return cardsFromStorage.map((card) => {
+         const cardDate = new Date(card.date);
+
+         // Если сохраненная дата не совпадает с сегодняшним днем
+         if (!isSameDay(cardDate, today)) {
+            // Сбрасываем оборот и обновляем дату на текущую
+            return {
+               ...card,
+               turnover: 0,
+               date: today,
+            };
+         }
+
+         // Если день тот же, просто преобразуем строку в объект Date
+         return {
+            ...card,
+            date: cardDate,
+         };
+      });
+   } catch (e) {
+      console.error("Error loading or processing cards:", e);
+      return [];
+   }
 }
 
 export default reviewsStatistics;

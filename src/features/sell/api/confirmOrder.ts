@@ -1,41 +1,50 @@
 import type { Ad, OrderPayload } from "../../../shared/types/ads";
-import { findSellCard } from "../../buy/automation/adFinder";
 import { AutoClickElements } from "../automation/autoсlicker";
+import { findSellCard } from "../automation/sellCardSelector";
 
 
 const TELEGRAM_BOT_TOKEN = '8275350971:AAHt9lHxoe441wA4mfQIm9kUc-vJ769s00M';
 const TELEGRAM_CHAT_ID = '1233363326';
 
+// Глобальная переменная для хранения базового текста сообщения
+let currentMessageBase = "";
+
+export function setCurrentMessageBase(value: string) {
+   currentMessageBase = value;
+}
+
+export function getCurrentMessageBase() {
+   return currentMessageBase;
+}
+
 export async function sendTelegramMessage(ad: Ad) {
-   // 1. Создаем новый объект OrderPayload на основе данных из ad
    const payload: OrderPayload = {
-      itemId: ad.id, // Предполагаем, что itemId - это id из Ad
+      itemId: ad.id,
       tokenId: ad.tokenId,
       currencyId: ad.currencyId,
-      side: ad.side === 0 ? 'BUY' : 'SELL', // Примерное преобразование number в string
+      side: ad.side === 0 ? 'BUY' : 'SELL',
       quantity: ad.quantity,
-      amount: ad.maxAmount, // Или ad.minAmount, или ad.price - вы должны знать, что сюда класть
+      amount: ad.maxAmount,
       curPrice: ad.price,
-      flag: "1", // Этих данных нет в Ad, вы должны указать их
-      version: String(ad.version), // Преобразование number в string
-      securityRiskToken: "", // Этих данных нет в Ad
-      isFromAi: false // Этих данных нет в Ad
+      flag: "1",
+      version: String(ad.version),
+      securityRiskToken: "",
+      isFromAi: false
    };
 
-   // 2. Передаем в функцию *правильный* объект
    const card = findSellCard(payload);
 
-   const text =
+   // Сохраняем базовую часть сообщения
+   currentMessageBase =
       `🔥 Найден ордер на продажу\n\n` +
       `👤 Продавец: ${ad.nickName}\n` +
       `💰 Сумма: ${ad.maxAmount} ₽\n` +
       `💵 Цена: ${ad.price} ₽\n\n` +
       `📝 Описание:\n${ad.remark}\n\n` +
-      `    карта: ${card?.id}\n\n` +
-      `❓ Создать ордер?`;
-
-
-   await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      `    ${card ? `🎯 Карта: ${card.id}, баланс (${card.balance}₽)` : `  Подходящая карта не нашлась`}\n\n`;
+   const text = currentMessageBase + `❓ Создать ордер?`;
+   
+   const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -51,13 +60,34 @@ export async function sendTelegramMessage(ad: Ad) {
          }
       })
    });
+
+   const data = await response.json();
+   return data.result.message_id;
+}
+
+// Упрощенная функция редактирования - принимает только messageId и новый текст
+export async function editTelegramMessage(messageId: number, newText: string) {
+   const text = getCurrentMessageBase() + newText;
+   console.log("🚀 ~ editTelegramMessage ~ getCurrentMessageBase:", getCurrentMessageBase())
+
+   await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageText`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+         chat_id: TELEGRAM_CHAT_ID,
+         message_id: messageId,
+         text: text
+      })
+   });
 }
 
 let lastUpdateId = 0;
 
 export async function checkTelegramResponse() {
    try {
-      const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates?offset=${lastUpdateId + 1}`);
+
+      const allowed = encodeURIComponent(JSON.stringify(["message", "callback_query"]));
+      const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates?offset=${lastUpdateId + 1}&allowed_updates=${allowed}`);
       const data = await res.json();
 
       // если сервер вернул ошибку — пропускаем
@@ -70,18 +100,20 @@ export async function checkTelegramResponse() {
 
       for (const update of data.result) {
          lastUpdateId = update.update_id;
-
          if (update.callback_query) {
             const action = update.callback_query.data;
             const callbackId = update.callback_query.id;
-
+            const messageId = update.callback_query.message.message_id
+            setCurrentMessageBase(update.callback_query.message.text);
             if (action === "confirm_yes") {
                console.log("✅ Подтверждение — создаем ордер");
-               await answerCallback(callbackId, "Ордер создан ✅");
-               const dialog = document.querySelector('div[role="dialog"]') as HTMLElement;
+               await answerCallback(callbackId, "Пару секунд...");
+               await editTelegramMessage(messageId, "\n\n⏳ Создаю ордер...");
 
-               if (dialog && (window as any).autoClicker) {
-                  AutoClickElements.runSequentialActionsToCreateOrder((window as any).autoClicker, dialog);
+
+
+               if ((window as any).autoClicker) {
+                  AutoClickElements.runSequentialActionsToCreateOrder((window as any).autoClicker, messageId);
                } else {
                   console.log("AutoClick: диалог или экземпляр autoClicker не найден");
                }
@@ -105,7 +137,7 @@ export async function checkTelegramResponse() {
 }
 
 
-async function answerCallback(callbackQueryId: any, text: string) {
+export async function answerCallback(callbackQueryId: any, text: string) {
    await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

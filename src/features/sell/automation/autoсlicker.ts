@@ -1,3 +1,5 @@
+import { editTelegramMessage,  } from "../api/confirmOrder";
+
 export class AutoClickElements {
   private observer: MutationObserver | null = null;
   private isActive = false;
@@ -79,23 +81,6 @@ export class AutoClickElements {
       }
     });
   }
-
-  // --- Шаг 3 ---
-  private findAndClickSellButtons(element: HTMLElement): void {
-    const buttons: HTMLButtonElement[] = element.querySelectorAll?.("button")
-      ? Array.from(element.querySelectorAll("button"))
-      : element.tagName === "BUTTON"
-        ? [element as HTMLButtonElement]
-        : [];
-
-    buttons.forEach((button) => {
-      const buttonText = button.textContent?.trim();
-      if (buttonText && buttonText.includes("Продажа")) {
-        console.log("AutoClick: Найдена кнопка Продажа, выполняю клик");
-        this.clickElement(button, "button");
-      }
-    });
-  }
   static findAndClickCancel(ctx: AutoClickElements, element: HTMLElement): void {
     const buttons: HTMLButtonElement[] = element.querySelectorAll?.("button")
       ? Array.from(element.querySelectorAll("button"))
@@ -112,26 +97,49 @@ export class AutoClickElements {
       });
     }
   }
+  // --- Шаг 1 ---
+  private findAndClickSellButton(element: HTMLElement): void {
+    if (!element) {
+      throw new Error("\n\n😭 Не найден диалог");
+    }
 
-  // --- Шаг 4 ---
+    const buttons: HTMLButtonElement[] = element.querySelectorAll?.("button")
+      ? Array.from(element.querySelectorAll("button"))
+      : element.tagName === "BUTTON"
+        ? [element as HTMLButtonElement]
+        : [];
+
+    let found = false;
+    buttons.forEach((button) => {
+      const buttonText = button.textContent?.trim();
+      if (buttonText && buttonText.includes("Продажа")) {
+        console.log("AutoClick: Найдена кнопка Продажа, выполняю клик");
+        this.clickElement(button, "button");
+        found = true;
+      }
+    });
+
+    if (!found) {
+      throw new Error("\n\n😭 Не смог кликнуть на продажа");
+    }
+  }
+  
+  // --- Шаг 2 ---
   private findAndClickUseOtherMethods(timeout: number = 10000): Promise<void> {
-    // Мы возвращаем Promise, который "разрешится" (resolve) при успехе
-    // или "отклонится" (reject) при таймауте.
     return new Promise((resolve, reject) => {
       const startTime = Date.now();
-      const interval = 200; // Интервал опроса
+      const interval = 200;
 
       const tryToFind = () => {
         let foundElement: { div: HTMLDivElement, span: HTMLSpanElement } | null = null;
         const divs = document.querySelectorAll<HTMLDivElement>("div[style]");
 
-        // Используем for...of, чтобы можно было использовать 'break'
         for (const div of divs) {
           const span = div.querySelector("span");
           const text = span?.textContent?.trim();
           if (text === "Использовать другие способы" && span) {
             foundElement = { div, span };
-            break; // Элемент найден, выходим из цикла
+            break;
           }
         }
 
@@ -139,88 +147,107 @@ export class AutoClickElements {
         if (foundElement) {
           console.log("AutoClick: Найден 'Использовать другие способы', кликаю");
           foundElement.span?.click();
-
-
           this.clickElement(foundElement.div, "use-other-methods");
-
-          resolve(); // Сообщаем Promise, что все успешно
+          resolve();
           return;
         }
 
         // 2. Ошибка: Таймаут истек
         if (Date.now() - startTime > timeout) {
-          console.error("AutoClick: Таймаут 6с. Элемент 'Использовать другие способы' не найден.");
+          console.error("AutoClick: Таймаут. Элемент 'Использовать другие способы' не найден.");
           const dialog = document.querySelector('div[role="dialog"]') as HTMLElement;
           AutoClickElements.findAndClickCancel(this, dialog);
-          reject(new Error("Таймаут ожидания 'Использовать другие способы'")); // Сообщаем об ошибке
+          reject(new Error("\n\n😭 Не смог кликнуть на использование других способов"));
           return;
         }
 
         // 3. Попытка: Элемент не найден, таймаут не истек
-        // Пробуем снова через 200 мс
         setTimeout(tryToFind, interval);
       };
 
-      // Запускаем первую попытку
       tryToFind();
     });
   }
 
-  // --- Шаг 5 ---
+  // --- Шаг 3 ---
   private findAndClickFundPassword(): void {
     const options = document.querySelectorAll<HTMLDivElement>("div.custom-option");
+    let found = false;
+
     options.forEach((option) => {
       const text = option.textContent?.trim();
       if (text && text.includes("Финансовый пароль")) {
         console.log("AutoClick: Найден 'Финансовый пароль', кликаю");
         this.clickElement(option, "fund-password");
+        found = true;
       }
     });
-  }
 
-  // --- Шаг 6: Введите финансовый пароль (input) ---
-  private findAndTypeFundPassword(password = "qCJjubprde927d$"): void {
-    const input = document.querySelector<HTMLInputElement>(
-      'input[placeholder="Введите финансовый пароль"]'
-    );
-
-    if (!input) {
-      setTimeout(() => this.findAndTypeFundPassword(password), 500);
-      return;
+    if (!found) {
+      throw new Error("\n\n😭 Не смог кликнуть на финансовый пароль");
     }
-
-    console.log("AutoClick: найден инпут финансового пароля, ввожу данные...");
-
-    // Устанавливаем значение напрямую
-    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-      window.HTMLInputElement.prototype,
-      "value"
-    )?.set;
-    nativeInputValueSetter?.call(input, password);
-
-    // События имитации ввода
-    const events = ["input", "change", "keyup", "keydown"];
-    events.forEach((eventName) => {
-      input.dispatchEvent(new Event(eventName, { bubbles: true }));
-    });
-
-    // На всякий случай подождём и кликнем “Подтвердить”
-    setTimeout(() => {
-      this.findAndClickConfirmButton()
-    }, 1000);
   }
 
-  // --- Шаг 7 ---
+  // --- Шаг 4 ---
+  private findAndTypeFundPassword(password = "qCJjubprde927d$"): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const maxAttempts = 10; // 10 попыток по 500ms = 5 секунд
+      let attempts = 0;
+
+      const tryToType = () => {
+        const input = document.querySelector<HTMLInputElement>(
+          'input[placeholder="Введите финансовый пароль"]'
+        );
+
+        if (!input) {
+          attempts++;
+          if (attempts >= maxAttempts) {
+            reject(new Error("😭 Не найден инпут финансового пароля"));
+            return;
+          }
+          setTimeout(tryToType, 500);
+          return;
+        }
+
+        console.log("AutoClick: найден инпут финансового пароля, ввожу данные...");
+
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+          window.HTMLInputElement.prototype,
+          "value"
+        )?.set;
+        nativeInputValueSetter?.call(input, password);
+
+        const events = ["input", "change", "keyup", "keydown"];
+        events.forEach((eventName) => {
+          input.dispatchEvent(new Event(eventName, { bubbles: true }));
+        });
+
+        resolve();
+      };
+
+      tryToType();
+    });
+  }
+
+  // --- Шаг 5 ---
   private findAndClickConfirmButton(): void {
     const buttons = document.querySelectorAll<HTMLButtonElement>("button");
+    let found = false;
+
     buttons.forEach((btn) => {
       const text = btn.textContent?.trim();
       if (text === "Подтвердить") {
         console.log("AutoClick: Найдена кнопка Подтвердить, кликаю");
         this.clickElement(btn, "confirm");
+        found = true;
       }
     });
+
+    if (!found) {
+      throw new Error("\n\n😭Не смог кликнуть на подтвердить");
+    }
   }
+
 
   // --- Универсальный клик ---
   private clickElement(
@@ -309,43 +336,54 @@ export class AutoClickElements {
   }
 
 
-  static async runSequentialActionsToCreateOrder(ctx: AutoClickElements, element: HTMLElement): Promise<void> {
-    // Вспомогательная функция для создания пауз
+  // --- Основная функция ---
+  static async runSequentialActionsToCreateOrder(ctx: AutoClickElements, messageId: any): Promise<void> {
     const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+    const element: HTMLElement = document.querySelector('div[role="dialog"]') as HTMLElement;
 
     try {
+      // Обновляем статус в начале
+      await editTelegramMessage(messageId, "\n\n⏳ Создаю ордер...");
+
       // 1. Клик "Продать"
       await delay(100);
-      ctx.findAndClickSellButtons(element);
+      ctx.findAndClickSellButton(element);
 
       // 2. Клик "Использовать другие способы"
-      // Ждем 2с (как в оригинале) перед *началом* поиска
       await delay(2000);
-      // Теперь мы ЖДЕМ (до 6 секунд) выполнения findAndClickUseOtherMethods
-      await ctx.findAndClickUseOtherMethods(); // таймаут 6000 мс по умолчанию
+      await ctx.findAndClickUseOtherMethods(10000);
 
       // 3. Клик "Пароль фонда"
-      // Этот шаг выполнится через 200 мс *ПОСЛЕ* *успешного* клика "Другие способы"
       await delay(200);
       ctx.findAndClickFundPassword();
 
       // 4. Ввод пароля
-      await delay(200); // (2400 - 2200)
-      ctx.findAndTypeFundPassword();
+      await delay(200);
+      await ctx.findAndTypeFundPassword();
 
       // 5. Клик "Подтвердить"
-      await delay(200); // (2600 - 2400)
+      await delay(200);
       ctx.findAndClickConfirmButton();
 
-      // 6. Назад
-      await delay(4400); // (6000 - 2600)
+      // 6. Успех!
+      await editTelegramMessage(messageId, "✅ Ордер успешно создан!");
 
+      // 7. Назад
+      await delay(4400);
       window.location.href = "https://www.bybit.com/ru-RU/p2p/sell/USDT/RUB";
 
     } catch (error) {
-      console.error("AutoClick: Ошибка в последовательности, цепочка прервана:", error);
-      // Если что-то пошло не так (например, таймаут 6с),
-      // выполнение здесь остановится, и мы не пойдем дальше.
+      console.error("AutoClick: Ошибка в последовательности:", error);
+
+      // Отправляем сообщение об ошибке
+      const errorMessage = error instanceof Error ? error.message : "😭 Неизвестная ошибка";
+      await editTelegramMessage(messageId, errorMessage);
+
+      // Закрываем диалог при ошибке
+      const dialog = document.querySelector('div[role="dialog"]') as HTMLElement;
+      if (dialog) {
+        AutoClickElements.findAndClickCancel(ctx, dialog);
+      }
     }
   }
 

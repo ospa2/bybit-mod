@@ -3,8 +3,8 @@
 import { showNotification } from "../../../shared/utils/notifications.ts";
 import { closeModal } from "../components/buyModalDOM.ts";
 import type { ApiResult, OrderPayload, CreateResponse} from "../../../shared/types/ads";
-import type { Card } from "../automation/adFinder.ts";
 import { saveOrderAndWatch } from "./buyOrderManager.ts";
+import type { Card } from "../../../shared/types/reviews";
 
 // === Валидация и расчеты ===
 
