@@ -81,11 +81,12 @@ export class AutoClickElements {
       }
     });
   }
-  static findAndClickCancel(ctx: AutoClickElements, element: HTMLElement): void {
-    const buttons: HTMLButtonElement[] = element.querySelectorAll?.("button")
-      ? Array.from(element.querySelectorAll("button"))
-      : element.tagName === "BUTTON"
-        ? [element as HTMLButtonElement]
+  static findAndClickCancel(ctx: AutoClickElements): void {
+    const modal = document.querySelector('div[role="dialog"]') as HTMLElement;
+    const buttons: HTMLButtonElement[] = modal.querySelectorAll?.("button")
+      ? Array.from(modal.querySelectorAll("button"))
+      : modal.tagName === "BUTTON"
+        ? [modal as HTMLButtonElement]
         : [];
     if (buttons) {
       buttons.forEach((button) => {
@@ -155,8 +156,8 @@ export class AutoClickElements {
         // 2. Ошибка: Таймаут истек
         if (Date.now() - startTime > timeout) {
           console.error("AutoClick: Таймаут. Элемент 'Использовать другие способы' не найден.");
-          const dialog = document.querySelector('div[role="dialog"]') as HTMLElement;
-          AutoClickElements.findAndClickCancel(this, dialog);
+
+          AutoClickElements.findAndClickCancel(this);
           reject(new Error("\n\n😭 Не смог кликнуть на использование других способов"));
           return;
         }
@@ -366,7 +367,7 @@ export class AutoClickElements {
       ctx.findAndClickConfirmButton();
 
       // 6. Успех!
-      await editTelegramMessage(messageId, "✅ Ордер успешно создан!");
+      await editTelegramMessage(messageId, "\n\n✅ Ордер успешно создан!");
 
       // 7. Назад
       await delay(4400);
@@ -382,7 +383,7 @@ export class AutoClickElements {
       // Закрываем диалог при ошибке
       const dialog = document.querySelector('div[role="dialog"]') as HTMLElement;
       if (dialog) {
-        AutoClickElements.findAndClickCancel(ctx, dialog);
+        AutoClickElements.findAndClickCancel(ctx);
       }
     }
   }

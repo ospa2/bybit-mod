@@ -49,24 +49,23 @@ export function initFetchInterceptor() {
 
 
    async function runBotPolling() {
-      // Внутри цикла while(true) для постоянного опроса
       while (true) {
          try {
-            //if (window.location.href.includes("sell")) {
+            if (window.location.href === "https://www.bybit.com/ru-RU/p2p/sell/USDT/RUB") {
                await checkTelegramResponse();
-          // }
+            }
 
-            // Если Telegram вернул пустой массив (timeout long polling), 
-            // новый запрос отправится немедленно, без задержки.
-
+            // Даже при непрерывном polling нужна короткая пауза,
+            // чтобы JS-движок успевал "отдышаться" и не блокировал страницу.
+            await new Promise(resolve => setTimeout(resolve, 50));
+            // 50 мс — практически мгновенно, но достаточно, чтобы не зависала страница
          } catch (error) {
-            // Если произошла сетевая ошибка, или другая критическая ошибка, 
-            // делаем небольшую паузу, чтобы не спамить API.
-            console.error("Критическая ошибка в цикле опроса, пауза...", error);
-            await new Promise(resolve => setTimeout(resolve, 5000)); // Пауза 5 секунд
+            console.error("Ошибка в цикле опроса, пауза 5 сек...", error);
+            await new Promise(resolve => setTimeout(resolve, 5000));
          }
       }
    }
+
 
    // Запуск бота
    runBotPolling();

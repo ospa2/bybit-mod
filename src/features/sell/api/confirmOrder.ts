@@ -43,7 +43,7 @@ export async function sendTelegramMessage(ad: Ad) {
       `📝 Описание:\n${ad.remark}\n\n` +
       `    ${card ? `🎯 Карта: ${card.id}, баланс (${card.balance}₽)` : `  Подходящая карта не нашлась`}\n\n`;
    const text = currentMessageBase + `❓ Создать ордер?`;
-   
+
    const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -123,7 +123,7 @@ export async function checkTelegramResponse() {
                console.log("❌ Отменено пользователем");
                const dialog = document.querySelector('div[role="dialog"]') as HTMLElement;
                if (dialog && (window as any).autoClicker) {
-                  AutoClickElements.findAndClickCancel((window as any).autoClicker, dialog);
+                  AutoClickElements.findAndClickCancel((window as any).autoClicker);
                } else {
                   console.log("AutoClick: диалог или экземпляр autoClicker не найден");
                }
