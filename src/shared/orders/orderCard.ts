@@ -23,12 +23,11 @@ export async function getUsedCard(orderId: string): Promise<Card | null> {
          }
       ).then((response) => response.json());
 
-      console.log("📨 Ответ от API:", res);
 
-      const messages = res.result.result.map((m: any) => m.message);
-      console.log("💬 Messages:", messages);
+      const messages: string[] = res.result.result.map((m: any) => m.message);
 
       let foundCard: Card | null = null;
+      let details: string[] = [];
 
       messages.forEach((message: string) => {
 
@@ -36,45 +35,72 @@ export async function getUsedCard(orderId: string): Promise<Card | null> {
             case "79525176865 Татьяна Г сбер":
             case "2202208836068156":
             case "Взаимный лайк💚":
-               foundCard = cards.find((c: Card) => c.id === "mamaSber") || null
+               details.push("mamaSber");
                break;
 
             case "79525181633 Никита К сбер":
             case "2202208821294064":
             case "Взaимный лайк💚":
-               foundCard = cards.find((c: Card) => c.id === "papaSber") || null
+               details.push("papaSber");
                break;
 
             case "79514513792 Серафим Г сбер":
             case "2202208034462813":
             case "Взаимный лaйк💚":
-               foundCard = cards.find((c: Card) => c.id === "seraphimSber") || null
+               details.push("seraphimSber");
                break;
 
             case "79514513792 Серафим Г тбанк":
             case "2200701913770423":
             case "Взаимный лaйк💛":
-               foundCard = cards.find((c: Card) => c.id === "seraphimTbank") || null
+               details.push("seraphimTbank");
                break;
 
             case "79227518402 Галина Г тбанк":
             case "2200701940041368":
             case "Взaимный лайк💛":
-               foundCard = cards.find((c: Card) => c.id === "galyaTbank") || null
+               details.push("galyaTbank");
                break;
          }
 
-         if (!foundCard) {
-            console.log("❌ Карта не найдена для message:", message);
+         if (details.length < 1) {
             return null;
          }
       });
-
-      console.log("✅ Найдена карта:", foundCard);
-      return foundCard;
+      // вернуть последнюю найденную карту(если было загружено несколько реквизитов)
+      foundCard = cards.find((c: Card) => c.id === details[details.length - 1]) || null
+      return foundCard
    } catch (error) {
-      console.error("🔥 Ошибка в getOrderCard:", error);
+      console.error("❌❌ Ошибка в getOrderCard:", error);
    }
 
    return null;
+}
+
+export function cardToMessage(card: Card, sbp: boolean = true): string {
+   let message = ".";
+
+   switch (card.id) {
+      case "mamaSber":
+         message = sbp ? "79525176865 Татьяна Г сбер" : "2202208836068156";
+         break;
+
+      case "papaSber":
+         message = sbp ? "79525181633 Никита К сбер" : "2202208821294064";
+         break;
+
+      case "seraphimSber":
+         message = sbp ? "79514513792 Серафим Г сбер" : "2202208034462813";
+         break;
+
+      case "seraphimTbank":
+         message = sbp ? "79514513792 Серафим Г тбанк" : "2200701913770423";
+         break;
+
+      case "galyaTbank":
+         message = sbp ? "79227518402 Галина Г тбанк" : "2200701940041368";
+         break;
+   }
+
+   return message;
 }

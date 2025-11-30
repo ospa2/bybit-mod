@@ -1,4 +1,4 @@
-import { editTelegramMessage,  } from "../api/confirmOrder";
+import { editTelegramMessage, } from "../api/confirmOrder";
 
 export class AutoClickElements {
   private observer: MutationObserver | null = null;
@@ -124,7 +124,7 @@ export class AutoClickElements {
       throw new Error("\n\n😭 Не смог кликнуть на продажа");
     }
   }
-  
+
   // --- Шаг 2 ---
   private findAndClickUseOtherMethods(timeout: number = 10000): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -192,7 +192,7 @@ export class AutoClickElements {
   // --- Шаг 4 ---
   private findAndTypeFundPassword(password = "qCJjubprde927d$"): Promise<void> {
     return new Promise((resolve, reject) => {
-      const maxAttempts = 10; // 10 попыток по 500ms = 5 секунд
+      const maxAttempts = 30; // 10 попыток по 50ms = 1.5 секунды
       let attempts = 0;
 
       const tryToType = () => {
@@ -206,7 +206,7 @@ export class AutoClickElements {
             reject(new Error("😭 Не найден инпут финансового пароля"));
             return;
           }
-          setTimeout(tryToType, 500);
+          setTimeout(tryToType, 50);
           return;
         }
 
@@ -234,12 +234,16 @@ export class AutoClickElements {
   private findAndClickConfirmButton(): void {
     const buttons = document.querySelectorAll<HTMLButtonElement>("button");
     let found = false;
-
+    let i = 0;
     buttons.forEach((btn) => {
       const text = btn.textContent?.trim();
       if (text === "Подтвердить") {
         console.log("AutoClick: Найдена кнопка Подтвердить, кликаю");
-        this.clickElement(btn, "confirm");
+        setInterval(() => {
+          if(i > 20) return
+          this.clickElement(btn, "confirm") 
+          i++;
+        }, 50);
         found = true;
       }
     });
@@ -347,23 +351,19 @@ export class AutoClickElements {
       await editTelegramMessage(messageId, "\n\n⏳ Создаю ордер...");
 
       // 1. Клик "Продать"
-      await delay(100);
       ctx.findAndClickSellButton(element);
 
       // 2. Клик "Использовать другие способы"
       await delay(2000);
-      await ctx.findAndClickUseOtherMethods(10000);
+      await ctx.findAndClickUseOtherMethods();
 
       // 3. Клик "Пароль фонда"
-      await delay(200);
       ctx.findAndClickFundPassword();
 
       // 4. Ввод пароля
-      await delay(200);
       await ctx.findAndTypeFundPassword();
 
       // 5. Клик "Подтвердить"
-      await delay(200);
       ctx.findAndClickConfirmButton();
 
       // 6. Успех!
@@ -398,12 +398,12 @@ export class AutoClickElements {
         div.classList.contains("otc-refresh-select-option")
       ) {
         const spanText = div.querySelector("span")?.textContent?.trim();
-        if (spanText && spanText.includes("до обновления")) {
+        if (spanText && (spanText.includes("до обновления") || spanText.includes("сейчас"))) {
           console.log("AutoClick: Найден селектор обновления, открываю список");
           ctx.clickElement(div, "refresh selector", () => {
             setTimeout(() => {
               ctx.findAndClickNotNow();
-            }, 500);
+            }, 100);
           });
         }
       }
@@ -426,7 +426,7 @@ export class AutoClickElements {
         this.clickElement(option, "Not now option", () => {
           setTimeout(() => {
             this.findAndClick5Seconds();
-          }, 500);
+          }, 100);
         });
         notNowFound = true;
       }
@@ -451,14 +451,16 @@ export class AutoClickElements {
 
       if (text === "5 с до обновления") {
         console.log("AutoClick: Найдена опция '5 с до обновления', кликаю");
-        this.clickElement(option, "5 seconds option");
+        if (window.location.href === "https://www.bybit.com/ru-RU/p2p/sell/USDT/RUB") {
+          this.clickElement(option, "5 seconds option");
+        }
         fiveSecondsFound = true;
       }
     });
 
     if (!fiveSecondsFound && options.length === 0) {
       console.log("AutoClick: Опции еще не загрузились, повторная попытка...");
-      setTimeout(() => this.findAndClick5Seconds(), 500);
+      setTimeout(() => this.findAndClick5Seconds(), 100);
     }
   }
 }

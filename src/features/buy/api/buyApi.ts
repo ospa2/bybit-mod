@@ -3,7 +3,7 @@ import { adShouldBeFiltered } from "../../../shared/utils/adFilter.ts";
 import { USER_ID } from "../../../core/config.ts";
 import { appState } from "../../../core/state.ts";
 
-import type { Ad, ApiResult, GenericApiResponse, OrderData } from "../../../shared/types/ads";
+import type { Ad, ApiResult, GenericApiResponse } from "../../../shared/types/ads";
 import { watchOrder } from "../../../shared/orders/orderWatcher.ts";
 import { StorageHelper } from "../../../shared/storage/storageHelper.ts";
 import { findBestBuyAd } from "../automation/buyCardSelector.ts";
@@ -132,12 +132,12 @@ export async function fetchAndAppendPage() {
 
 export function resumePendingOrders(): void {
 
-   let orders: OrderData[] = StorageHelper.getOrders();
+   let orders: any = StorageHelper.getOrders();
 
-   console.log('запуск хуйни');
+   console.log(orders);
 
    for (const order of orders) {
-      if (order.order.Status === "pending") {
+      if (order.order.Status === "pending" && (!order.res || order.req)) {
          const card = order.card;
          if (card) {
             watchOrder(order.order["Order No."], card);
@@ -198,67 +198,4 @@ export async function fetchAdDetails(ad: Ad): Promise<ApiResult & GenericApiResp
          result: null, // Результат отсутствует
       } as unknown as (ApiResult & GenericApiResponse);
    }
-}
-interface SendOrderMessageParams {
-   message: string;
-   orderId: string;
-}
-async function signRequest(
-   apiSecret: string,
-   payload: string
-): Promise<string> {
-   const encoder = new TextEncoder();
-
-   const key = await crypto.subtle.importKey(
-      "raw",
-      encoder.encode(apiSecret),
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["sign"]
-   );
-
-   const signatureBuffer = await crypto.subtle.sign(
-      "HMAC",
-      key,
-      encoder.encode(payload)
-   );
-
-   return Array.from(new Uint8Array(signatureBuffer))
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-}
-
-export async function sendOrderMessage({
-   message,
-   orderId,
-}: SendOrderMessageParams): Promise<any> {
-   const apiKey = "K8CPRLuqD302ftIfua";
-   const apiSecret = "E86RybeO4tLjoXiR5YYtbVStHC9qXCHDBeOI";
-
-   const url = "https://api-testnet.bybit.com/v5/p2p/item/online";
-   const timestamp = Date.now().toString();
-   const recvWindow = "5000";
-
-   const body = JSON.stringify({
-      message,
-      contentType: "str",
-      orderId,
-   });
-
-   const payload = timestamp + apiKey + recvWindow + body;
-   const signature = await signRequest(apiSecret, payload);
-
-   const response = await fetch(url, {
-      method: "POST",
-      headers: {
-         "X-BAPI-API-KEY": apiKey,
-         "X-BAPI-SIGN": signature,
-         "X-BAPI-TIMESTAMP": timestamp,
-         "X-BAPI-RECV-WINDOW": recvWindow,
-         "Content-Type": "application/json",
-      },
-      body,
-   });
-
-   return await response.json();
 }

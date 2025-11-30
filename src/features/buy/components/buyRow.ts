@@ -79,13 +79,15 @@ export function createRowFromTemplate(ad: Ad, minPrice?: number): ChildNode | nu
                                         <div class="moly-space-item moly-space-item-first" style="margin-top: 6px;">
                                             <div class="inline-block" style="max-width: 400px;">
                                                 <span
-                                                   class="moly-text text-[var(--bds-gray-t2)] font-[400] inline cursor-text transition-colors duration-300"
-                                                   ondblclick="
-                                                      navigator.clipboard.writeText(this.textContent.trim());
-                                                      this.classList.add('copied');
-                                                      setTimeout(() => this.classList.remove('copied'), 800);
-                                                   "
-                                                   >
+  class="moly-text text-[var(--bds-gray-t2)] font-[400] inline cursor-text transition-colors duration-300"
+  data-copyable
+  ondblclick="
+    const text = this.textContent.trim().replace(/\n+/g, ' ');
+    navigator.clipboard.writeText(text);
+    this.classList.add('copied');
+    setTimeout(() => this.classList.remove('copied'), 800);
+  "
+>
                                                    <img
                                                       src="/fiat/trade/gw/static/media/clock.8fb8bc6c6fe17cf175ba8a0abda873f5.svg"
                                                       alt=""

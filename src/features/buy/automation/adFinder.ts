@@ -1,7 +1,7 @@
 import { getCardUsageData, setCardUsageData } from "../../../shared/storage/storageHelper";
 import type { Ad, OrderPayload } from "../../../shared/types/ads";
 import type { Card } from "../../../shared/types/reviews";
-import { availableBanks } from "../../../shared/utils/bankParser";
+import { availableBanks, availableBanksSell } from "../../../shared/utils/bankParser";
 
 const COOLDOWN_TIME = 1_200_000; // 20 минут в миллисекундах
 
@@ -70,7 +70,14 @@ export function canUseCard(card: Card, ad: Ad | OrderPayload): boolean {
       return paymentWeight(ad, card) > 0;
    } else {
       //объявление на продажу
-
+      const curAds: Ad[] = JSON.parse(localStorage.getItem("curAds") || "[]");
+      const remark = curAds.find((a) => a.id === ad.itemId)?.remark
+      let banks: string[]=["*"]
+      if (remark) {
+         banks = availableBanksSell(remark)
+      }
+      if ((!banks.includes("Тинькофф") && !banks.includes("*")) && card.id === "tbank") return false;
+      if ((!banks.includes("Сбербанк") && !banks.includes("*")) && card.id === "sber") return false;
       amount = parseFloat(ad.amount);
       if (isNaN(amount)) return false;
 
@@ -83,7 +90,7 @@ export function canUseCard(card: Card, ad: Ad | OrderPayload): boolean {
 export function markCardAsUsed(cardId: string): void {
    const usageData = getCardUsageData();
    const now = Date.now();
-   localStorage.setItem("tradingModalCooldown", now.toString());// общее кд между ордерами чтобы не перегружаться
+   localStorage.setItem("tradingModalCooldown", now.toString());// общее кд между ордерами чтобы не перегружаться; только для автоарбитража
    usageData[cardId] = Date.now();
    setCardUsageData(usageData);
 }

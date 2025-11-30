@@ -1,0 +1,91 @@
+[
+  {
+    "order": {
+      "Order No.": "1994416157216579584",
+      "Type": "SELL",
+      "Fiat Amount": "55000",
+      "Price": "86.00",
+      "Coin Amount": "639.5349",
+      "Counterparty": "Konex",
+      "Status": "pending",
+      "Time": "2025-11-28T14:40:42.337Z"
+    },
+    "card": {
+    "id": "papaSber",
+    "bank": "sber",
+    "balance": 13159,
+    "turnover": 0,
+    "date": "2025-11-28T11:03:13.885Z"
+}
+  }
+]
+
+[{
+    "id": "seraphimTbank",
+    "bank": "sber",
+    "balance": 61284,
+    "turnover": 0,
+    "date": "2025-11-28T11:03:13.885Z"
+},{
+    "id": "galyaTbank",
+    "bank": "40763",
+    "balance": 13159,
+    "turnover": 0,
+    "date": "2025-11-28T11:03:13.885Z"
+},{
+    "id": "seraphimSber",
+    "bank": "tbank",
+    "balance": 21231,
+    "turnover": 0,
+    "date": "2025-11-28T11:03:13.885Z"
+},{
+    "id": "papaSber",
+    "bank": "sber",
+    "balance": 13159,
+    "turnover": 0,
+    "date": "2025-11-28T11:03:13.885Z"
+},{
+    "id": "mamaSber",
+    "bank": "sber",
+    "balance": 87289,
+    "turnover": 0,
+    "date": "2025-11-28T11:03:13.885Z"
+}] 
+
+[
+  {
+    "id": "seraphimTbank",
+    "bank": "tbank",
+    "balance": 19284,
+    "turnover": 42000,
+    "date": "2025-11-29T03:31:58.468Z"
+  },
+  {
+    "id": "galyaTbank",
+    "bank": "tbank",
+    "balance": 11763,
+    "turnover": 29000,
+    "date": "2025-11-29T03:31:58.468Z"
+  },
+  {
+    "id": "seraphimSber",
+    "bank": "sber",
+    "balance": 64031,
+    "turnover": 0,
+    "date": "2025-11-29T03:31:58.468Z"
+  },
+  {
+    "id": "papaSber",
+    "bank": "sber",
+    "balance": 13159,
+    "turnover": 0,
+    "date": "2025-11-29T03:31:58.469Z"
+  },
+  {
+    "id": "mamaSber",
+    "bank": "sber",
+    "balance": 44489,
+    "turnover": 0,
+    "date": "2025-11-29T03:31:58.468Z"
+  }
+]

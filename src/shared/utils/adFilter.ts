@@ -4,13 +4,23 @@ import { forbiddenPhrases, MIN_EXECUTED_COUNT, MAX_PRICE_DIFFERENCE } from '../.
 import { appState } from '../../core/state.ts';
 import type { Ad } from '../types/ads';
 import type { ReviewStats } from '../types/reviews';
+import { availableBanks } from './bankParser.ts';
 
+// side == 1 - покупка
 export function adShouldBeFiltered(ad: Ad) {
   // 1. Фильтрация по минимальному количеству выполненных объявлений
-  if (ad.finishNum <= MIN_EXECUTED_COUNT) {
+  if (ad.finishNum <= MIN_EXECUTED_COUNT && ad.side === 0) {
 
     return true;
   }
+  const isOnlySber = localStorage.getItem("onlySber") === "true";
+
+  if (isOnlySber && !(availableBanks(ad.remark).includes("Сбербанк") || availableBanks(ad.remark).includes("*"))) {
+
+    return true;
+  }
+
+
 
   // let storedStats: ReviewStats[] = []; // Закомментировано, так как ниже объявляется снова
   let storedStats: ReviewStats[] = [];
@@ -35,7 +45,7 @@ export function adShouldBeFiltered(ad: Ad) {
   const userStats = storedStats.find(item => item.userId === ad.userId);
 
   // 3. Фильтрация по количеству подсвеченных (highlighted) объявлений
-  if (userStats && userStats.highlightedCount >= 3) {
+  if (userStats && userStats.highlightedCount >= 3 && ad.side === 0) {
 
     return true;
   }

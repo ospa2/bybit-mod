@@ -34,7 +34,10 @@ export async function handleUrlChange() {
   }
 
   console.log(`[${now()}] handleUrlChange — очищаю таблицу один раз и перезапускаю загрузку по правилу страницы.`);
-  if(window.location.href === "https://www.bybit.com/ru-RU/p2p/sell/USDT/RUB") {
+  if (window.location.href === "https://www.bybit.com/ru-RU/p2p/sell/USDT/RUB") {
+    AutoClickElements.findAndClickRefreshSelector((window as any).autoClicker)
+  }
+  if (window.location.href === "https://www.bybit.com/ru-RU/p2p/buy/USDT/RUB") {
     AutoClickElements.findAndClickRefreshSelector((window as any).autoClicker)
   }
   // Останавливаем текущие операции
@@ -45,10 +48,6 @@ export async function handleUrlChange() {
     // eslint-disable-next-line no-await-in-loop
     await new Promise(res => setTimeout(res, 50));
   }
-
-  // Один раз очистить таблицу (как вы просили)
-  tbody.querySelectorAll('.dynamic-row').forEach(row => row.remove());
-  tbody.querySelector('.completion-indicator')?.remove();
 
   setStopLoading(false);
 
@@ -86,18 +85,11 @@ export function observeUrlChanges() {
       console.log(`[${now()}] URL изменился: ${previousUrl} → ${location.href}`);
       previousUrl = location.href;
       emitUrlChange();
-
-      // небольшой deferred кастомный класс для выделения строк на buy-странице
-      setTimeout(() => {
-        if (location.href === "https://www.bybit.com/ru-RU/p2p/buy/USDT/RUB") {
-          document.querySelectorAll('.trade-table__tbody tr').forEach(row => {
-            row.classList.add('filtered-ad');
-          });
-        }
-      }, 1500);
     }
   });
   observer.observe(document.body, { childList: true, subtree: true });
-
+  if (window.location.href === "https://www.bybit.com/ru-RU/p2p/sell/USDT/RUB") {
+    AutoClickElements.findAndClickRefreshSelector((window as any).autoClicker)
+  }
   console.log(`[${now()}] observeUrlChanges установлен.`);
 }

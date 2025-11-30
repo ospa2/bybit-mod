@@ -121,6 +121,10 @@ export async function executeTrade(apiResult: ApiResult, card: Card, tradeButton
          await saveOrderAndWatch(result.result.orderId, card, apiResult, amountInput); // ⭐ Вызов из buyOrderManager
          showNotification("ордер успешно создан", "success");
          closeModal();
+         await (window as any).wsClient.sendMessage({
+            orderId: result.result.orderId,
+            message: "Привет"
+         });
       } else {
          showNotification(result.ret_msg || String(result), "error");
          closeModal();

@@ -4,11 +4,12 @@ import { updateGlobalValues } from "./core/state.ts";
 import { loadOnceAndApply, observeUrlChanges } from "./features/buy/logic/buyLoader.ts";
 let periodicRefreshId: ReturnType<typeof setInterval> | null = null;
 
-import { connectPrivateWs } from "./shared/api/wsPrivate.ts";
+import { BybitP2PWebSocket } from "./shared/api/wsPrivate.ts";
 import { initFetchInterceptor } from "./features/sell/logic/sellInterceptor.ts";
 import { resumePendingOrders } from "./features/buy/api/buyApi.ts";
 import { AutoClickElements } from "./features/sell/automation/autoсlicker.ts";
 import { backgroundProcessAds } from "./features/sell/logic/sellBackgroundProc.ts";
+import { addOnlySberSwitch } from "./features/buy/components/sberSwitch.ts";
 
 function now() {
    return new Date().toISOString();
@@ -98,15 +99,44 @@ function waitForTableAndStart() {
 
 setTimeout(waitForTableAndStart, 100);
 
+let attempts = 0;
+const maxAttempts = 50; // 5 секунд (50 * 100ms)
 
+const checkInterval = setInterval(() => {
+   attempts++;
+
+   if (addOnlySberSwitch()) {
+      clearInterval(checkInterval);
+      console.log('Свич добавлен после', attempts, 'попыток');
+   } else if (attempts >= maxAttempts) {
+      clearInterval(checkInterval);
+      console.error('Не удалось найти элемент guide-step-two после', maxAttempts, 'попыток');
+   }
+}, 100);
+
+setTimeout(() => {
+   document.querySelector(".fiat-otc-side-bar-aiguide")?.remove();
+}, 3000);
 
 // Запускаем автоматизацию кликов
 const autoClicker = new AutoClickElements();
 // Делаем экземпляр доступным глобально
 (window as any).autoClicker = autoClicker;
 
-connectPrivateWs();
 
 resumePendingOrders();
 
 backgroundProcessAds()
+
+
+const wsClient = new BybitP2PWebSocket();
+
+(window as any).wsClient = wsClient;
+// Запускаем
+try {
+   console.log("Connecting to WebSocket...");
+   await (window as any).wsClient.connect();
+   console.log("Connected to WebSocket and Logged in!");
+} catch (e) {
+   console.error("Failed:", e);
+}

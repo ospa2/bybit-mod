@@ -4,14 +4,14 @@ import type { OrderData } from "../types/ads";
 import type { Card, CardUsageMap, ReviewStats } from "../types/reviews";
 import { isSameDay } from "../utils/timeStuff";
 
-const STORAGE_KEY = "reviewsStatistics_v1";
-const STORAGE_TIME_KEY = '!cards_last_used';
+const REVIEWSSTATISTICS = "reviewsStatistics_v1";
+const CARDS_LAST_USED = '!cards_last_used';
 
 export const reviewsStatistics = {
    data: (function loadFromStorage(): ReviewStats[] {
       // ... (Ваша функция loadFromStorage без изменений)
       try {
-         const raw = localStorage.getItem(STORAGE_KEY);
+         const raw = localStorage.getItem(REVIEWSSTATISTICS);
          const parsed = raw ? JSON.parse(raw) : [];
          return parsed;
       } catch (e) {
@@ -26,7 +26,7 @@ export const reviewsStatistics = {
    _saveToStorage(): void {
       // ... (Ваша функция _saveToStorage без изменений)
       try {
-         localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
+         localStorage.setItem(REVIEWSSTATISTICS, JSON.stringify(this.data));
       } catch (e) {
          console.warn(
             "Не удалось сохранить reviewsStatistics в GM-хранилище:",
@@ -140,6 +140,14 @@ export function updateCardBalance(cardId: string, balanceChange: number): void {
       }
       return c;
    });
+   let cardsLastUsedRaw = localStorage.getItem("!cards_last_used") ?? "{}";
+   let cardsLastUsed = JSON.parse(cardsLastUsedRaw);
+
+   if (cardsLastUsed.hasOwnProperty(cardId)) {
+      cardsLastUsed[cardId] = Date.now(); // минус 20 минут
+   }
+
+   localStorage.setItem("!cards_last_used", JSON.stringify(cardsLastUsed));
    StorageHelper.setCards(updatedCards);
 }
 
@@ -150,6 +158,15 @@ export function restoreCardBalance(originalCard: Card): void {
    const updatedCards = cards.map((c) =>
       c.id === originalCard.id ? { ...originalCard } : c
    );
+
+   let cardsLastUsedRaw = localStorage.getItem("!cards_last_used") ?? "{}";
+   let cardsLastUsed = JSON.parse(cardsLastUsedRaw);
+
+   if (cardsLastUsed.hasOwnProperty(originalCard.id)) {
+      cardsLastUsed[originalCard.id] -= 20 * 60 * 1000; // минус 20 минут
+   }
+
+   localStorage.setItem("!cards_last_used", JSON.stringify(cardsLastUsed));
    StorageHelper.setCards(updatedCards);
 }
 
@@ -185,7 +202,7 @@ export function upsertStats(newEntry: ReviewStats) {
 
 export function getCardUsageData(): CardUsageMap {
    try {
-      const data = localStorage.getItem(STORAGE_TIME_KEY);
+      const data = localStorage.getItem(CARDS_LAST_USED);
       return data ? JSON.parse(data) : {};
    } catch (e) {
       console.error('Error reading card usage data:', e);
@@ -195,7 +212,7 @@ export function getCardUsageData(): CardUsageMap {
 
 export function setCardUsageData(data: CardUsageMap): void {
    try {
-      localStorage.setItem(STORAGE_TIME_KEY, JSON.stringify(data));
+      localStorage.setItem(CARDS_LAST_USED, JSON.stringify(data));
    } catch (e) {
       console.error('Error saving card usage data:', e);
    }

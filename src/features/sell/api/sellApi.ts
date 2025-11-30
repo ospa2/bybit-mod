@@ -1,35 +1,42 @@
 import { GM_xmlhttpRequest } from "$";
 import { appState } from "../../../core/state";
+import { cardToMessage } from "../../../shared/orders/orderCard";
 import { watchOrder } from "../../../shared/orders/orderWatcher";
 import { loadCards, StorageHelper } from "../../../shared/storage/storageHelper";
-import type { CreateResponse, OrderData, OrderPayload } from "../../../shared/types/ads";
+import type { Ad, CreateResponse, OrderData, OrderPayload } from "../../../shared/types/ads";
 import type { Card } from "../../../shared/types/reviews";
+import { markCardAsUsed } from "../../buy/automation/adFinder";
 import { findSellCard } from "../automation/sellCardSelector";
 
 const API_URL = "https://orders-finances-68zktfy1k-ospa2s-projects.vercel.app/api/orders";
 
-export function saveSellData(body: OrderPayload, result: CreateResponse) {
+export async function saveSellData(request: OrderPayload, result: CreateResponse) {
 
    //функция вызывается при создании ордера
 
    if (result.ret_code !== 0) return;
-   let orders: OrderData[] = StorageHelper.getOrders();
+   let ordersRaw = localStorage.getItem("!orders");
+   let orders = ordersRaw ? JSON.parse(ordersRaw) : [];
+
    let cards: Card[] = loadCards()
 
-   const card = findSellCard(body);
-   const maxAmount = parseFloat(body.amount);
+   const card = findSellCard(request);
+   const maxAmount = parseFloat(request.amount);
    if (card) watchOrder(result.result.orderId, card);
 
    cards = cards.map((c) =>
       c.id === card?.id
          ? {
             ...c,
-            balance: c.balance + maxAmount,
-            turnover: c.turnover + maxAmount,
+            balance: c.balance + parseFloat(maxAmount.toFixed(1)),
+            turnover: c.turnover + parseFloat(maxAmount.toFixed(1)),
             // Дата уже будет сегодняшней после вызова loadCards
          }
          : c
    );
+   if (card) {
+      markCardAsUsed(card.id);
+   }
    localStorage.setItem("!cards", JSON.stringify(cards));
    // Получаем имя из модального окна, сохраненного в appState
 
@@ -38,18 +45,45 @@ export function saveSellData(body: OrderPayload, result: CreateResponse) {
    const newOrder = {
       "Order No.": result.result.orderId,
       Type: "SELL",
-      "Fiat Amount": body.amount,
-      Price: (parseFloat(body.amount) / parseFloat(body.quantity)).toFixed(2),
-      "Coin Amount": body.quantity,
+      "Fiat Amount": request.amount,
+      Price: (parseFloat(request.amount) / parseFloat(request.quantity)).toFixed(2),
+      "Coin Amount": request.quantity,
       Counterparty: nickName,
       Status: "pending",
       Time: new Date().toISOString(),
    };
 
-   if (card) {
+   if (orders) {
+      // Удаляем объект {request, result} который был передан в функцию
+      orders = orders.filter((item: any) =>
+         !(item.req && item.res &&
+            item.res.result?.orderId === result.result.orderId)
+      );
+
+      // Добавляем новый объект
       orders.push({ order: newOrder, card: card });
       StorageHelper.setOrders(orders);
    }
+   if ((window as any).wsClient) {
+      await (window as any).wsClient.sendMessage({
+         orderId: result.result.orderId,
+         message: "Привет"
+      });
+      const curAds: Ad[] = JSON.parse(localStorage.getItem("curAds") || "[]");
+      const remark = curAds.find((a) => a.id === request.itemId)?.remark
+      if (remark) {
+         const regex = new RegExp(/номер[уа]?\s?карт/g);
+         const poNomeruKarti: boolean = regex.test(remark);
+         if (card) {
+            await (window as any).wsClient.sendMessage({
+               orderId: result.result.orderId,
+               message: cardToMessage(card, !poNomeruKarti)
+            });
+         }
+      }
+      
+   }
+
 }
 
 

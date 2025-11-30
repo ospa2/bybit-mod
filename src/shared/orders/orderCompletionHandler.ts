@@ -13,14 +13,17 @@ export async function handleCompletedOrder(
    console.log(`✅ Ордер ${orderId} завершён`);
 
    try {
-      const actuallyUsedCard = await getUsedCard(orderId);
+      let actuallyUsedCard = await getUsedCard(orderId);
 
-      if (actuallyUsedCard) {
-         restoreCardBalance(originalCard);// баланс предложенной карты восстанавливаем
-         let rubleAmount = parseFloat(orderData.order["Fiat Amount"]);
-         orderData.order.Type === "BUY" ? rubleAmount = -rubleAmount : rubleAmount = rubleAmount
-         updateCardBalance(actuallyUsedCard.id, rubleAmount);// баланс использованной карты обновляем.
-      }
+      if (!actuallyUsedCard) {
+         // в сообщениях в ордере не указана карта
+         actuallyUsedCard = originalCard
+      };
+
+      restoreCardBalance(originalCard);// баланс предложенной карты восстанавливаем
+      let rubleAmount = parseFloat(orderData.order["Fiat Amount"]);
+      orderData.order.Type === "BUY" ? rubleAmount = -rubleAmount : rubleAmount = rubleAmount
+      updateCardBalance(actuallyUsedCard.id, rubleAmount);// баланс использованной карты обновляем.
 
       // Отправляем на сервер
       orderData.order.Status = "Completed";
@@ -42,17 +45,7 @@ export async function handleCancelledOrder(
    try {
       // Возвращаем баланс карты
       restoreCardBalance(originalCard);
-      
-      let cardLastUsedRaw = localStorage.getItem("!cards_last_used") ?? "{}";
-      let cardLastUsed = JSON.parse(cardLastUsedRaw);
 
-      if (cardLastUsed.hasOwnProperty(originalCard.id)) {
-         cardLastUsed[originalCard.id] -= 20 * 60 * 1000; // минус 20 минут
-      }
-
-      localStorage.setItem("!cards_last_used", JSON.stringify(cardLastUsed));
-
-      
       // Отправляем на сервер
       orderData.order.Status = "Cancelled";
       await sendOrderToServer(orderData);

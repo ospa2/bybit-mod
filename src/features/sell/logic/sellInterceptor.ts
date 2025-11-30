@@ -1,12 +1,13 @@
 // src/features/sell/api/sellInterceptor.ts
 import { enhanceAdRows } from "./sellAdProc";
-import type { Ad, CreateResponse, OrderPayload } from "../../../shared/types/ads";
+import type { Ad } from "../../../shared/types/ads";
 
 
 import { saveSellData } from "../api/sellApi";
 import { backgroundProcessAds } from "./sellBackgroundProc";
 import { setupSellButtonListener } from "../components/sellDOMHandlers";
 import { checkTelegramResponse } from "../api/confirmOrder";
+import { AutoClickElements } from "../automation/autoсlicker";
 
 let onlineAdsData: Ad[] = []; // Локальное хранилище данных об объявлениях на продажу
 
@@ -65,7 +66,12 @@ export function initFetchInterceptor() {
          }
       }
    }
-
+   setInterval(() => {
+      if (window.location.href === "https://www.bybit.com/ru-RU/p2p/sell/USDT/RUB") {
+         AutoClickElements.findAndClickRefreshSelector((window as any).autoClicker)
+      }
+   }, 1000*60);
+   
 
    // Запуск бота
    runBotPolling();
@@ -78,54 +84,44 @@ export function initFetchInterceptor() {
          isProcessing = true;
 
          try {
-            const newValue = localStorage.getItem("tempSellData");
+            const newValue = localStorage.getItem("!orders");
             if (!newValue) {
                isProcessing = false;
                return;
             }
 
-            let curOrders: { req: OrderPayload, res: CreateResponse }[] = [];
+            let curOrders = [];
             try {
                curOrders = JSON.parse(newValue);
             } catch (jsonErr) {
-               console.error("Ошибка парсинга tempSellData:", jsonErr);
-               localStorage.removeItem("tempSellData"); // сбрасываем повреждённые данные
+               console.error("Ошибка парсинга !orders:", jsonErr);
                isProcessing = false;
                return;
             }
 
             if (!Array.isArray(curOrders) || curOrders.length === 0) {
-               localStorage.removeItem("tempSellData"); // чистим, если пусто
                isProcessing = false;
                return;
             }
 
-            const data = curOrders[0];
-            if (!data?.req || !data?.res) {
-               console.warn("Некорректная структура данных:", data);
-               curOrders.shift(); // удаляем неверный элемент
-               localStorage.setItem("tempSellData", JSON.stringify(curOrders));
-               isProcessing = false;
-               return;
+            // Обрабатываем все объекты в массиве
+            for (const data of curOrders) {
+               // Проверяем наличие полей request и result
+               if (!data?.req || !data?.res) {
+                  continue; // пропускаем этот элемент
+               }
+
+               try {
+                  console.log("попытка сделать ", data);
+                  
+                  // вызываем saveSellData с правильными полями
+                  await saveSellData(data.req, data.res);
+               } catch (err) {
+                  console.error("Ошибка при сохранении данных:", err);
+                  // продолжаем обработку других элементов
+               }
             }
 
-            try {
-               // безопасный вызов sendSellData
-               saveSellData(data.req, data.res);
-            } catch (err) {
-               console.error("Ошибка при сохранении данных:", err);
-               // если ошибка при отправке — не удаляем элемент, чтобы не потерять данные
-               isProcessing = false;
-               return;
-            }
-
-            // удаляем успешно обработанный элемент
-            curOrders.shift();
-            if (curOrders.length > 0) {
-               localStorage.setItem("tempSellData", JSON.stringify(curOrders));
-            } else {
-               localStorage.removeItem("tempSellData");
-            }
          } catch (err) {
             console.error("Ошибка при обработке заказов:", err);
          } finally {
