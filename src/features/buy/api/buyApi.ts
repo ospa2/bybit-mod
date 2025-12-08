@@ -7,6 +7,8 @@ import type { Ad, ApiResult, GenericApiResponse } from "../../../shared/types/ad
 import { watchOrder } from "../../../shared/orders/orderWatcher.ts";
 import { StorageHelper } from "../../../shared/storage/storageHelper.ts";
 import { findBestBuyAd } from "../automation/buyCardSelector.ts";
+import { openBuyModal } from "../components/buyModal.ts";
+import { updateMaxAmount } from "../../../shared/utils/bankParser.ts";
 
 
 const BYBIT_AD_DETAILS_URL = "https://www.bybit.com/x-api/fiat/otc/item/simple";
@@ -69,8 +71,11 @@ export async function fetchAndAppendPage() {
       );
 
       const json = await res.json();
-      const ads: Ad[] = json.result.items || {};
-
+      const adsRaw: Ad[] = json.result.items || {};
+      const ads: Ad[] = adsRaw.map((ad: Ad) => {
+         ad = updateMaxAmount(ad)
+         return ad
+      })
       // Удаляем старые строки и индикатор
       tbody.querySelectorAll(".dynamic-row").forEach((row) => row.remove());
       tbody.querySelector(".completion-indicator")?.remove();
@@ -90,7 +95,7 @@ export async function fetchAndAppendPage() {
                adAndCard?.ad.nickName
             );
             if (adAndCard) {
-               //openBuyModal(adAndCard, minPrice, true); // автоматическое создание ордера
+               openBuyModal(adAndCard, minPrice, true); // автоматическое создание ордера
             }
          } catch (error) {
             console.log('error:', error);
@@ -137,7 +142,9 @@ export function resumePendingOrders(): void {
    console.log(orders);
 
    for (const order of orders) {
-      if (order.order.Status === "pending" && (!order.res || order.req)) {
+      console.log(order.order.Status);
+      
+      if ((order.order.Status === "pending" || order.order.Status === "10" || order.order.Status === "20" || order.order.Status === "30" || order.order.Status === "40") && (!order.res || order.req)) {
          const card = order.card;
          if (card) {
             watchOrder(order.order["Order No."], card);

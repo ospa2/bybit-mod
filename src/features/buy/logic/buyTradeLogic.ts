@@ -2,9 +2,10 @@
 
 import { showNotification } from "../../../shared/utils/notifications.ts";
 import { closeModal } from "../components/buyModalDOM.ts";
-import type { ApiResult, OrderPayload, CreateResponse} from "../../../shared/types/ads";
+import type { ApiResult, OrderPayload, CreateResponse } from "../../../shared/types/ads";
 import { saveOrderAndWatch } from "./buyOrderManager.ts";
 import type { Card } from "../../../shared/types/reviews";
+import { editTelegramMessage } from "../../sell/api/confirmOrder.ts";
 
 // === Валидация и расчеты ===
 
@@ -55,7 +56,7 @@ export function handleAmountChange(amountInput: HTMLInputElement | null, receive
    validateAndToggleButton(amountInput, tradeButton, apiResult);
 }
 
-export function createBuyPayload(apiResult: ApiResult, amountInput: HTMLInputElement | null): OrderPayload {
+function createBuyPayload(apiResult: ApiResult, amountInput: HTMLInputElement | null): OrderPayload {
    // Используем maxAmount, если amountInput недоступен (например, в авторежиме)
    const quantity: string = amountInput
       ? parseFloat(amountInput.value).toString()
@@ -86,7 +87,7 @@ export function createBuyPayload(apiResult: ApiResult, amountInput: HTMLInputEle
 /**
  * Отправляет запрос на создание ордера и обрабатывает результат.
  */
-export async function executeTrade(apiResult: ApiResult, card: Card, tradeButton: HTMLButtonElement | null): Promise<void> {
+export async function executeTrade(apiResult: ApiResult, card: Card, tradeButton: HTMLButtonElement | null, messageId?: number): Promise<void> {
    const originalText: string = tradeButton?.textContent || "";
 
    // ... (Логика блокировки кнопки и проверки ошибок API)
@@ -121,6 +122,9 @@ export async function executeTrade(apiResult: ApiResult, card: Card, tradeButton
          await saveOrderAndWatch(result.result.orderId, card, apiResult, amountInput); // ⭐ Вызов из buyOrderManager
          showNotification("ордер успешно создан", "success");
          closeModal();
+         if (messageId) {
+            await editTelegramMessage(messageId, "\n\n✅ Ордер успешно создан!");
+         }
          await (window as any).wsClient.sendMessage({
             orderId: result.result.orderId,
             message: "Привет"
@@ -128,9 +132,15 @@ export async function executeTrade(apiResult: ApiResult, card: Card, tradeButton
       } else {
          showNotification(result.ret_msg || String(result), "error");
          closeModal();
+         if (messageId) {
+            await editTelegramMessage(messageId, "\n\n❌ Ошибка при создании ордера: " + result.ret_msg);
+         }
       }
    } catch (error) {
       console.error("Ошибка при создании ордера:", error);
+      if (messageId) {
+         await editTelegramMessage(messageId, "\n\n❌❌ Неизвестная ошибка при создании ордера");
+      }
    } finally {
       if (tradeButton) {
          tradeButton.disabled = false;

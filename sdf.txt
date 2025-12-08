@@ -89,3 +89,23 @@
     "date": "2025-11-29T03:31:58.468Z"
   }
 ]
+[
+  {
+    "order": {
+      "Order No.": "1997998546474639360",
+      "Type": "Sell",
+      "Fiat Amount": "90000.00",
+      "Price": "83.00",
+      "Coin Amount": "1084.3374",
+      "Counterparty": "b3nw1k",
+      "Status": "10",
+      "Time": "2025-05-08T08:35:49.000Z"
+    },
+    "card": {
+      "id": "mamaSber",
+      "bank": "sber",
+      "balance": 44489,
+      "turnover": 0
+    }
+  }
+]

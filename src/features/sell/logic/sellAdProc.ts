@@ -7,7 +7,6 @@ import type { ReviewStats } from "../../../shared/types/reviews";
 import { sendTelegramMessage } from "../api/confirmOrder";
 import { AutoClickElements } from "../automation/autoсlicker";
 
-// app.ts
 
 // Хранилище уже кликнутых объявлений
 const clickedAds = new Set<string>();
@@ -22,7 +21,7 @@ export function enhanceAdRows(ads: Ad[]) {
   // Чтобы за один проход был только один авто-клик
 
   document.querySelectorAll(".trade-table__tbody tr").forEach((row, i) => {
-    const ad = ads[i];
+    const ad = ads[i-1];
     if (!ad) return;
 
     // Авто-клик по лучшим мерчантам
@@ -46,6 +45,10 @@ export function enhanceAdRows(ads: Ad[]) {
       if (sellBtn) {
         sellBtn.click();
         clickedAds.add(ad.id); // запоминаем, что кликнули
+
+        if ((window as any).autoClicker) {
+          AutoClickElements.clickEveryButtonExceptOne((window as any).autoClicker);
+        }
         if (Notification.permission === "granted") {
           // 2. Если есть, показываем уведомление
           new Notification("Новый ордер на продажу", {

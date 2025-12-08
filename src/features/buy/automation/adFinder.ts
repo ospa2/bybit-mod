@@ -44,7 +44,7 @@ function paymentWeight(ad: Ad, card: Card): number {
 }
 
 
-export function canUseCard(card: Card, ad: Ad | OrderPayload): boolean {
+export function canUseCard(card: Card, ad: Ad | OrderPayload, remarkFromTG?: string): boolean {
    let amount: number;
 
    // Проверка последнего использования
@@ -70,14 +70,19 @@ export function canUseCard(card: Card, ad: Ad | OrderPayload): boolean {
       return paymentWeight(ad, card) > 0;
    } else {
       //объявление на продажу
-      const curAds: Ad[] = JSON.parse(localStorage.getItem("curAds") || "[]");
-      const remark = curAds.find((a) => a.id === ad.itemId)?.remark
-      let banks: string[]=["*"]
-      if (remark) {
-         banks = availableBanksSell(remark)
+      if (!remarkFromTG) {
+         const curAds: Ad[] = JSON.parse(localStorage.getItem("curAds") || "[]");
+         remarkFromTG = curAds.find((a) => a.id === ad.itemId)?.remark
+         console.log("🚀 ~ canUseCard ~ remarkFromTG:", remarkFromTG)
       }
-      if ((!banks.includes("Тинькофф") && !banks.includes("*")) && card.id === "tbank") return false;
-      if ((!banks.includes("Сбербанк") && !banks.includes("*")) && card.id === "sber") return false;
+
+      let banks: string[] = ["*"]
+      console.log("🚀 ~ canUseCard ~ remarkFromTG:", remarkFromTG)
+      if (remarkFromTG) {
+         banks = availableBanksSell(remarkFromTG)
+      }
+      if ((!banks.includes("Тинькофф") && !banks.includes("*")) && card.bank === "tbank") return false;
+      if ((!banks.includes("Сбербанк") && !banks.includes("*")) && card.bank === "sber") return false;
       amount = parseFloat(ad.amount);
       if (isNaN(amount)) return false;
 

@@ -1,5 +1,6 @@
 import { GM_xmlhttpRequest } from "$";
 import { appState } from "../../../core/state";
+import { sendCardsToServer } from "../../../shared/orders/fetchCards";
 import { cardToMessage } from "../../../shared/orders/orderCard";
 import { watchOrder } from "../../../shared/orders/orderWatcher";
 import { loadCards, StorageHelper } from "../../../shared/storage/storageHelper";
@@ -19,9 +20,13 @@ export async function saveSellData(request: OrderPayload, result: CreateResponse
    let orders = ordersRaw ? JSON.parse(ordersRaw) : [];
 
    let cards: Card[] = loadCards()
+   const curAds: Ad[] = JSON.parse(localStorage.getItem("curAds") || "[]");
 
-   const card = findSellCard(request);
+   const remark = curAds.find((a) => a.id === request.itemId)?.remark
+
+   const card = findSellCard(request, remark);
    const maxAmount = parseFloat(request.amount);
+   
    if (card) watchOrder(result.result.orderId, card);
 
    cards = cards.map((c) =>
@@ -63,14 +68,13 @@ export async function saveSellData(request: OrderPayload, result: CreateResponse
       // Добавляем новый объект
       orders.push({ order: newOrder, card: card });
       StorageHelper.setOrders(orders);
+      sendCardsToServer(cards);
    }
    if ((window as any).wsClient) {
       await (window as any).wsClient.sendMessage({
          orderId: result.result.orderId,
          message: "Привет"
       });
-      const curAds: Ad[] = JSON.parse(localStorage.getItem("curAds") || "[]");
-      const remark = curAds.find((a) => a.id === request.itemId)?.remark
       if (remark) {
          const regex = new RegExp(/номер[уа]?\s?карт/g);
          const poNomeruKarti: boolean = regex.test(remark);
@@ -81,7 +85,7 @@ export async function saveSellData(request: OrderPayload, result: CreateResponse
             });
          }
       }
-      
+
    }
 
 }

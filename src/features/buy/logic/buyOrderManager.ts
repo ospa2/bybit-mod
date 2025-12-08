@@ -1,6 +1,7 @@
 // src/features/buy/logic/buyOrderManager.ts
 
 
+import { sendCardsToServer } from "../../../shared/orders/fetchCards.ts";
 import { watchOrder } from "../../../shared/orders/orderWatcher.ts";
 import { loadCards, StorageHelper } from "../../../shared/storage/storageHelper.ts";
 import type { ApiResult, Order, OrderData } from "../../../shared/types/ads";
@@ -55,6 +56,8 @@ export async function saveOrderAndWatch(orderId: string, card: Card, apiResult: 
          : c
    );
    localStorage.setItem("!cards", JSON.stringify(cards));
+
+   sendCardsToServer(cards);
    orders.push({ order: newOrder, card: card });
    StorageHelper.setOrders(orders);
 }

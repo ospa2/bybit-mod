@@ -28,7 +28,6 @@ export interface Card {
   bank: "tbank" | "sber";
   balance: number; // остаток
   turnover: number; // оборот за сегодня
-  date: Date; // дата последнего обновления оборота
 }
 
 export interface CardUsageMap {

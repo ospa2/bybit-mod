@@ -1,23 +1,25 @@
+import type { Ad } from "../types/ads";
+
 type BankVariants = {
    [key: string]: (string | RegExp)[];
 };
 const bankVariants: BankVariants = {
-   Тинькофф: [/тин[ь]?к/g, /т\s*-*[.]*\s*банк/g, "t-bank"],
-   Сбербанк: [/[сc]б[еe][рp]/g, "sber"],
+   Тинькофф: [/тин[ь]?к/, /т\s*-*[.]*\s*б[аa]нк/, "t-bank"],
+   Сбербанк: [/[сc]б[еe][рp]/, "sber"],
    "Альфа-Банк": ["альф", "alfa"],
    ВТБ: ["втб"],
    Газпромбанк: ["газпром"],
    Райффайзенбанк: ["райф"],
    Росбанк: ["росбанк"],
-   МКБ: ["мкб", /московский\s*-*[.]*\s*кредитный/g],
+   МКБ: ["мкб", /московский\s*-*[.]*\s*кредитный/],
    Совкомбанк: ["совком"],
    Яндекс: ["яндекс"],
-   "Почта Банк": [/почта\s*-*[.]*\s*банк/g],
-   "Ак Барс": [/ак\s*-*[.]*\s*барс/g],
-   УралСиб: [/урал\s*-*[.]*\s*сиб/g],
-   "Русский Стандарт": [/русский\s*-*[.]*\s*стандар[т]?/g],
-   Промсвязьбанк: [/пром\s*-*[.]*\s*связ/g, "псб"],
-   "ОТП Банк": [/[\s.,;:-]отп[\s.,;:-]/g],
+   "Почта Банк": [/почта\s*-*[.]*\s*банк/],
+   "Ак Барс": [/ак\s*-*[.]*\s*барс/],
+   УралСиб: [/урал\s*-*[.]*\s*сиб/],
+   "Русский Стандарт": [/русский\s*-*[.]*\s*стандар[т]?/],
+   Промсвязьбанк: [/пром\s*-*[.]*\s*связ/, "псб"],
+   "ОТП Банк": [/[\s.,;:-]отп[\s.,;:-]/],
    Россельхозбанк: ["россельхоз", "рсхб"],
    Озон: ["озон", "ozon"],
 };
@@ -256,7 +258,7 @@ function removeExcludedBanks(input: string): string {
    const excludePatterns = [
       // 1. "не принимаю с [банк]"
       // Примеры: "не принимаю с альфы", "не принимаем платеж от сбербанка"
-      /не\s+(?:(?:принима[юе][тм]?[ся]?|прим[уе][м]?)\s)?(?:платеж[и]?|перевод[ы]?)?\s?(?:с|со|от|из)\s?[^.;\n]+/gi,
+      /не\s+(?:(?:принима[юе][тм]?[ся]?|прим[уе][м]?)\s)?(?:платеж[и]?|перевод[ы]?|оплат[аыу]?)?\s?(?:с|со|от|из)\s?[^.;\n]+/gi,
 
       // 2. "кроме [банк/список банков]"
       // Примеры: "кроме сбербанка", "кроме тинькофф и альфы"
@@ -265,7 +267,7 @@ function removeExcludedBanks(input: string): string {
       // 3. "[банк] не принимаю"
       // Примеры: "сбербанк не принимаю", "карты тинькофф не принимаю"
       // Работает после начала строки или знака препинания
-      /([а-я\-]+)\s+не\s+(?:принима[юе][тм]?[ся]?|прим[уе][м]?)/gi,
+      /([а-я\-]+)\s*(?:платеж[и]?|перевод[ы]?|оплат[аыу]?)?\s*не\s*(?:принима[юе][тм]?[ся]?|прим[уе][м]?)/gi,
 
       // 4. "исключая [банк]" или "за исключением [банк]"
       // Примеры: "исключаю сбер", "за исключением тинькофф"
@@ -295,7 +297,52 @@ function removeExcludedBanks(input: string): string {
 
    return result;
 }
+function removeExcludedSellBanks(input: string): string {
+   let result = input;
 
+   // Паттерны для запретов
+   const excludePatterns = [
+      // 1. "не отправляю на [банк]", "не скидываю на [банк]", "не перевожу на [банк]"
+      // Примеры: "не отправляю на сбер", "не скидываю на тинькофф", "не перевожу на альфу"
+      /не\s+(?:отправля[юе][тм]?[ся]?|скидыва[юе][тм]?[ся]?|перево[жд][ую][тм]?[ся]?|переведу|скину|отправлю)\s+(?:платеж[и]?|перевод[ы]?)?\s?(?:на|в)\s?[^.;\n]+/gi,
+
+      // 2. "кроме [банк/список банков]" (остаётся без изменений, работает в обе стороны)
+      // Примеры: "кроме сбербанка", "кроме тинькофф и альфы"
+      /кроме\s+[^.,;!?\n]+/gi,
+
+      // 3. "на [банк] не отправляю/не перевожу/не скидываю"
+      // Примеры: "на сбербанк не отправляю", "на тинькофф не перевожу"
+      // Работает после начала строки или знака препинания
+      /(?:на|в)\s+([а-я\-]+)\s+не\s+(?:отправля[юе][тм]?[ся]?|скидыва[юе][тм]?[ся]?|перево[жд][ую][тм]?[ся]?|переведу|скину|отправлю)/gi,
+
+      // 4. "исключая [банк]" или "за исключением [банк]" (остаётся без изменений)
+      // Примеры: "исключаю сбер", "за исключением тинькофф"
+      /(?:исключа[яю]|за\s+исключением)\s+[а-я]+/gi,
+
+      // 5. "не отправляю/не перевожу/не скидываю: [список банков через запятую]"
+      // Примеры: "не отправляю: озон, сбер, альфа", "не перевожу; тинькофф, райф"
+      // Захватывает всё до точки или конца строки
+      /не\s+(?:отправля[юе][тм]?[ся]?|скидыва[юе][тм]?[ся]?|перево[жд][ую][тм]?[ся]?|переведу|скину|отправлю)\s*[:;]\s*[^.\n]+/gi,
+   ];
+
+   excludePatterns.forEach((pattern) => {
+      result = result.replace(pattern, (match) => {
+         // Проверяем, упомянут ли какой-то банк в найденном фрагменте
+         const mentionedBanks = findAllMentionedBanks(match);
+         if (mentionedBanks.length > 0) {
+            // Только если найден хотя бы один банк — заменяем
+            return " ";
+         }
+         // Иначе оставляем как есть
+         return match;
+      });
+   });
+
+   // Нормализуем пробелы
+   result = result.replace(/\s+/g, " ").trim();
+
+   return result;
+}
 // Находит все упомянутые банки в очищенном тексте
 function findAllMentionedBanks(text: string): string[] {
    function includesBank(text: string, variant: string | RegExp) {
@@ -339,29 +386,71 @@ export function availableBanksSell(description: string): string[] {
    // Очищаем текст с помощью твоей функции
    const text = cleanText(description);
 
-   const recipientPatterns = [
-      // "на/в" с возможными повторами (но не перед номером телефона/скобкой)
+   let remark = removeExcludedSellBanks(text);
 
-      /[.,;\s]на\s+[а-я\s]+/gi,
+   let foundBanks: string[] = findAllMentionedBanks(remark);
 
-      /(?:\s+|^)(?:на|в)\s+(?:карту\s+)?[а-я\s]+/gi,
+   return foundBanks.length > 0 ? foundBanks : ["*"];
+}
 
-      /(?:карты|счет|номер)[.,]+[а-я\s]+/gi,
-   ];
 
-   let foundBanks: string[] = [];
+export function updateMaxAmount(ad: Ad) {
+   if (!ad.remark) return ad;
 
-   // Проверяем каждое выражение
-   for (const pattern of recipientPatterns) {
-      let match;
-      while ((match = pattern.exec(text)) !== null) {
-         const segment = match[0];
-         const banks = findAllMentionedBanks(segment);
-         foundBanks.push(...banks);
+   const remark = ad.remark.toLowerCase();
+
+   // Если найдём число — положим его сюда
+   let maxValue: number | null = null;
+   let numbers: number[] = [];
+
+   // --- 1. Кратные ---
+   const kratnyeMatch = remark.match(/кратн(?:ые|ых|ая)\s*[\d.,]*/g);
+   if (kratnyeMatch) {
+      const part = kratnyeMatch[0] || "";
+      const match = part.match(/\d+(?:[.,\s]\d+)?/);
+      const num = match ? parseFloat(match[0].replace(",", ".")) : null;
+
+      if (num && num !== 0) {
+         // вернуть ближайшую нижнюю кратную ad.maxAmount
+         const result =
+            parseFloat(ad.maxAmount) - (parseFloat(ad.maxAmount) % num);
+         // если нужно, можно присвоить ad.maxAmount = result; но оставлю как в твоём варианте — вернуть значение
+         ad.maxAmount = result.toString();
+         return ad;
       }
    }
 
-   // Если нашли – возвращаем уникальный список
-   const unique = [...new Set(foundBanks)];
-   return unique.length > 0 ? unique : ["*"];
+   // --- 2. Ищем все числовые вхождения и пытаемся выбрать максимальную релевантную сумму ---
+   const allNumbers = remark.match(/\d+[.,\s]?\d*/g); // оставил простую регулярку
+
+   if (allNumbers && allNumbers.length > 0) {
+      numbers = allNumbers
+         .map((s: string) => {
+            // попробуем корректно распарсить: сначала как с десятичным разделителем запятая
+            const floatGuess = parseFloat(s.replace(",", "."));
+
+            // если число относительно маленькое — возможно это формат с разделителями тысяч (40,325 -> 40325)
+            if (floatGuess < 10000) {
+               const withoutSep = s.replace(/[.\s]/g, "");
+               return parseFloat(withoutSep);
+            }
+
+            return floatGuess;
+         })
+         .filter((n) => Number.isFinite(n)); // убираем NaN
+   }
+
+   // логирование для отладки (если нужно)
+   // console.log({ allNumbers, numbers });
+
+   if (numbers.length > 0) {
+      maxValue = Math.max(...numbers);
+   }
+
+   // --- 3. Обновляем, если найдено и оно не больше текущего maxAmount ---
+   if (maxValue !== null && maxValue <= parseFloat(ad.maxAmount)) {
+      ad.maxAmount = maxValue.toString()+".00";
+   }
+
+   return ad;
 }

@@ -33,7 +33,6 @@ function hasSignificantLead(
 ): boolean {
    if (!candidates.length) return false;
    if (candidates.length === 1) return true; // если только одно подходящее объявление — возвращаем его
-
    const top = candidates[0].value;
    const second = candidates[1].value;
 

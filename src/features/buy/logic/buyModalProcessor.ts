@@ -9,6 +9,7 @@ import type { Ad, ApiResult } from "../../../shared/types/ads";
 import { fetchAdDetails } from "../api/buyApi.ts";
 import type { Card } from "../../../shared/types/reviews";
 import { findBuyCard } from "../automation/buyCardSelector.ts";
+import { sendTelegramMessage } from "../../sell/api/confirmOrder.ts";
 
 
 /**
@@ -39,8 +40,8 @@ export async function fetchAdDetailsAndSetupEvents(
       }
 
       // --- 3. НАСТРОЙКА ИНТЕРФЕЙСА / АВТОМАТИЗАЦИЯ ---
-      if (data.card) {
-         setupTradeEvents(apiResult, data.card, autoarbitrage);
+      if (data) {
+         setupTradeEvents(apiResult, data, autoarbitrage);
       } else {
          showNotification("нет подходящей карты под это объявление", "error");
          closeModal();
@@ -51,13 +52,14 @@ export async function fetchAdDetailsAndSetupEvents(
       closeModal();
    }
 }
-
+const clickedAds = new Set<string>();
 /**
  * Привязывает логику к кнопкам и полям ввода модального окна.
  */
-function setupTradeEvents(apiResult: ApiResult, card: Card, autoarbitrage: boolean): void {
+function setupTradeEvents(apiResult: ApiResult, data: { ad: Ad; card: Card | null }, autoarbitrage: boolean): void {
    const overlay = document.querySelector(".bybit-modal-overlay") as HTMLElement | null;
-
+   const card = data.card;
+   const ad = data.ad;
    // ... получение всех элементов DOM (amountInput, receiveInput, tradeButton, maxButton)
    const amountInput = overlay?.querySelector("#amount-input") as HTMLInputElement | null;
    const receiveInput = overlay?.querySelector("#receive-input") as HTMLInputElement | null;
@@ -88,9 +90,9 @@ function setupTradeEvents(apiResult: ApiResult, card: Card, autoarbitrage: boole
          }
          handleAmountChange(amountInput, receiveInput, tradeButton, apiResult);
       });
-
-      tradeButton?.addEventListener("click", () => executeTrade(apiResult, card, tradeButton));
-
+      if (card) {
+         tradeButton?.addEventListener("click", () => executeTrade(apiResult, card, tradeButton));
+      }
       maxButton?.click(); // Инициализация
       return;
    }
@@ -104,5 +106,9 @@ function setupTradeEvents(apiResult: ApiResult, card: Card, autoarbitrage: boole
    }
 
    handleAmountChange(amountInput, receiveInput, tradeButton, apiResult);
-   executeTrade(apiResult, card, tradeButton);
+   // executeTrade(apiResult, card, tradeButton);
+   if (card && !clickedAds.has(ad.id)) {
+      sendTelegramMessage(ad, card, apiResult);
+      clickedAds.add(ad.id);
+   }
 }

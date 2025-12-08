@@ -51,7 +51,6 @@ export class AutoClickElements {
         const hasUsdtSibling = parent?.querySelector("span")?.textContent?.trim() === "USDT";
 
         if (hasUsdtSibling) {
-          console.log('AutoClick: Найден нужный span "Все" рядом с "USDT", выполняю клик');
           this.clickMax(span, "span");
         }
       }
@@ -72,7 +71,6 @@ export class AutoClickElements {
         selectText.includes("Выбрать способ оплаты") &&
         div.classList.contains("cursor-pointer")
       ) {
-        console.log("AutoClick: Найден селект способа оплаты, открываю список");
         this.clickElement(div, "payment selector", () => {
           setTimeout(() => {
             this.findAndClickSBP();
@@ -92,12 +90,22 @@ export class AutoClickElements {
       buttons.forEach((button) => {
         const buttonText = button.textContent?.trim();
         if (buttonText && buttonText.includes("Отмена")) {
-          console.log("AutoClick: Найдена кнопка Отмена, выполняю клик");
           ctx.clickElement(button, "button");
         }
       });
     }
+
+    document.dispatchEvent(new KeyboardEvent("keydown", {
+      key: "Escape",
+      code: "Escape",
+      keyCode: 27,
+      which: 27,
+      bubbles: true
+    }));
+
   }
+
+
   // --- Шаг 1 ---
   private findAndClickSellButton(element: HTMLElement): void {
     if (!element) {
@@ -114,7 +122,6 @@ export class AutoClickElements {
     buttons.forEach((button) => {
       const buttonText = button.textContent?.trim();
       if (buttonText && buttonText.includes("Продажа")) {
-        console.log("AutoClick: Найдена кнопка Продажа, выполняю клик");
         this.clickElement(button, "button");
         found = true;
       }
@@ -129,7 +136,7 @@ export class AutoClickElements {
   private findAndClickUseOtherMethods(timeout: number = 10000): Promise<void> {
     return new Promise((resolve, reject) => {
       const startTime = Date.now();
-      const interval = 200;
+      const interval = 100;
 
       const tryToFind = () => {
         let foundElement: { div: HTMLDivElement, span: HTMLSpanElement } | null = null;
@@ -146,7 +153,6 @@ export class AutoClickElements {
 
         // 1. Успех: Элемент найден
         if (foundElement) {
-          console.log("AutoClick: Найден 'Использовать другие способы', кликаю");
           foundElement.span?.click();
           this.clickElement(foundElement.div, "use-other-methods");
           resolve();
@@ -178,7 +184,6 @@ export class AutoClickElements {
     options.forEach((option) => {
       const text = option.textContent?.trim();
       if (text && text.includes("Финансовый пароль")) {
-        console.log("AutoClick: Найден 'Финансовый пароль', кликаю");
         this.clickElement(option, "fund-password");
         found = true;
       }
@@ -210,7 +215,6 @@ export class AutoClickElements {
           return;
         }
 
-        console.log("AutoClick: найден инпут финансового пароля, ввожу данные...");
 
         const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
           window.HTMLInputElement.prototype,
@@ -238,10 +242,9 @@ export class AutoClickElements {
     buttons.forEach((btn) => {
       const text = btn.textContent?.trim();
       if (text === "Подтвердить") {
-        console.log("AutoClick: Найдена кнопка Подтвердить, кликаю");
         setInterval(() => {
-          if(i > 20) return
-          this.clickElement(btn, "confirm") 
+          if (i > 20) return
+          this.clickElement(btn, "confirm")
           i++;
         }, 50);
         found = true;
@@ -253,7 +256,78 @@ export class AutoClickElements {
     }
   }
 
+  static findAndClickRefreshSelector(ctx: AutoClickElements): void {
+    const divs = document.querySelectorAll<HTMLDivElement>("div");
 
+    divs.forEach((div) => {
+      // Ищем селектор обновления по классу и тексту
+      if (
+        div.classList.contains("fiat-otc-select-option") &&
+        div.classList.contains("otc-refresh-select-option")
+      ) {
+        const spanText = div.querySelector("span")?.textContent?.trim();
+        if (spanText && (spanText.includes("до обновления") || spanText.includes("сейчас"))) {
+          ctx.clickElement(div, "refresh selector", () => {
+            setTimeout(() => {
+              ctx.findAndClickNotNow();
+            }, 100);
+          });
+        }
+      }
+    });
+  }
+
+  private findAndClickNotNow(): void {
+    const options = document.querySelectorAll<HTMLDivElement>(
+      ".rc-select-item.rc-select-item-option"
+    );
+
+    let notNowFound = false;
+
+    options.forEach((option) => {
+      const titleDiv = option.querySelector(".truncate");
+      const text = titleDiv?.textContent?.trim() || titleDiv?.getAttribute("title");
+
+      if (text === "Не сейчас") {
+        this.clickElement(option, "Not now option", () => {
+          setTimeout(() => {
+            this.findAndClick5Seconds();
+          }, 100);
+        });
+        notNowFound = true;
+      }
+    });
+
+    if (!notNowFound && options.length === 0) {
+      console.log("AutoClick: Опции еще не загрузились, повторная попытка...");
+      setTimeout(() => this.findAndClickNotNow(), 500);
+    }
+  }
+
+  private findAndClick5Seconds(): void {
+    const options = document.querySelectorAll<HTMLDivElement>(
+      ".rc-select-item.rc-select-item-option"
+    );
+
+    let fiveSecondsFound = false;
+
+    options.forEach((option) => {
+      const titleDiv = option.querySelector(".truncate");
+      const text = titleDiv?.textContent?.trim() || titleDiv?.getAttribute("title");
+
+      if (text === "5 с до обновления") {
+        if (window.location.href === "https://www.bybit.com/ru-RU/p2p/sell/USDT/RUB") {
+          this.clickElement(option, "5 seconds option");
+        }
+        fiveSecondsFound = true;
+      }
+    });
+
+    if (!fiveSecondsFound && options.length === 0) {
+      console.log("AutoClick: Опции еще не загрузились, повторная попытка...");
+      setTimeout(() => this.findAndClick5Seconds(), 100);
+    }
+  }
   // --- Универсальный клик ---
   private clickElement(
     element: HTMLElement,
@@ -269,7 +343,6 @@ export class AutoClickElements {
 
       element.focus();
       element.click();
-      console.log(`AutoClick: клик по ${type}`);
 
       if (callback) callback();
     } catch (error) {
@@ -329,7 +402,6 @@ export class AutoClickElements {
         text &&
         ["Наличные", "Bank Transfer", "Mobile Top-up", "Cash Deposit to Bank"].includes(text)
       ) {
-        console.log("AutoClick: Найден способ оплаты, кликаю");
         this.clickElement(div, "SBP div");
       }
     });
@@ -339,6 +411,7 @@ export class AutoClickElements {
       setTimeout(() => this.findAndClickSBP(), 500);
     }
   }
+
 
 
   // --- Основная функция ---
@@ -370,7 +443,7 @@ export class AutoClickElements {
       await editTelegramMessage(messageId, "\n\n✅ Ордер успешно создан!");
 
       // 7. Назад
-      await delay(4400);
+      await delay(6400);
       window.location.href = "https://www.bybit.com/ru-RU/p2p/sell/USDT/RUB";
 
     } catch (error) {
@@ -387,80 +460,53 @@ export class AutoClickElements {
       }
     }
   }
+  //предложенное объявление
+  static async clickEveryButtonExceptOne(ctx: AutoClickElements) {
+    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+    await delay(2000);
+    const element: HTMLElement = document.querySelector('div[role="dialog"]') as HTMLElement;
+    // 1. Клик "Продать"
+    await delay(3000);
+    ctx.findAndClickSellButton(element);
 
-  static findAndClickRefreshSelector(ctx: AutoClickElements): void {
-    const divs = document.querySelectorAll<HTMLDivElement>("div");
+    // 2. Клик "Использовать другие способы"
+    await delay(2000);
+    await ctx.findAndClickUseOtherMethods();
 
-    divs.forEach((div) => {
-      // Ищем селектор обновления по классу и тексту
-      if (
-        div.classList.contains("fiat-otc-select-option") &&
-        div.classList.contains("otc-refresh-select-option")
-      ) {
-        const spanText = div.querySelector("span")?.textContent?.trim();
-        if (spanText && (spanText.includes("до обновления") || spanText.includes("сейчас"))) {
-          console.log("AutoClick: Найден селектор обновления, открываю список");
-          ctx.clickElement(div, "refresh selector", () => {
-            setTimeout(() => {
-              ctx.findAndClickNotNow();
-            }, 100);
-          });
-        }
-      }
-    });
+    // 3. Клик "Пароль фонда"
+    ctx.findAndClickFundPassword();
+
+    // 4. Ввод пароля
+    await ctx.findAndTypeFundPassword();
+
   }
 
-  private findAndClickNotNow(): void {
-    const options = document.querySelectorAll<HTMLDivElement>(
-      ".rc-select-item.rc-select-item-option"
-    );
+  static async clickLastButton(ctx: AutoClickElements, messageId: any): Promise<void> {
+    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+    try {
 
-    let notNowFound = false;
+      // 5. Клик "Подтвердить"
+      ctx.findAndClickConfirmButton();
 
-    options.forEach((option) => {
-      const titleDiv = option.querySelector(".truncate");
-      const text = titleDiv?.textContent?.trim() || titleDiv?.getAttribute("title");
+      // 6. Успех!
+      await editTelegramMessage(messageId, "\n\n✅ Ордер успешно создан!");
 
-      if (text === "Не сейчас") {
-        console.log("AutoClick: Найдена опция 'Не сейчас', кликаю");
-        this.clickElement(option, "Not now option", () => {
-          setTimeout(() => {
-            this.findAndClick5Seconds();
-          }, 100);
-        });
-        notNowFound = true;
+      // 7. Назад
+      await delay(6400);
+      window.location.href = "https://www.bybit.com/ru-RU/p2p/sell/USDT/RUB";
+
+    } catch (error) {
+      console.error("AutoClick: Ошибка в последовательности:", error);
+
+      // Отправляем сообщение об ошибке
+      const errorMessage = error instanceof Error ? error.message : "😭 Неизвестная ошибка";
+      await editTelegramMessage(messageId, errorMessage);
+
+      // Закрываем диалог при ошибке
+      const dialog = document.querySelector('div[role="dialog"]') as HTMLElement;
+      if (dialog) {
+        AutoClickElements.findAndClickCancel(ctx);
       }
-    });
-
-    if (!notNowFound && options.length === 0) {
-      console.log("AutoClick: Опции еще не загрузились, повторная попытка...");
-      setTimeout(() => this.findAndClickNotNow(), 500);
-    }
-  }
-
-  private findAndClick5Seconds(): void {
-    const options = document.querySelectorAll<HTMLDivElement>(
-      ".rc-select-item.rc-select-item-option"
-    );
-
-    let fiveSecondsFound = false;
-
-    options.forEach((option) => {
-      const titleDiv = option.querySelector(".truncate");
-      const text = titleDiv?.textContent?.trim() || titleDiv?.getAttribute("title");
-
-      if (text === "5 с до обновления") {
-        console.log("AutoClick: Найдена опция '5 с до обновления', кликаю");
-        if (window.location.href === "https://www.bybit.com/ru-RU/p2p/sell/USDT/RUB") {
-          this.clickElement(option, "5 seconds option");
-        }
-        fiveSecondsFound = true;
-      }
-    });
-
-    if (!fiveSecondsFound && options.length === 0) {
-      console.log("AutoClick: Опции еще не загрузились, повторная попытка...");
-      setTimeout(() => this.findAndClick5Seconds(), 100);
     }
   }
 }

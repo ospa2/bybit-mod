@@ -223,32 +223,46 @@ export function loadCards(): Card[] {
    if (!raw) return [];
 
    try {
-      const today = new Date();
-      // JSON.parse преобразует дату в строку, поэтому нам нужно обработать это
-      const cardsFromStorage: any[] = JSON.parse(raw);
+      const cardsFromStorage: Card[] = JSON.parse(raw);
 
-      return cardsFromStorage.map((card) => {
-         const cardDate = new Date(card.date);
-
-         // Если сохраненная дата не совпадает с сегодняшним днем
-         if (!isSameDay(cardDate, today)) {
-            // Сбрасываем оборот и обновляем дату на текущую
-            return {
-               ...card,
-               turnover: 0,
-               date: today,
-            };
-         }
-
-         // Если день тот же, просто преобразуем строку в объект Date
-         return {
+      // Проверяем, нужно ли сбросить оборот для всех карт
+      if (shouldResetTurnover()) {
+         return cardsFromStorage.map((card) => ({
             ...card,
-            date: cardDate,
-         };
-      });
+            turnover: 0,
+         }));
+      }
+
+      // Если сброс не требуется, просто возвращаем карты с восстановленными датами
+      return cardsFromStorage.map((card) => ({
+         ...card
+      }));
    } catch (e) {
       console.error("Error loading or processing cards:", e);
       return [];
+   }
+}
+
+function shouldResetTurnover(): boolean {
+   const raw = localStorage.getItem("!cards_last_used");
+   if (!raw) return false;
+
+   try {
+      const lastUsedTimes: Record<string, number> = JSON.parse(raw);
+      const timestamps = Object.values(lastUsedTimes);
+
+      if (timestamps.length === 0) return false;
+
+      // Находим максимальный timestamp
+      const maxTimestamp = Math.max(...timestamps);
+      const lastUsedDate = new Date(maxTimestamp);
+      const today = new Date();
+
+      // Проверяем, было ли последнее использование не сегодня
+      return !isSameDay(lastUsedDate, today);
+   } catch (e) {
+      console.error("Error checking last used times:", e);
+      return false;
    }
 }
 

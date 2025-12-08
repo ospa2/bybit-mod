@@ -5,22 +5,22 @@ import type { Card } from "../../../shared/types/reviews";
 import { canUseCard } from "../../buy/automation/adFinder";
 
 
-export function findSellCard(ad: OrderPayload): Card | null {
+export function findSellCard(ad: OrderPayload, remark?: string): Card | null {
 
    // Загружаем все карты
    let cards = loadCards();
    
    // Фильтруем подходящие карты
-   const available = cards.filter((c) => canUseCard(c, ad));
+   const available = cards.filter((c) => canUseCard(c, ad, remark));
    
    if (!available.length) return null;
 
    // если есть рабочие тиньки, то они в приоритете
    available.sort((a, b) => {
       const priority = (bank: string) =>
-         bank.toLowerCase().includes("tbank")
+         bank.toLowerCase().includes("sber")
             ? 1
-            : bank.toLowerCase().includes("sber")
+            : bank.toLowerCase().includes("tbank")
                ? 2
                : 3;
       return priority(a.bank) - priority(b.bank);

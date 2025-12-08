@@ -228,3 +228,44 @@ export interface OrderData {
 }
 
 export type OrderStatus = "pending" | "completed" | "cancelled" | string;
+
+export interface PendingOrder {
+  id: string;
+  side: number;
+  tokenId: string;
+  orderType: string;
+  amount: string;
+  currencyId: string;
+  price: string;
+  notifyTokenQuantity: string;
+  notifyTokenId: string;
+  fee: string;
+  targetNickName: string;
+  targetUserId: string;
+  status: number;
+  selfUnreadMsgCount: string;
+  createDate: string;
+  transferLastSeconds: string;
+  appealLastSeconds: string;
+  userId: string;
+  sellerRealName: string;
+  buyerRealName: string;
+  judgeInfo: {
+    autoJudgeUnlockTime: string;
+    dissentResult: string;
+    preDissent: string;
+    postDissent: string;
+  };
+  unreadMsgCount: string;
+  extension: {
+    isDelayWithdraw: boolean;
+    delayTime: string;
+    startTime: string;
+  };
+  bulkOrderFlag: boolean;
+  targetUserMaskId: string;
+  loginUserMaskId: string;
+  verificationOrderLastSeconds: string;
+  verificationOrder: boolean;
+  expiresSoon: boolean;
+}

@@ -10,6 +10,9 @@ import { resumePendingOrders } from "./features/buy/api/buyApi.ts";
 import { AutoClickElements } from "./features/sell/automation/autoсlicker.ts";
 import { backgroundProcessAds } from "./features/sell/logic/sellBackgroundProc.ts";
 import { addOnlySberSwitch } from "./features/buy/components/sberSwitch.ts";
+import { loadCards } from "./shared/storage/storageHelper.ts";
+import { watchNewOrders } from "./shared/orders/getOrders.ts";
+import { fetchAndStoreCards } from "./shared/orders/fetchCards.ts";
 
 function now() {
    return new Date().toISOString();
@@ -113,7 +116,9 @@ const checkInterval = setInterval(() => {
       console.error('Не удалось найти элемент guide-step-two после', maxAttempts, 'попыток');
    }
 }, 100);
-
+setInterval(() => {
+   window.location.reload();
+}, 60*1000*10);
 setTimeout(() => {
    document.querySelector(".fiat-otc-side-bar-aiguide")?.remove();
 }, 3000);
@@ -123,12 +128,16 @@ const autoClicker = new AutoClickElements();
 // Делаем экземпляр доступным глобально
 (window as any).autoClicker = autoClicker;
 
+fetchAndStoreCards()
 
 resumePendingOrders();
 
 backgroundProcessAds()
 
+const cards = loadCards()
+console.log('cards:', cards);
 
+watchNewOrders()
 const wsClient = new BybitP2PWebSocket();
 
 (window as any).wsClient = wsClient;

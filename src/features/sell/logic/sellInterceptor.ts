@@ -52,9 +52,9 @@ export function initFetchInterceptor() {
    async function runBotPolling() {
       while (true) {
          try {
-            if (window.location.href === "https://www.bybit.com/ru-RU/p2p/sell/USDT/RUB") {
-               await checkTelegramResponse();
-            }
+
+            await checkTelegramResponse();
+
 
             // Даже при непрерывном polling нужна короткая пауза,
             // чтобы JS-движок успевал "отдышаться" и не блокировал страницу.
@@ -70,8 +70,8 @@ export function initFetchInterceptor() {
       if (window.location.href === "https://www.bybit.com/ru-RU/p2p/sell/USDT/RUB") {
          AutoClickElements.findAndClickRefreshSelector((window as any).autoClicker)
       }
-   }, 1000*60);
-   
+   }, 1000 * 60);
+
 
    // Запуск бота
    runBotPolling();
@@ -113,7 +113,7 @@ export function initFetchInterceptor() {
 
                try {
                   console.log("попытка сделать ", data);
-                  
+
                   // вызываем saveSellData с правильными полями
                   await saveSellData(data.req, data.res);
                } catch (err) {
