@@ -37,8 +37,8 @@ function hasSignificantLead(
    const second = candidates[1].value;
 
    // Пороговые параметры (можно подстроить):
-   const MIN_ABS_DIFF = 0.03; // минимальная абсолютная разница в score (3%)
-   const REL_DIFF_FACTOR = 0.05; // минимальная относительная разница (5%)
+   const MIN_ABS_DIFF = 0.04; // минимальная абсолютная разница в score (3%)
+   const REL_DIFF_FACTOR = 0.06; // минимальная относительная разница (5%)
 
    // динамический порог: берём максимум абсолютного и относительного
    const threshold = Math.max(MIN_ABS_DIFF, REL_DIFF_FACTOR * Math.max(top, second));

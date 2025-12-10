@@ -1,14 +1,6 @@
 import { USER_ID } from "../../core/config";
 import { fetchFreshBybitToken } from "./tokenGetter";
 
-interface BybitWebSocketConfig {
-  url: string;
-  token?: string; // <--- ОБЯЗАТЕЛЬНО: JWT токен для авторизации
-  appId?: string;
-  os?: string;
-  deviceId: string;
-}
-
 interface SendMessageParams {
   userId?: number;
   orderId: string;
@@ -16,11 +8,20 @@ interface SendMessageParams {
   contentType?: 'str' | 'image' | 'file';
   roleType?: 'user' | 'merchant';
 }
+interface BybitWebSocketConfig {
+  url: string;
+  token?: string; // <--- ОБЯЗАТЕЛЬНО: JWT токен для авторизации
+  appId?: string;
+  os?: string;
+  deviceId: string;
+}
+// Добавляем тип для обработчиков событий
+type EventHandler = (data: any) => void;
 
 export class BybitP2PWebSocket {
   private ws: WebSocket | null = null;
   private config: BybitWebSocketConfig;
-  private currentToken: string | null = null; // Хранилище для токена
+  private currentToken: string | null = null;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private pingInterval: ReturnType<typeof setInterval> | null = null;
@@ -30,8 +31,10 @@ export class BybitP2PWebSocket {
   private connectionResolver: (() => void) | null = null;
   private connectionRejector: ((err: Error) => void) | null = null;
 
+  // ✅ ДОБАВЛЯЕМ: Event Emitter
+  private eventHandlers: Map<string, EventHandler[]> = new Map();
+
   constructor() {
-    // Здесь выполняется только синхронная инициализация
     this.config = {
       appId: 'bybit',
       os: 'web',
@@ -40,14 +43,45 @@ export class BybitP2PWebSocket {
     };
   }
 
+  // ✅ ДОБАВЛЯЕМ: Метод подписки на события
+  on(event: string, handler: EventHandler): void {
+    if (!this.eventHandlers.has(event)) {
+      this.eventHandlers.set(event, []);
+    }
+    this.eventHandlers.get(event)!.push(handler);
+  }
+
+  // ✅ ДОБАВЛЯЕМ: Метод отписки от событий
+  off(event: string, handler: EventHandler): void {
+    const handlers = this.eventHandlers.get(event);
+    if (handlers) {
+      const index = handlers.indexOf(handler);
+      if (index > -1) {
+        handlers.splice(index, 1);
+      }
+    }
+  }
+
+  // ✅ ДОБАВЛЯЕМ: Метод генерации событий
+  private emit(event: string, data: any): void {
+    const handlers = this.eventHandlers.get(event);
+    if (handlers) {
+      handlers.forEach(handler => {
+        try {
+          handler(data);
+        } catch (err) {
+          console.error(`Error in event handler for "${event}":`, err);
+        }
+      });
+    }
+  }
+
   /**
    * Подключение к WebSocket и Авторизация
    */
   async connect(): Promise<void> {
-    // 1. Если уже подключаемся, возвращаем текущий промис
     if (this.connectionPromise) return this.connectionPromise;
 
-    // 2. Асинхронно получаем токен
     try {
       this.currentToken = await fetchFreshBybitToken();
     } catch (e) {
@@ -70,7 +104,6 @@ export class BybitP2PWebSocket {
 
       this.ws.onopen = () => {
         this.reconnectAttempts = 0;
-        // Сразу после подключения отправляем ЛОГИН
         this.sendLogin();
         this.startPingInterval();
       };
@@ -83,7 +116,7 @@ export class BybitP2PWebSocket {
       this.ws.onclose = (event) => {
         console.log(`🔌 WebSocket closed (Code: ${event.code})`);
         this.stopPingInterval();
-        this.connectionPromise = null; // Сбрасываем промис
+        this.connectionPromise = null;
         this.handleReconnect();
       };
 
@@ -95,24 +128,18 @@ export class BybitP2PWebSocket {
     return this.connectionPromise;
   }
 
-  /**
-   * Отправка фрейма авторизации
-   */
   private sendLogin(): void {
     if (!this.ws || !this.currentToken) return;
 
     const payload = {
       op: 'login',
-      args: [this.currentToken], // Используем this.currentToken
+      args: [this.currentToken],
       req_id: this.config.deviceId
     };
 
     this.ws.send(JSON.stringify(payload));
   }
 
-  /**
-   * Отправка сообщения в ордер
-   */
   async sendMessage(params: SendMessageParams): Promise<void> {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
       throw new Error('WebSocket is not connected');
@@ -130,7 +157,6 @@ export class BybitP2PWebSocket {
     const timestamp = Date.now();
     const msgId = `OTC_USER_CHAT_MSG_V2-SEND-${timestamp}-${orderId}`;
 
-    // Внутренняя структура данных
     const internalData = {
       topic: 'OTC_USER_CHAT_MSG_V2',
       type: 'SEND',
@@ -150,7 +176,7 @@ export class BybitP2PWebSocket {
       op: 'input',
       args: [
         'FIAT_OTC_TOPIC',
-        JSON.stringify(internalData) // Важно: это должна быть строка JSON
+        JSON.stringify(internalData)
       ]
     };
 
@@ -158,12 +184,8 @@ export class BybitP2PWebSocket {
     console.log('📤 Message sent payload:', payload);
   }
 
-  /**
-   * Подписка на топики
-   */
   async subscribe(topics: string[]): Promise<void> {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      // Можно добавить логику ожидания подключения
       console.warn('Cannot subscribe, WS not open');
       return;
     }
@@ -186,12 +208,10 @@ export class BybitP2PWebSocket {
       // 1. Обработка ответа на ЛОГИН
       if (message.request && message.request.op === 'login') {
         if (message.success) {
-          // Только здесь мы считаем соединение полностью готовым
           if (this.connectionResolver) {
             this.connectionResolver();
             this.connectionResolver = null;
           }
-          // Автоматически подписываемся на топик чата после логина
           this.subscribe(['FIAT_OTC_TOPIC']);
         } else {
           console.error('⛔ Auth Failed:', message.ret_msg);
@@ -199,28 +219,32 @@ export class BybitP2PWebSocket {
             this.connectionRejector(new Error(`Auth Failed: ${message.ret_msg}`));
             this.connectionRejector = null;
           }
-          this.disconnect(); // Разрываем, если логин не прошел
+          this.disconnect();
         }
         return;
       }
 
-      // 2. Обработка входящих сообщений чата
+      // 2. ✅ ЭМИТИМ событие 'message' для всех входящих сообщений
+      this.emit('message', message);
+
+      // 3. Обработка входящих сообщений чата
       if (message.topic === 'OTC_USER_CHAT_MSG_V2' && message.type === 'RECEIVE') {
         console.log('📩 New Message Received:', message.data);
-        // TODO: Вызвать callback или event emitter
+        // ✅ ЭМИТИМ специфичное событие для чата
+        this.emit('chat:message', message);
       }
 
-      // 3. Логирование ошибок API
+      // 4. Логирование ошибок API
       if (message.success === false) {
         console.warn('⚠️ API Error:', message);
+        this.emit('error', message);
       }
 
     } catch (error) {
       console.error('Error parsing message:', error);
+      this.emit('error', error);
     }
   }
-
-  // ... (Остальные методы: markAsRead, ping, reconnect, generateUUID остаются без изменений)
 
   private startPingInterval(): void {
     this.pingInterval = setInterval(() => {
@@ -246,7 +270,6 @@ export class BybitP2PWebSocket {
       this.reconnectAttempts++;
       console.log(`🔄 Reconnecting... Attempt ${this.reconnectAttempts}`);
       setTimeout(() => {
-        // Сбрасываем промис перед повторным подключением
         this.connectionPromise = null;
         this.connect().catch(console.error);
       }, 2000 * this.reconnectAttempts);
@@ -254,7 +277,6 @@ export class BybitP2PWebSocket {
   }
 
   private generateUUID(): string {
-    // Простая реализация UUID v4
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
       var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
       return v.toString(16);
@@ -267,5 +289,7 @@ export class BybitP2PWebSocket {
       this.ws.close();
       this.ws = null;
     }
+    // ✅ Очищаем обработчики событий
+    this.eventHandlers.clear();
   }
 }

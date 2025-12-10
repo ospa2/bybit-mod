@@ -48,12 +48,11 @@ export async function sendTelegramMessage(ad: Ad, card?: Card, apiResult?: ApiRe
       poNomeruKarti = regex.test(ad.remark);
 
       const baseText =
-         `🟥 Найден ордер на продажу\n\n` +
-         `🟥 Продавец: ${ad.nickName}\n` +
          `🟥 Сумма: ${ad.maxAmount} ₽\n` +
          `🟥 Цена: ${ad.price} ₽\n\n` +
+         `🟥 Покупатель: ${ad.nickName}\n` +
          `🟥 Описание:\n${ad.remark}\n\n` +
-         `    ${card ? `🟥 Карта: ${card.id} по ${poNomeruKarti ? "номеру карты; " : "сбп; "} баланс (${card.balance}₽)` : `🟥 Подходящая карта не нашлась`}\n\n`;
+         `${card ? `${card.bank === "sber" ? "🟢" : "🟡"} по ${poNomeruKarti ? "номеру карты; " : "сбп; "} баланс (${card.balance}₽)` : `🟥 Подходящая карта не нашлась`}\n\n`;
 
       const text = baseText + `❓ Создать ордер?`;
 
@@ -86,13 +85,12 @@ export async function sendTelegramMessage(ad: Ad, card?: Card, apiResult?: ApiRe
 
    } else if (ad.side === 1) {
       //покупка
-      const baseText =
-         `🟩 Найден ордер на покупку\n\n` +
-         `🟩 Продавец: ${ad.nickName}\n` +
+      const baseText =        
          `🟩 Сумма: ${ad.maxAmount} ₽\n` +
          `🟩 Цена: ${ad.price} ₽\n\n` +
+         `🟩 Продавец: ${ad.nickName}\n` +
          `🟩 Описание:\n${ad.remark}\n\n` +
-         `${card ? `${card.bank==="sber" ? "🟢" : "🟡"} Карта: ${card.id}; баланс (${card.balance}₽)` : `🟩 Подходящая карта не нашлась`}\n\n`;
+         `${card ? `${card.bank === "sber" ? "🟢" : "🟡"} Карта: ${card.id}; баланс (${card.balance}₽)` : `🟩 Подходящая карта не нашлась`}\n\n`;
 
       const text = baseText + `❓ Создать ордер?`;
 

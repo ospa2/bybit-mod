@@ -454,3 +454,24 @@ export function updateMaxAmount(ad: Ad) {
 
    return ad;
 }
+
+export function bankLatinToCyrillic(name: string): string {
+   const map: Record<string, string> = {
+      // 🇷🇺 Крупные банки
+      sber: "Сбер",
+      tbank: "Т-Банк",
+      alfa: "Альфа-Банк",
+      vtb: "ВТБ",
+      raif: "Райффайзен",
+      gazprom: "Газпромбанк",
+      psb: "ПСБ",
+      rshb: "Россельхозбанк",
+      mts: "МТС Банк",
+      sovcom: "Совкомбанк",
+      uralsib: "Уралсиб",
+      rnkb: "РНКБ"
+   };
+
+   const key = name.toLowerCase();
+   return map[key] || name;
+}

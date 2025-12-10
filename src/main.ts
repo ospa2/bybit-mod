@@ -13,6 +13,7 @@ import { addOnlySberSwitch } from "./features/buy/components/sberSwitch.ts";
 import { loadCards } from "./shared/storage/storageHelper.ts";
 import { watchNewOrders } from "./shared/orders/getOrders.ts";
 import { fetchAndStoreCards } from "./shared/orders/fetchCards.ts";
+import { OrderChatManager } from "./shared/orders/orderChatManager.ts";
 
 function now() {
    return new Date().toISOString();
@@ -118,15 +119,23 @@ const checkInterval = setInterval(() => {
 }, 100);
 setInterval(() => {
    window.location.reload();
-}, 60*1000*10);
+}, 60 * 1000 * 10);
 setTimeout(() => {
    document.querySelector(".fiat-otc-side-bar-aiguide")?.remove();
 }, 3000);
 
 // Запускаем автоматизацию кликов
+
 const autoClicker = new AutoClickElements();
+
+
 // Делаем экземпляр доступным глобально
 (window as any).autoClicker = autoClicker;
+
+setTimeout(() => {
+   const manager = new OrderChatManager((window as any).wsClient);
+   (window as any).manager = manager;
+}, 4000);
 
 fetchAndStoreCards()
 
