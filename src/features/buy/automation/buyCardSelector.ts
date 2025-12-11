@@ -109,14 +109,7 @@ export function findBestBuyAd(ads: Ad[]): { ad: Ad; card: Card } | null {
    }
 
    if (!significant) {
-      // Лидер не убедителен — логируем причину и ничего не возвращаем
-      const top = candidates[0].value;
-      const second = candidates[1] ? candidates[1].value : null;
-      console.log(
-         `Лидер не достаточно явно опережает конкурентов. top=${top.toFixed(
-            4
-         )}, second=${second !== null ? second.toFixed(4) : "n/a"}`
-      );
+
       return null;
    }
 

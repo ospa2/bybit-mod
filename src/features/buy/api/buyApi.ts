@@ -88,12 +88,7 @@ export async function fetchAndAppendPage() {
       if (ads) {
          try {
             const adAndCard = findBestBuyAd(ads);
-            console.log(
-               "card:",
-               adAndCard?.card.id,
-               "counterparty: ",
-               adAndCard?.ad.nickName
-            );
+          
             if (adAndCard) {
                openBuyModal(adAndCard, minPrice, true); // автоматическое создание ордера
             }

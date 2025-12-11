@@ -26,7 +26,6 @@ export function watchOrder(orderId: string, card: Card): () => void {
 
          // Получение статуса
          const status = await getOrderStatus(orderId);
-         console.log(`📊 Статус ордера ${orderId}: ${status} (попытка ${attemptCount}/${MAX_ATTEMPTS})`);
 
          // Сброс счётчика ошибок при успешном запросе
          consecutiveErrors = 0;
