@@ -118,7 +118,9 @@ const checkInterval = setInterval(() => {
    }
 }, 100);
 setInterval(() => {
-   window.location.reload();
+   if (window.location.href === "https://www.bybit.com/ru-RU/p2p/sell/USDT/RUB") {
+      window.location.reload();
+   }
 }, 60 * 1000 * 10);
 setTimeout(() => {
    document.querySelector(".fiat-otc-side-bar-aiguide")?.remove();

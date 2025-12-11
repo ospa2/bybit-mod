@@ -129,7 +129,7 @@ export async function executeTrade(apiResult: ApiResult, card: Card, tradeButton
             orderId: result.result.orderId,
             message: "Привет"
          });
-         (window as any).orderChatmanager.startForOrder(result.result.orderId);
+         (window as any).manager.startForOrder(result.result.orderId);
       } else {
          showNotification(result.ret_msg || String(result), "error");
          closeModal();

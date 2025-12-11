@@ -29,16 +29,46 @@ export function findBuyCard(ad: Ad, minPrice: number): Card | null {
 
 // === Вспомогательная логика для проверки значимости лидера ===
 function hasSignificantLead(
-   candidates: { ad: Ad; card: Card; value: number }[]
-): boolean {
+   candidates: { ad: Ad; card: Card; value: number }[],
+   ): boolean {
    if (!candidates.length) return false;
    if (candidates.length === 1) return true; // если только одно подходящее объявление — возвращаем его
    const top = candidates[0].value;
    const second = candidates[1].value;
 
-   // Пороговые параметры (можно подстроить):
-   const MIN_ABS_DIFF = 0.04; // минимальная абсолютная разница в score (3%)
-   const REL_DIFF_FACTOR = 0.06; // минимальная относительная разница (5%)
+   // Опорные точки для интерполяции MIN_ABS_DIFF
+   const hourlyThresholds: Record<number, number> = {
+      0: 0.040, 1: 0.040, 2: 0.040, 3: 0.040, 4: 0.040,
+      5: 0.040, 6: 0.040, 7: 0.040, 8: 0.040, 9: 0.040,
+      10: 0.042, 11: 0.050, 12: 0.060, 13: 0.068, 14: 0.073,
+      15: 0.076, 16: 0.078, 17: 0.079, 18: 0.080, 19: 0.077,
+      20: 0.074, 21: 0.071, 22: 0.068, 23: 0.064, 24: 0.060
+   };
+
+   // Функция линейной интерполяции между опорными точками
+   function interpolateThreshold(hour: number): number {
+      // Нормализуем час в диапазон [0, 24]
+      const h = Math.max(0, Math.min(24, hour));
+
+      const hourFloor = Math.floor(h);
+      const hourCeil = Math.ceil(h);
+
+      // Если час целый, возвращаем точное значение
+      if (hourFloor === hourCeil) {
+         return hourlyThresholds[hourFloor];
+      }
+
+      // Линейная интерполяция между соседними часами
+      const lowerValue = hourlyThresholds[hourFloor];
+      const upperValue = hourlyThresholds[hourCeil];
+      const fraction = h - hourFloor;
+
+      return lowerValue + (upperValue - lowerValue) * fraction;
+   }
+   const now = new Date();
+   const hour = now.getHours() + now.getMinutes() / 60;
+   const MIN_ABS_DIFF = interpolateThreshold(hour);
+   const REL_DIFF_FACTOR = MIN_ABS_DIFF + 0.02; // REL_DIFF_FACTOR всегда на 2% выше
 
    // динамический порог: берём максимум абсолютного и относительного
    const threshold = Math.max(MIN_ABS_DIFF, REL_DIFF_FACTOR * Math.max(top, second));
@@ -48,7 +78,7 @@ function hasSignificantLead(
       // топ не опережает второго достаточно сильно
       return false;
    }
-   
+
    // Доп. защита: если более одного объявления находятся "в пределах порога" от лидера,
    // значит конкуренция плотная — лучше ничего не возвращать.
    let closeCount = 0;
