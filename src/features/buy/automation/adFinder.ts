@@ -7,32 +7,58 @@ const COOLDOWN_TIME = 1_200_000; // 20 минут в миллисекундах
 
 
 // ==== Весовые функции ====
+// ЖЁСТКАЯ фильтрация по цене - если цена больше порога, вес = 0
 function priceWeight(price: number, minPrice: number): number {
+   const MAX_PRICE_DIFF = 0.005; // 0.5% - жёсткий лимит
+
+   if (price > minPrice * (1 + MAX_PRICE_DIFF)) {
+      return 0; // Полное отсечение дорогих объявлений
+   }
+
    if (price <= minPrice) {
       return 1.0;
-   } else if (price <= minPrice * 1.005) {
-      // линейная интерполяция от 1 до 0.5
-      return 0.5 + ((1.0 - 0.5) * (1.005 - price / minPrice)) / 0.005;
-   } else if (price <= minPrice * 1.01) {
-      // линейная интерполяция от 0.5 до 0.3
-      return 0.3 + ((0.5 - 0.3) * (1.01 - price / minPrice)) / 0.005;
-   } else {
-      return 0.3;
    }
+
+   // Линейная интерполяция от 1.0 до 0.1 в диапазоне [minPrice, minPrice*1.005]
+   const ratio = (price - minPrice) / (minPrice * MAX_PRICE_DIFF);
+   return 1.0 - (0.9 * ratio); // от 1.0 до 0.1
 }
 
+// ЖЁСТКАЯ фильтрация по объёму - минимум 30k
 function amountWeight(amount: number): number {
-   if (amount <= 10000) return 1.0;
-   if (amount <= 20000) return 1.0 + ((1.4 - 1.0) * (amount - 10000)) / 10000;
-   if (amount <= 30000) return 1.4 + ((1.7 - 1.4) * (amount - 20000)) / 10000;
-   if (amount <= 40000) return 1.7 + ((2.0 - 1.7) * (amount - 30000)) / 10000;
-   return 2.0;
+   const MIN_AMOUNT = 30000; // Жёсткий минимум
+   const OPTIMAL_START = 50000;
+   const OPTIMAL_END = 95000;
+   const MAX_AMOUNT = 100000;
+
+   // Отсекаем слишком маленькие объёмы
+   if (amount < MIN_AMOUNT) {
+      return 0;
+   }
+
+   // Отсекаем слишком большие (>= 100k)
+   if (amount >= MAX_AMOUNT) {
+      return 0;
+   }
+
+   // От 30k до 50k - плавный рост от 0.3 до 1.0
+   if (amount < OPTIMAL_START) {
+      const ratio = (amount - MIN_AMOUNT) / (OPTIMAL_START - MIN_AMOUNT);
+      return 0.3 + (0.7 * ratio);
+   }
+
+   // От 50k до 95k - максимальный вес
+   if (amount <= OPTIMAL_END) {
+      return 1.0;
+   }
+
+   // От 95k до 100k - быстрое падение (защита от переполнения)
+   const ratio = (MAX_AMOUNT - amount) / (MAX_AMOUNT - OPTIMAL_END);
+   return 1.0 * ratio;
 }
 
-
-function paymentWeight(ad: Ad, card: Card): number {
-   const banks = availableBanks(ad.remark)
-
+export function paymentWeight(ad: Ad, card: Card): number {
+   const banks = availableBanks(ad.remark);
    const isSberAd = (banks.includes("Сбербанк") || banks.includes("*"));
    const isUniversalAd = (banks.includes("*"));
 
@@ -40,27 +66,25 @@ function paymentWeight(ad: Ad, card: Card): number {
    if (card.bank === "tbank" && !isSberAd) return 0.8;
    if (card.bank === "tbank" && isUniversalAd) return 0.7;
 
-   return 0; // карта не подходит под способы оплаты
+   return 0;
 }
+
 
 
 export function canUseCard(card: Card, ad: Ad | OrderPayload, remarkFromTG?: string): boolean {
    let amount: number;
 
-   // Проверка последнего использования
    const usageData = getCardUsageData();
    const lastUsedTime = usageData[card.id];
 
    if (lastUsedTime) {
       const timeDiff = Date.now() - lastUsedTime;
       if (timeDiff < COOLDOWN_TIME) {
-
          return false;
       }
    }
-   if ("maxAmount" in ad) {
-      //объявление на покупку
 
+   if ("maxAmount" in ad) {
       amount = parseFloat(ad.maxAmount);
       if (isNaN(amount)) return false;
 
@@ -69,15 +93,12 @@ export function canUseCard(card: Card, ad: Ad | OrderPayload, remarkFromTG?: str
 
       return paymentWeight(ad, card) > 0;
    } else {
-      //объявление на продажу
       if (!remarkFromTG) {
          const curAds: Ad[] = JSON.parse(localStorage.getItem("curAds") || "[]");
          remarkFromTG = curAds.find((a) => a.id === ad.itemId)?.remark
-         console.log("🚀 ~ canUseCard ~ remarkFromTG:", remarkFromTG)
       }
 
       let banks: string[] = ["*"]
-      console.log("🚀 ~ canUseCard ~ remarkFromTG:", remarkFromTG)
       if (remarkFromTG) {
          banks = availableBanksSell(remarkFromTG)
       }
@@ -95,13 +116,12 @@ export function canUseCard(card: Card, ad: Ad | OrderPayload, remarkFromTG?: str
 export function markCardAsUsed(cardId: string): void {
    const usageData = getCardUsageData();
    const now = Date.now();
-   localStorage.setItem("tradingModalCooldown", now.toString());// общее кд между ордерами чтобы не перегружаться; только для автоарбитража
+   localStorage.setItem("tradingModalCooldown", now.toString());
    usageData[cardId] = Date.now();
    setCardUsageData(usageData);
 }
 
-
-// ==== Основная функция ====
+// НОВЫЕ ВЕСА - больший приоритет объёму
 export function calculateValue(ad: Ad, card: Card, minPrice: number): number {
    const price = parseFloat(ad.price);
    const amount = parseFloat(ad.maxAmount);
@@ -110,14 +130,15 @@ export function calculateValue(ad: Ad, card: Card, minPrice: number): number {
    const wAmount = amountWeight(amount);
    const wPayment = paymentWeight(ad, card);
 
+   // Если любой из критических весов = 0, возвращаем 0
+   if (wPrice === 0 || wAmount === 0 || wPayment === 0) {
+      return 0;
+   }
 
-   // веса факторов
-   const priceCoef = 0.6;
-   const paymentCoef = 0.25;
-   const amountCoef = 0.15;
-   // console.log(
-   //    wPrice * priceCoef + wPayment * paymentCoef + wAmount * amountCoef
-   // );
+   // НОВЫЕ КОЭФФИЦИЕНТЫ
+   const priceCoef = 0.50;   // 50% - цена
+   const amountCoef = 0.40;  // 40% - объём (сильно увеличен!)
+   const paymentCoef = 0.10; // 10% - способ оплаты
 
    return wPrice * priceCoef + wPayment * paymentCoef + wAmount * amountCoef;
 }

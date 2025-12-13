@@ -106,7 +106,7 @@ function setupTradeEvents(apiResult: ApiResult, data: { ad: Ad; card: Card | nul
    }
 
    handleAmountChange(amountInput, receiveInput, tradeButton, apiResult);
-   // executeTrade(apiResult, card, tradeButton);
+
    if (card && !clickedAds.has(ad.id)) {
       sendTelegramMessage(ad, card, apiResult);
       clickedAds.add(ad.id);

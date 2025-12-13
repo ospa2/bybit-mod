@@ -14,6 +14,7 @@ import { loadCards } from "./shared/storage/storageHelper.ts";
 import { watchNewOrders } from "./shared/orders/getOrders.ts";
 import { fetchAndStoreCards } from "./shared/orders/fetchCards.ts";
 import { OrderChatManager } from "./shared/orders/orderChatManager.ts";
+import { initializeDailyReset } from "./features/buy/automation/cardsTurnover.ts";
 
 function now() {
    return new Date().toISOString();
@@ -144,6 +145,8 @@ fetchAndStoreCards()
 resumePendingOrders();
 
 backgroundProcessAds()
+
+initializeDailyReset()
 
 const cards = loadCards()
 console.log('cards:', cards);

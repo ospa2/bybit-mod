@@ -92,7 +92,7 @@ export async function sendTelegramMessage(ad: Ad, card?: Card, apiResult?: ApiRe
          `🟩 Описание:\n${ad.remark}\n\n` +
          `${card ? `${card.bank === "sber" ? "🟢" : "🟡"} Карта: ${card.id}; баланс (${card.balance}₽)` : `🟩 Подходящая карта не нашлась`}\n\n`;
 
-      const text = baseText + `❓ Создать ордер?`;
+      const text = baseText
 
       const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
          method: "POST",
@@ -103,8 +103,7 @@ export async function sendTelegramMessage(ad: Ad, card?: Card, apiResult?: ApiRe
             reply_markup: {
                inline_keyboard: [
                   [
-                     { text: "✅ Да", callback_data: "confirm_yes" },
-                     { text: "❌ Нет", callback_data: "confirm_no" }
+                     { text: "✅ Создать ордер", callback_data: "confirm_yes" },
                   ]
                ]
             }
@@ -113,7 +112,10 @@ export async function sendTelegramMessage(ad: Ad, card?: Card, apiResult?: ApiRe
 
       const data = await response.json();
       const messageId = data.result.message_id;
-
+      if (apiResult) {
+         apiResult.maxAmount = ad.maxAmount
+         apiResult.maxQuantity = (parseFloat(ad.quantity) / parseFloat(ad.maxAmount)).toFixed(4);
+      }
       // Сохраняем данные для этого конкретного сообщения
       if (apiResult && card) {
          setMessageData(messageId, apiResult, card, baseText);
@@ -212,8 +214,7 @@ export async function checkTelegramResponse() {
       console.error("Ошибка при получении апдейтов Telegram:", err);
    }
 }
-
-export async function answerCallback(callbackQueryId: any, text: string) {
+async function answerCallback(callbackQueryId: any, text: string) {
    await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
