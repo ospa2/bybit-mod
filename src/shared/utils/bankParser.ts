@@ -228,11 +228,13 @@ function removeRecipientBanks(text: string): string {
    const recipientPatterns = [
       // "на/в" с возможными повторами (но не перед номером телефона/скобкой)
 
-      /[.,;\s]на\s+[а-я]+/gi,
+      /[.,;\s]на\s+[а-я]+/g,
 
-      /(?:\s+|^)(?:на|в)\s+(?:карту\s+)?[а-я\s]+/gi,
+      /(?:\s+|^)(?:на|в)\s+(?:карту\s+)?[а-я\s]+/g,
 
-      /(?:карты|счет|номер)[.,]+[а-я]+/gi,
+      /(?:карты|счет|номер)[.,]+[а-я]+/g,
+
+      /карта\s*[а-я]+/g,
    ];
 
    recipientPatterns.forEach((pattern) => {
@@ -258,32 +260,38 @@ function removeExcludedBanks(input: string): string {
    const excludePatterns = [
       // 1. "не принимаю с [банк]"
       // Примеры: "не принимаю с альфы", "не принимаем платеж от сбербанка"
-      /не\s+(?:(?:принима[юе][тм]?[ся]?|прим[уе][м]?)\s)?(?:платеж[и]?|перевод[ы]?|оплат[аыу]?)?\s?(?:с|со|от|из)\s?[^.;\n]+/gi,
+      /не\s+(?:(?:принима[юе][тм]?[ся]?|прим[уе][м]?)\s)?(?:платеж[и]?|перевод[ы]?|оплат[аыу]?)?\s?(?:с|со|от|из)\s?[^.;\n]+/g,
 
       // 2. "кроме [банк/список банков]"
       // Примеры: "кроме сбербанка", "кроме тинькофф и альфы"
-      /кроме\s+[^.,;!?\n]+/gi,
+      /кроме\s+[^.,;!?\n]+/g,
 
       // 3. "[банк] не принимаю"
       // Примеры: "сбербанк не принимаю", "карты тинькофф не принимаю"
       // Работает после начала строки или знака препинания
-      /([а-я\-]+)\s*(?:платеж[и]?|перевод[ы]?|оплат[аыу]?)?\s*не\s*(?:принима[юе][тм]?[ся]?|прим[уе][м]?)/gi,
+      /([а-яa-z\-\s,]+)\s*(?:платеж[и]?|перевод[ы]?|оплат[аыу]?)?\s*не\s*(?:принима[юе][тм]?[ся]?|прим[уе][м]?)(?!\sс\s(?:ип|веб|т-бизнеса|ооо))/g,
 
       // 4. "исключая [банк]" или "за исключением [банк]"
       // Примеры: "исключаю сбер", "за исключением тинькофф"
-      /(?:исключа[яю]|за\s+исключением)\s+[а-я]+/gi,
+      /(?:исключа[яю]|за\s+исключением)\s+[а-я]+/g,
 
       // 5. "не принимаю: [список банков через запятую]"
       // Примеры: "не принимаю: озон, сбер, альфа", "не приму; тинькофф, райф"
       // Захватывает всё до точки или конца строки
-      /не\s+(?:принима[юе][тм]?[ся]?|прим[уе][м]?)\s*[:;]\s*[^.\n]+/gi,
+      /не\s+(?:принима[юе][тм]?[ся]?|прим[уе][м]?)\s*[:;]\s*[^.\n]+/g,
    ];
+
+   const anyBankPatterns = [/с\sлюбого\sбанк/];
+   let anyBank = false;
+   anyBank = anyBankPatterns.some((pattern) => {
+      return pattern.test(input);
+   });
 
    excludePatterns.forEach((pattern) => {
       result = result.replace(pattern, (match) => {
          // Проверяем, упомянут ли какой-то банк в найденном фрагменте
          const mentionedBanks = findAllMentionedBanks(match);
-         if (mentionedBanks.length > 0) {
+         if (mentionedBanks.length > 0 || anyBank) {
             // Только если найден хотя бы один банк — заменяем
             return " ";
          }
@@ -368,6 +376,31 @@ function findAllMentionedBanks(text: string): string[] {
    return Array.from(found);
 }
 
+function isFromAnyBank(text: string): boolean {
+   if (!text) return false;
+
+   let remark = cleanText(text);
+
+   const patterns = [
+      // с любого банка / с любого российского банка
+      /со?\s+любо(го|й)\s+банка/,
+      /со?\s+всех\s+банков/,
+      /со?\s+любых\s+банков/,
+
+      // из любого банка
+      /из\s+любо(го|й)\s+банка/,
+
+      // любой банк / любые банки
+      /любо(й|го)\s+банк/,
+      /любые\s+банки/,
+   ];
+   const noExcludedBanks = removeExcludedBanks(remark).length === remark.length;
+   if (noExcludedBanks) {
+      return patterns.some((regex) => regex.test(remark));
+   } else {
+      return false;
+   }
+}
 // Главная функция с новым подходом
 export function availableBanks(description: string): string[] {
    // Удаляем эмодзи и лишние пробелы
@@ -379,6 +412,8 @@ export function availableBanks(description: string): string[] {
    // Шаг 3: Ищем все оставшиеся упоминания банков
    const result = findAllMentionedBanks(text);
    // Если ничего не найдено, возвращаем wildcard
+   if (isFromAnyBank(description)) return ["*"];
+   
    return result.length > 0 ? result : ["*"];
 }
 

@@ -70,6 +70,7 @@ function setupTradeEvents(apiResult: ApiResult, data: { ad: Ad; card: Card | nul
 
    // === Ручной режим ===
    if (!autoarbitrage) {
+      // ... (логика ручного режима остается без изменений)
       amountInput?.addEventListener("input", () => handleAmountChange(amountInput, receiveInput, tradeButton, apiResult));
 
       receiveInput?.addEventListener("input", () => {
@@ -107,8 +108,12 @@ function setupTradeEvents(apiResult: ApiResult, data: { ad: Ad; card: Card | nul
 
    handleAmountChange(amountInput, receiveInput, tradeButton, apiResult);
 
-   if (card && !clickedAds.has(ad.id)) {
+   // --- Измененная логика проверки уникальности ---
+   const uniqueKey = `${ad.id}_${apiResult.price}_${apiResult.maxAmount}`;
+
+   if (card && !clickedAds.has(uniqueKey)) {
       sendTelegramMessage(ad, card, apiResult);
-      clickedAds.add(ad.id);
+      clickedAds.add(uniqueKey);
    }
+   // -----------------------------------------------
 }

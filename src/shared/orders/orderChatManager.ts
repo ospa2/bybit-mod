@@ -1,6 +1,5 @@
 // orderChatManager.ts
 
-
 import type { BybitP2PWebSocket } from "../api/wsPrivate";
 import type { OrderData } from "../types/ads";
 import { bankLatinToCyrillic } from "../utils/bankParser";
@@ -32,9 +31,11 @@ export class OrderChatManager {
         matcher: RegExp | string;
         response: string | string[];
     }> = [
-            { matcher: /(?:откуда\s*(?:оплата|перевод|плат[её]ж)|как[ог]г?[ой]\s*(?:у\s*(?:вас|тебя))?\s*банк)/, response: this.bank },
+            { matcher: /(?:откуда\s*(?:оплата|перевод|плат[её]ж)|как[ог]г*[ой]\s*(?:у\s*(?:вас|тебя))?\s*банк)/, response: this.bank },
             { matcher: /(?:на\sпочт|работаем)/, response: "Да" },
-            { matcher: /(?:лицо|личная\sкарта)/, response: "Можно с карты родственника? лк у меня" }
+            { matcher: /(?:лицо|личная\sкарта)/, response: "Можно с карты родственника? лк у меня" },
+            { matcher: /(?:лк\sна\sруках|лк\sу\sвас)/, response: "Да" },
+            { matcher: /(?:знае(?:те|шь)|умее(?:те|шь)|подтверди(?:те|шь)|сможе(?:те|шь)|предостави(?:те|шь))/, response: "Да" },
         ];
 
     private replyRateLimitPerMinute = 6;

@@ -2,35 +2,10 @@ import { loadCards } from "../../../shared/storage/storageHelper";
 import type { Ad } from "../../../shared/types/ads";
 import type { Card } from "../../../shared/types/reviews";
 import { adShouldBeFiltered } from "../../../shared/utils/adFilter";
-import { calculateValue, canUseCard, paymentWeight } from "./adFinder";
+import { calculateValue, canUseCard } from "./adFinder";
 
 // ======== Выбор карты для покупки ========
-// НОВАЯ функция - абсолютный фильтр качества
-function meetsMinimumQuality(ad: Ad, card: Card, minPrice: number): boolean {
-   const price = parseFloat(ad.price);
-   const amount = parseFloat(ad.maxAmount);
 
-   // Жёсткие требования
-   const MAX_PRICE_TOLERANCE = 0.005; // 0.5%
-   const MIN_ACCEPTABLE_AMOUNT = 30000; // 30k
-
-   // Проверка цены
-   if (price > minPrice * (1 + MAX_PRICE_TOLERANCE)) {
-      return false;
-   }
-
-   // Проверка объёма
-   if (amount < MIN_ACCEPTABLE_AMOUNT) {
-      return false;
-   }
-
-   // Проверка способа оплаты
-   if (paymentWeight(ad, card) === 0) {
-      return false;
-   }
-
-   return true;
-}
 export function findBuyCard(ad: Ad, minPrice: number): Card | null {
    const cards = loadCards();
    if (!cards.length) return null;
@@ -39,9 +14,6 @@ export function findBuyCard(ad: Ad, minPrice: number): Card | null {
 
    for (const card of cards) {
       if (!canUseCard(card, ad)) continue;
-
-      // НОВАЯ ПРОВЕРКА: фильтруем заведомо плохие объявления
-      if (!meetsMinimumQuality(ad, card, minPrice)) continue;
 
       const value = calculateValue(ad, card, minPrice);
       if (value <= 0) continue;
@@ -65,11 +37,11 @@ function hasSignificantLead(
 
    // БОЛЕЕ СТРОГИЕ ПОРОГИ
    const hourlyThresholds: Record<number, number> = {
-      0: 0.050, 1: 0.050, 2: 0.050, 3: 0.050, 4: 0.050,
-      5: 0.050, 6: 0.050, 7: 0.050, 8: 0.055, 9: 0.060,
-      10: 0.065, 11: 0.075, 12: 0.085, 13: 0.095, 14: 0.100,
-      15: 0.105, 16: 0.110, 17: 0.112, 18: 0.115, 19: 0.110,
-      20: 0.105, 21: 0.095, 22: 0.085, 23: 0.075, 24: 0.065
+      0: 0.040, 1: 0.040, 2: 0.040, 3: 0.040, 4: 0.040,
+      5: 0.040, 6: 0.040, 7: 0.040, 8: 0.045, 9: 0.050,
+      10: 0.055, 11: 0.065, 12: 0.075, 13: 0.075, 14: 0.080,
+      15: 0.080, 16: 0.080, 17: 0.080, 18: 0.080, 19: 0.080,
+      20: 0.080, 21: 0.080, 22: 0.080, 23: 0.075, 24: 0.065
    };
 
    function interpolateThreshold(hour: number): number {
@@ -95,10 +67,10 @@ function hasSignificantLead(
    let MIN_ABS_DIFF = interpolateThreshold(hour);
 
    if (dayOfWeek === 6 || dayOfWeek === 0) {
-      MIN_ABS_DIFF = 0.050; // Выходные
+      MIN_ABS_DIFF = 0.040; // Выходные
    }
 
-   const REL_DIFF_FACTOR = MIN_ABS_DIFF + 0.03;
+   const REL_DIFF_FACTOR = MIN_ABS_DIFF + 0.02;
 
    const threshold = Math.max(MIN_ABS_DIFF, REL_DIFF_FACTOR * Math.max(top, second));
 

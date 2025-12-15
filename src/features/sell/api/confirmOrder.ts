@@ -192,9 +192,6 @@ export async function checkTelegramResponse() {
                   }
                }
 
-               // Опционально: удаляем данные после использования
-               // deleteMessageData(messageId);
-
             } else if (action === "confirm_no") {
                console.log("❌ Отменено пользователем");
                const dialog = document.querySelector('div[role="dialog"]') as HTMLElement;

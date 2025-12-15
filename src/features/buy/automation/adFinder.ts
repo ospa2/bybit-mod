@@ -9,7 +9,7 @@ const COOLDOWN_TIME = 1_200_000; // 20 минут в миллисекундах
 // ==== Весовые функции ====
 // ЖЁСТКАЯ фильтрация по цене - если цена больше порога, вес = 0
 function priceWeight(price: number, minPrice: number): number {
-   const MAX_PRICE_DIFF = 0.005; // 0.5% - жёсткий лимит
+   const MAX_PRICE_DIFF = 0.007; // 0.7% - жёсткий лимит
 
    if (price > minPrice * (1 + MAX_PRICE_DIFF)) {
       return 0; // Полное отсечение дорогих объявлений
@@ -19,14 +19,14 @@ function priceWeight(price: number, minPrice: number): number {
       return 1.0;
    }
 
-   // Линейная интерполяция от 1.0 до 0.1 в диапазоне [minPrice, minPrice*1.005]
+   // Линейная интерполяция от 1.0 до 0.1 в диапазоне [minPrice, minPrice*1.007]
    const ratio = (price - minPrice) / (minPrice * MAX_PRICE_DIFF);
    return 1.0 - (0.9 * ratio); // от 1.0 до 0.1
 }
 
 // ЖЁСТКАЯ фильтрация по объёму - минимум 30k
 function amountWeight(amount: number): number {
-   const MIN_AMOUNT = 30000; // Жёсткий минимум
+   const MIN_AMOUNT = 20000; // Жёсткий минимум
    const OPTIMAL_START = 50000;
    const OPTIMAL_END = 95000;
    const MAX_AMOUNT = 100000;
@@ -41,7 +41,7 @@ function amountWeight(amount: number): number {
       return 0;
    }
 
-   // От 30k до 50k - плавный рост от 0.3 до 1.0
+   // От 20k до 50k - плавный рост от 0.3 до 1.0
    if (amount < OPTIMAL_START) {
       const ratio = (amount - MIN_AMOUNT) / (OPTIMAL_START - MIN_AMOUNT);
       return 0.3 + (0.7 * ratio);
