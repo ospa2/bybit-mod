@@ -125,10 +125,7 @@ export async function executeTrade(apiResult: ApiResult, card: Card, tradeButton
          if (messageId) {
             await editTelegramMessage(messageId, "\n\n✅ Ордер успешно создан!");
          }
-         await (window as any).wsClient.sendMessage({
-            orderId: result.result.orderId,
-            message: "Привет"
-         });
+         
          (window as any).manager.startForOrder(result.result.orderId);
       } else {
          showNotification(result.ret_msg || String(result), "error");

@@ -11,7 +11,6 @@ import { openBuyModal } from "../components/buyModal.ts";
 import { updateMaxAmount } from "../../../shared/utils/bankParser.ts";
 
 
-const BYBIT_AD_DETAILS_URL = "https://www.bybit.com/x-api/fiat/otc/item/simple";
 function now() {
    return new Date().toISOString();
 }
@@ -84,11 +83,11 @@ export async function fetchAndAppendPage() {
       const fragment = document.createDocumentFragment();
 
       const minPrice = Math.min(...ads.filter((ad: Ad) => !adShouldBeFiltered(ad)).map((a: Ad) => parseFloat(a.price)));
-
+      localStorage.setItem("minPrice", minPrice.toString());
       if (ads) {
          try {
             const adAndCard = findBestBuyAd(ads);
-          
+
             if (adAndCard) {
                openBuyModal(adAndCard, minPrice, true); // автоматическое создание ордера
             }
@@ -138,7 +137,7 @@ export function resumePendingOrders(): void {
 
    for (const order of orders) {
       console.log(order.order.Status);
-      
+
       if ((order.order.Status === "pending" || order.order.Status === "10" || order.order.Status === "20" || order.order.Status === "30" || order.order.Status === "40") && (!order.res || order.req)) {
          const card = order.card;
          if (card) {
@@ -159,7 +158,7 @@ export async function fetchAdDetails(ad: Ad): Promise<ApiResult & GenericApiResp
 
    try {
       const response: Response = await fetch(
-         BYBIT_AD_DETAILS_URL,
+         "https://www.bybit.com/x-api/fiat/otc/item/simple", // Убедитесь, что константа URL определена или импортирована
          {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -178,18 +177,34 @@ export async function fetchAdDetails(ad: Ad): Promise<ApiResult & GenericApiResp
 
       // Проверяем ret_code на уровне API ответа Bybit
       if (apiRes.ret_code !== 0) {
-         // Возвращаем объект ошибки, как если бы это был успешный, но ошибочный ответ
+         // Возвращаем объект ошибки
          return apiRes as (ApiResult & GenericApiResponse);
       }
 
-      // Возвращаем результат, совмещая его с полями GenericApiResponse
-      return {
+      // 1. Формируем предварительный объект результата
+      // Мы приводим apiRes.result к any, чтобы безопасно прочитать remark, если его нет в типах
+      const resultData = apiRes.result as any;
+
+      const combinedResult = {
          ...apiRes.result,
          ret_code: apiRes.ret_code,
          ret_msg: apiRes.ret_msg,
-         side: ad.side,
+         // Конвертируем side в строку, если в интерфейсе GenericApiResponse это string, а в Ad — number
+         side: ad.side.toString(),
          nickName: ad.nickName,
+         // ВАЖНО: Гарантируем наличие remark для функции парсинга. 
+         // Приоритет: данные из детального ответа API -> данные из входного ad -> пустая строка
+         remark: resultData.remark || ad.remark || ""
       } as unknown as (ApiResult & GenericApiResponse);
+
+      // 2. Применяем логику обновления maxAmount и quantity
+      // Функция updateMaxAmount вернет мутированный объект
+      console.log(combinedResult.maxAmount);
+      
+      const updatedResult = updateMaxAmount(combinedResult);
+      console.log(updatedResult.maxAmount)
+
+      return updatedResult;
 
    } catch (error) {
       console.error("fetchAdDetails - Критическая ошибка:", error);
@@ -197,7 +212,7 @@ export async function fetchAdDetails(ad: Ad): Promise<ApiResult & GenericApiResp
       return {
          ret_code: -1, // Неизвестная/критическая ошибка
          ret_msg: `Критическая ошибка загрузки: ${error instanceof Error ? error.message : "Неизвестная ошибка"}`,
-         result: null, // Результат отсутствует
+         result: null,
       } as unknown as (ApiResult & GenericApiResponse);
    }
 }

@@ -1,4 +1,4 @@
-import type { Ad } from "../types/ads";
+import type { Ad, ApiResult, GenericApiResponse } from "../types/ads";
 
 type BankVariants = {
    [key: string]: (string | RegExp)[];
@@ -413,7 +413,7 @@ export function availableBanks(description: string): string[] {
    const result = findAllMentionedBanks(text);
    // Если ничего не найдено, возвращаем wildcard
    if (isFromAnyBank(description)) return ["*"];
-   
+
    return result.length > 0 ? result : ["*"];
 }
 
@@ -429,12 +429,26 @@ export function availableBanksSell(description: string): string[] {
 }
 
 
-export function updateMaxAmount(ad: Ad) {
-   if (!ad.remark) return ad;
+// Определяем объединенный тип для удобства
+type AdOrApi = Ad | (ApiResult & GenericApiResponse);
 
-   const remark = ad.remark.toLowerCase();
+// <T extends AdOrApi> означает: "Я принимаю любой тип T, который похож на Ad или ApiResult"
+// (item: T): T означает: "Я верну именно тот тип T, который мне передали"
+export function updateMaxAmount<T extends AdOrApi>(item: T): T {
+   // 1. Безопасное получение remark
+   // (item as any) нужно, так как в ApiResult поля remark формально нет в интерфейсе
+   const remarkRaw = (item as any).remark;
 
-   // Если найдём число — положим его сюда
+   if (!remarkRaw) return item;
+
+   const remark = remarkRaw.toLowerCase();
+
+   // Получаем текущие числовые значения (эти поля price и maxAmount есть в обоих интерфейсах)
+   const currentPrice = parseFloat(item.price);
+   const currentMaxAmount = parseFloat(item.maxAmount);
+
+   if (isNaN(currentPrice) || isNaN(currentMaxAmount)) return item;
+
    let maxValue: number | null = null;
    let numbers: number[] = [];
 
@@ -446,48 +460,57 @@ export function updateMaxAmount(ad: Ad) {
       const num = match ? parseFloat(match[0].replace(",", ".")) : null;
 
       if (num && num !== 0) {
-         // вернуть ближайшую нижнюю кратную ad.maxAmount
-         const result =
-            parseFloat(ad.maxAmount) - (parseFloat(ad.maxAmount) % num);
-         // если нужно, можно присвоить ad.maxAmount = result; но оставлю как в твоём варианте — вернуть значение
-         ad.maxAmount = result.toString();
-         return ad;
+         const result = currentMaxAmount - (currentMaxAmount % num);
+         applyChanges(item, result, currentPrice);
+         return item;
       }
    }
 
-   // --- 2. Ищем все числовые вхождения и пытаемся выбрать максимальную релевантную сумму ---
-   const allNumbers = remark.match(/\d+[.,\s]?\d*/g); // оставил простую регулярку
+   // --- 2. Поиск чисел ---
+   const allNumbers = remark.match(/\d+[.,\s]?\d*/g);
 
    if (allNumbers && allNumbers.length > 0) {
       numbers = allNumbers
          .map((s: string) => {
-            // попробуем корректно распарсить: сначала как с десятичным разделителем запятая
             const floatGuess = parseFloat(s.replace(",", "."));
-
-            // если число относительно маленькое — возможно это формат с разделителями тысяч (40,325 -> 40325)
             if (floatGuess < 10000) {
                const withoutSep = s.replace(/[.\s]/g, "");
                return parseFloat(withoutSep);
             }
-
             return floatGuess;
          })
-         .filter((n) => Number.isFinite(n)); // убираем NaN
+         .filter((n: number) => Number.isFinite(n));
    }
-
-   // логирование для отладки (если нужно)
-   // console.log({ allNumbers, numbers });
 
    if (numbers.length > 0) {
       maxValue = Math.max(...numbers);
    }
 
-   // --- 3. Обновляем, если найдено и оно не больше текущего maxAmount ---
-   if (maxValue !== null && maxValue <= parseFloat(ad.maxAmount)) {
-      ad.maxAmount = maxValue.toString()+".00";
+   // --- 3. Применение ---
+   if (maxValue !== null && maxValue <= currentMaxAmount) {
+      applyChanges(item, maxValue, currentPrice);
    }
 
-   return ad;
+   return item;
+}
+
+/**
+ * Вспомогательная функция для мутации объекта.
+ * Определяет, какое поле количества обновлять (quantity или lastQuantity).
+ */
+function applyChanges(item: AdOrApi, newMaxAmount: number, price: number) {
+   // Обновляем сумму (поле maxAmount есть у обоих)
+   item.maxAmount = newMaxAmount.toFixed(2);
+   const newQuantity = (newMaxAmount / price).toFixed(4);
+
+   // Проверяем наличие свойства quantity, характерного для Ad
+   if ('quantity' in item) {
+      (item as Ad).quantity = newQuantity;
+   } else {
+      // Иначе считаем, что это ApiResult, у которого lastQuantity
+      // Используем as any, если в типах ApiResult нет lastQuantity явно (но в P2PResult оно есть)
+      (item as any).lastQuantity = newQuantity;
+   }
 }
 
 export function bankLatinToCyrillic(name: string): string {

@@ -12,7 +12,7 @@ function priceWeight(price: number, minPrice: number): number {
    const MAX_PRICE_DIFF = 0.007; // 0.7% - жёсткий лимит
 
    if (price > minPrice * (1 + MAX_PRICE_DIFF)) {
-      return 0; // Полное отсечение дорогих объявлений
+      return 0.06; // Полное отсечение дорогих объявлений
    }
 
    if (price <= minPrice) {
@@ -33,7 +33,7 @@ function amountWeight(amount: number): number {
 
    // Отсекаем слишком маленькие объёмы
    if (amount < MIN_AMOUNT) {
-      return 0;
+      return 0.1;
    }
 
    // Отсекаем слишком большие (>= 100k)

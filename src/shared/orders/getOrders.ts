@@ -1,8 +1,10 @@
 import { markCardAsUsed } from "../../features/buy/automation/adFinder";
+import { findBuyCard } from "../../features/buy/automation/buyCardSelector";
 import { findSellCard } from "../../features/sell/automation/sellCardSelector";
 import { loadCards, StorageHelper } from "../storage/storageHelper";
-import type { OrderData, OrderPayload, PendingOrder } from "../types/ads";
+import type { Ad, OrderData, OrderPayload, PendingOrder } from "../types/ads";
 import type { Card } from "../types/reviews";
+import { payloadToAd } from "../utils/typeConverter";
 import { watchOrder } from "./orderWatcher";
 
 async function getCurrentOrders() {
@@ -75,22 +77,36 @@ export async function watchNewOrders() {
                version: "",
                securityRiskToken: "",
                isFromAi: false,
+               
             };
             let card: Card | null = null;
             const remark = await getRemarkByOrderID(order.id);
-            if (remark) {
-               card = findSellCard(orderPayload, remark);
+            const minPriceRaw = localStorage.getItem("minPrice") || orderPayload.amount;
+            const minPrice = parseFloat(minPriceRaw);
+            const ad: Ad = payloadToAd(orderPayload, "123", remark);
+
+            if (orderData.Type === "BUY") {
+               card = findBuyCard(ad, minPrice);
             } else {
-               card = findSellCard(orderPayload);
+               // SELL
+               if (remark) {
+                  card = findSellCard(orderPayload, remark);
+               } else {
+                  card = findSellCard(orderPayload);
+               }
             }
             let cards = loadCards();
+
+            if (!(window as any).manager.isActive(order.id)) {
+               (window as any).manager.startForOrder(order.id);
+            }
 
             // 🔹 Запустить наблюдение за картой только если она есть
             if (card) watchOrder(order.id, card);
 
             // 🔹 Обновление балансов карты
             if (card) {
-               const val = Number(order.amount);
+               const val = orderData.Type === "BUY" ? -parseFloat(order.amount) : parseFloat(order.amount);
                cards = cards.map((c) =>
                   c.id === card.id
                      ? {

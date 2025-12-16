@@ -98,14 +98,23 @@ export class OrderChatManager {
     }
 
     /* ---------- API: старт/стоп канала для ордера ---------- */
-    startForOrder(orderId: string, opponentUserId?: number | string) {
+    async startForOrder(orderId: string, opponentUserId?: number | string) {
         const active = this.loadActive();
         if (active[orderId]) {
             console.warn(`[OrderChatManager:startForOrder] Channel for ${orderId} is already active. Skipping.`);
-            return; // уже есть
+            return;
         }
         active[orderId] = { orderId, startedAt: Date.now(), opponentUserId };
         this.saveActive(active);
+
+        try {
+            await (window as any).wsClient.sendMessage({
+                orderId: orderId,
+                message: "Привет"
+            });
+        } catch (error) {
+            console.error("Failed to send message:", error);
+        }
     }
 
     stopForOrder(orderId: string) {

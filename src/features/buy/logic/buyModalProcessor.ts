@@ -10,6 +10,7 @@ import { fetchAdDetails } from "../api/buyApi.ts";
 import type { Card } from "../../../shared/types/reviews";
 import { findBuyCard } from "../automation/buyCardSelector.ts";
 import { sendTelegramMessage } from "../../sell/api/confirmOrder.ts";
+import { updateMaxAmount } from "../../../shared/utils/bankParser.ts";
 
 
 /**
@@ -24,8 +25,8 @@ export async function fetchAdDetailsAndSetupEvents(
 ): Promise<void> {
    try {
       // --- 1. ПАРАЛЛЕЛЬНАЯ ЗАГРУЗКА ДАННЫХ И ВАЛИДАЦИЯ ---
-      const apiResult = await fetchAdDetails(data.ad);
-
+      const apiResultRaw = await fetchAdDetails(data.ad);
+      let apiResult = updateMaxAmount(apiResultRaw)
       if (apiResult.ret_code !== 0) {
          showNotification(apiResult.ret_msg || "Не удалось загрузить детали объявления.", "error");
          closeModal();

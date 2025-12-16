@@ -13,6 +13,7 @@ export function findBuyCard(ad: Ad, minPrice: number): Card | null {
    let best: { card: Card; value: number } | null = null;
 
    for (const card of cards) {
+
       if (!canUseCard(card, ad)) continue;
 
       const value = calculateValue(ad, card, minPrice);
