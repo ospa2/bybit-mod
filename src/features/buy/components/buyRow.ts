@@ -1,15 +1,18 @@
 //import { filterRemark } from "../../../shared/utils/filterRemark";
 import { openBuyModal } from "./buyModal";
-import { paymentNames, paymentColors } from "../../../core/config";
+import { paymentColors } from "../../../core/config";
 import type { Ad } from "../../../shared/types/ads";
 import { availableBanks } from "../../../shared/utils/bankParser";
 import { findBuyCard } from "../automation/buyCardSelector";
 
 export function createRowFromTemplate(ad: Ad, minPrice?: number): ChildNode | null {
    function getPaymentStyle(paymentId: string): string {
-      const color =
-         paymentColors[paymentId.toString() as keyof typeof paymentColors];
-      return color ? `background-color: ${color}; color: white;` : "";
+      const color = paymentColors[paymentId as keyof typeof paymentColors];
+      if (!color) return "";
+
+      // Если в строке есть 'gradient', используем свойство background, иначе background-color
+      const isGradient = color.includes('gradient');
+      return `${isGradient ? 'background' : 'background-color'}: ${color}; color: white;`;
    }
 
    const filteredRemark = ad.remark//легаси 
@@ -129,13 +132,12 @@ export function createRowFromTemplate(ad: Ad, minPrice?: number): ChildNode | nu
                     ${availableBanks(ad.remark)
          ?.slice(0, 3)
          .map(
-            (paymentId) =>
+            (paymentName) =>
                `<div class="inline-block"><div class="trade-list-tag" style="${getPaymentStyle(
-                  paymentId
-               )}">${paymentNames[
-               paymentId as keyof typeof paymentNames
-               ] ?? paymentId
-               }</div></div>`
+                  paymentName
+               )}">${paymentName
+               }</div>
+               </div>`
          )
          .join("") ??
       '<div class="inline-block"><div class="trade-list-tag">Не указано</div></div>'

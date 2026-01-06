@@ -15,7 +15,6 @@ import { watchNewOrders } from "./shared/orders/getOrders.ts";
 import { fetchAndStoreCards } from "./shared/orders/fetchCards.ts";
 import { OrderChatManager } from "./shared/orders/orderChatManager.ts";
 import { initializeDailyReset } from "./features/buy/automation/cardsTurnover.ts";
-
 function now() {
    return new Date().toISOString();
 }
@@ -25,7 +24,7 @@ initFetchInterceptor();
 function startPeriodicRefresh() {
    stopPeriodicRefresh();
    // Только на buy странице обновляем раз в 3000ms
-   if (location.href.includes("/buy/USDT/RUB")) {
+   if (location.href.includes("/buy/USDT/RUB")|| location.href.includes("/sell/USDT/RUB")) {
       periodicRefreshId = setInterval(() => {
          // Запускаем загрузку (внутри уже есть защита от параллельных вызовов)
          loadOnceAndApply().catch((e) =>
@@ -77,7 +76,7 @@ function waitForTableAndStart() {
       // Если URL сменится — observeUrlChanges вызовет handleUrlChange, и можно остановить/запустить периодический рефреш там же.
       // Потому добавим слушатель попstate для управления периодическим рефрешем:
       window.addEventListener("popstate", () => {
-         if (location.href.includes("/buy/USDT/RUB")) startPeriodicRefresh();
+         if (location.href.includes("/buy/USDT/RUB") || location.href.includes("/sell/USDT/RUB")) startPeriodicRefresh();
          else stopPeriodicRefresh();
       });
 
@@ -85,20 +84,16 @@ function waitForTableAndStart() {
       const originalPush = history.pushState;
       history.pushState = function (...args) {
          originalPush.apply(this, args);
-         if (location.href.includes("/buy/USDT/RUB")) startPeriodicRefresh();
+         if (location.href.includes("/buy/USDT/RUB") || location.href.includes("/sell/USDT/RUB")) startPeriodicRefresh();
          else stopPeriodicRefresh();
       };
       const originalReplace = history.replaceState;
       history.replaceState = function (...args) {
          originalReplace.apply(this, args);
-         if (location.href.includes("/buy/USDT/RUB")) startPeriodicRefresh();
+         if (location.href.includes("/buy/USDT/RUB") || location.href.includes("/sell/USDT/RUB")) startPeriodicRefresh();
          else stopPeriodicRefresh();
       };
 
-      // Отметить текущие строки как filtered-ads (если нужно)
-      document
-         .querySelectorAll(".trade-table__tbody tr")
-         .forEach((row) => row.classList.add("filtered-ads"));
    }, 100);
 }
 

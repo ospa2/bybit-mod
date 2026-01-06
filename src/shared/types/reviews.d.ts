@@ -20,7 +20,6 @@ export interface Review {
 export type FetchReviewsResult = {
   negativeReviews: Review[];
   positiveReviewsCount: number;
-  currentBalance: number;
 };
 
 export interface Card {

@@ -1,7 +1,8 @@
 // orderChatManager.ts
 
+import { USER_ID } from "../../core/config";
 import type { BybitP2PWebSocket } from "../api/wsPrivate";
-import type { OrderData } from "../types/ads";
+import type { ChatMessageData, IncomingChatPayload, OrderData } from "../types/ads";
 import { bankLatinToCyrillic } from "../utils/bankParser";
 
 const STORAGE_KEY_ACTIVE = 'bybit_p2p_active_orders_v1';
@@ -32,10 +33,8 @@ export class OrderChatManager {
         response: string | string[];
     }> = [
             { matcher: /(?:откуда\s*(?:оплата|перевод|плат[её]ж)|как[ог]г*[ой]\s*(?:у\s*(?:вас|тебя))?\s*банк)/, response: this.bank },
-            { matcher: /(?:на\sпочт|работаем)/, response: "Да" },
             { matcher: /(?:лицо|личная\sкарта)/, response: "Можно с карты родственника? лк у меня" },
-            { matcher: /(?:лк\sна\sруках|лк\sу\sвас)/, response: "Да" },
-            { matcher: /(?:знае(?:те|шь)|умее(?:те|шь)|подтверди(?:те|шь)|сможе(?:те|шь)|предостави(?:те|шь))/, response: "Да" },
+            { matcher: /(?:лк\sна\sруках|лк\sу\sвас|знае(?:те|шь)|умее(?:те|шь)|подтверди(?:те|шь)|сможе(?:те|шь)|предостави(?:те|шь)|на\sпочт|работаем)/, response: "Да" },
         ];
 
     private replyRateLimitPerMinute = 6;
@@ -143,16 +142,21 @@ export class OrderChatManager {
     }
     private processingLock = new Set<string>();
     /* ---------- Основная логика обработки входящего сообщения ---------- */
-    private async onIncomingChatMessage(payload: any) {
-        // ожидаем структуру: { topic: 'OTC_USER_CHAT_MSG_V2', type: 'RECEIVE', data: { orderId, msgUuid?, userId, message, ... } }
+    private async onIncomingChatMessage(payload: IncomingChatPayload): Promise<void> {
         try {
+            // Проверка на соответствие структуры
             if (!payload || payload.topic !== 'OTC_USER_CHAT_MSG_V2' || payload.type !== 'RECEIVE') {
                 return;
             }
-            const data = payload.data || {};
-            const orderId: string = data.orderId || data.order_id || data.otcOrderId || data.order;
-            const orderAndCardRaw = localStorage.getItem("!orders")
-            const ordersAndCards: OrderData[] = orderAndCardRaw ? JSON.parse(orderAndCardRaw) : {};
+
+            const data: ChatMessageData = payload.data || {} as ChatMessageData;
+
+            // Извлекаем orderId с учетом возможных алиасов из вашего кода
+            const orderId: string = data.orderId || data.order_id || data.otcOrderId || data.order || '';
+
+            // Поиск ордера в localStorage
+            const orderAndCardRaw = localStorage.getItem("!orders");
+            const ordersAndCards: OrderData[] = orderAndCardRaw ? JSON.parse(orderAndCardRaw) : [];
             const foundOrder = ordersAndCards.find((item) => item.order["Order No."] === orderId);
 
             if (foundOrder) {
@@ -161,8 +165,9 @@ export class OrderChatManager {
                 console.warn(`[OrderChatManager:onIncomingChatMessage] Order data not found for orderId: ${orderId}`);
             }
 
-            const incomingMsgId = data.msgUuid || data.msg_id || data.msgId || data.uuid || String(Date.now());
-            const textRaw = (data.message || data.text || '').toString();
+            // Извлекаем ID сообщения и текст
+            const incomingMsgId: string = data.msgUuid || data.msg_id || data.msgId || data.uuid || String(Date.now());
+            const textRaw: string = (data.message || data.text || '').toString().toLowerCase();
 
             if (!orderId || !textRaw) {
                 console.warn(`[OrderChatManager:onIncomingChatMessage] Missing orderId or message text. orderId: ${orderId}, textRaw: ${textRaw.substring(0, 50)}`);
@@ -177,36 +182,36 @@ export class OrderChatManager {
             this.processingLock.add(lockKey);
 
             try {
-                // ✅ ВСЕ ПРОВЕРКИ И ЗАПИСИ СИНХРОННО
-                const processed = this.loadProcessed();
+                // ✅ Обработка дублей (Idempotency)
+                const processed = this.loadProcessed(); // Ожидается Record<string, string[]>
                 processed[orderId] = processed[orderId] || [];
+
                 if (processed[orderId].includes(incomingMsgId)) {
                     return;
                 }
+
                 processed[orderId].push(incomingMsgId);
                 this.saveProcessed(processed);
 
-                // ✅ Находим ВСЕ подходящие ответы
-                const replies = this.findAllRepliesForText(textRaw);
-                if (replies.length === 0) {
+                // ✅ Поиск ответов
+                const replies: string[] = this.findAllRepliesForText(textRaw);
+                if (replies.length === 0 || data.userId === USER_ID) {
                     return;
                 }
 
-                // ✅ Отправляем каждый ответ по очереди
+                // ✅ Последовательная отправка
                 for (let i = 0; i < replies.length; i++) {
                     const reply = replies[i];
 
-                    // ✅ Rate limit проверяем перед каждым сообщением
                     if (!this.canReplyNow(orderId)) {
-                        console.warn(`[OrderChatManager:onIncomingChatMessage] Rate limit exceeded for order ${orderId} on reply ${i + 1}/${replies.length}. Skipping remaining replies.`);
+                        console.warn(`[OrderChatManager:onIncomingChatMessage] Rate limit exceeded for order ${orderId}. Skipping.`);
                         break;
                     }
+
                     this.pushRateTimestamp(orderId, Date.now());
 
-                    // ⏰ Ждём перед отправкой
                     await wait(randomDelay());
 
-                    // 📤 Отправляем
                     await this.wsClient.sendMessage({
                         orderId,
                         message: reply,
@@ -219,7 +224,7 @@ export class OrderChatManager {
             }
 
         } catch (err) {
-            console.error('[OrderChatManager:onIncomingChatMessage] CRITICAL OrderChatManager error:', err);
+            console.error('[OrderChatManager:onIncomingChatMessage] CRITICAL error:', err);
         }
     }
 
@@ -291,3 +296,20 @@ export class OrderChatManager {
         console.warn('OrderChatManager: unable to hook into wsClient incoming messages automatically. Provide messages manually.');
     }
 }
+
+// {
+//     "userId": 279782617,
+//     "orderId": "2001615416852860928",
+//     "message": "Добрый день! оплата по номеру карты на сбербанк, работаем?",
+//     "msgUuid": "37bb0430-a075-6b76-cd4a-def38762cec6",
+//     "createDate": "1766057314963",
+//     "contentType": "str",
+//     "roleType": "user",
+//     "id": 5299029598,
+//     "msgCode": 0,
+//     "onlyForCustomer": 0,
+//     "nickName": "🌊Urahara",
+//     "fromP2pChat": false,
+//     "autoSend": false,
+//     "msgUuId": "37bb0430-a075-6b76-cd4a-def38762cec6"
+// }

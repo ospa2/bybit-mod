@@ -1,7 +1,7 @@
 import { analyzeReview } from "../logic/reviewAnalyzer.ts";
 import type { Review, ReviewStats } from "../../../shared/types/reviews";
 import type { Ad } from "../../../shared/types/ads";
-import { fetchReviewsData } from "../api/reviewsApi.ts";
+import { fetchBalance, fetchReviewsData } from "../api/reviewsApi.ts";
 import reviewsStatistics from "../../../shared/storage/storageHelper.ts";
 import { convertBybitTime } from "../../../shared/utils/timeStuff.ts";
 import { calculatePriority } from "../logic/procHelper.ts";
@@ -26,8 +26,9 @@ export async function loadAndDisplayReviews(originalAd: Ad) {
    try {
       // --- 1. ПАРАЛЛЕЛЬНАЯ ЗАГРУЗКА ДАННЫХ ---
       // Вызываем новую асинхронную функцию для загрузки отзывов
-      const { negativeReviews, positiveReviewsCount, currentBalance } =
+      const { negativeReviews, positiveReviewsCount } =
          await fetchReviewsData(originalAd.userId);
+      const currentBalance = await fetchBalance()
 
       const balanceValueEl = document.getElementById("balance-value");
       const availableForTradeEl = document.getElementById(

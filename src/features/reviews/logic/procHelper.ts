@@ -9,7 +9,7 @@ export function calculatePriority(user: Pick<ReviewStats, "goodReviewsCount" | "
 }
 
 // Интервал (в днях) = 300 / priority
-export function getRefreshIntervalDays(priority: number): number {
+function getRefreshIntervalDays(priority: number): number {
    if (!priority || priority <= 0) return Infinity;
    return 300 / priority;
 }
@@ -23,28 +23,4 @@ export function shouldRefresh(user: ReviewStats): boolean {
 
    const msSince = Date.now() - last;
    return msSince >= intervalDays * 24 * 60 * 60 * 1000;
-}
-
-// Совместимость: старое поле allReviewsLength → badReviewsCount
-export function normalizeStoredEntry(item: any): ReviewStats | null {
-   if (!item) return null;
-
-   const badReviewsCount =
-      item.badReviewsCount ?? Number(item.allReviewsLength ?? 0);
-
-   const goodReviewsCount = Number(item.goodReviewsCount ?? 0);
-   const highlightedCount = Number(item.highlightedCount ?? 0);
-   const lastUpdated = Number(item.lastUpdated ?? 0);
-
-   const priority =
-      item.priority ?? calculatePriority({ goodReviewsCount, highlightedCount });
-
-   return {
-      userId: String(item.userId),
-      goodReviewsCount,
-      badReviewsCount,
-      highlightedCount,
-      lastUpdated,
-      priority
-   };
 }

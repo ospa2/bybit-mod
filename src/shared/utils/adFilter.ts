@@ -1,6 +1,6 @@
 //src/logic/adFilter.ts 
 
-import { forbiddenPhrases, MIN_EXECUTED_COUNT, MAX_PRICE_DIFFERENCE } from '../../core/config.ts';
+import { forbiddenPhrases, MIN_EXECUTED_COUNT,  } from '../../core/config.ts';
 import { appState } from '../../core/state.ts';
 import type { Ad } from '../types/ads';
 import type { ReviewStats } from '../types/reviews';
@@ -20,9 +20,6 @@ export function adShouldBeFiltered(ad: Ad) {
     return true;
   }
 
-
-
-  // let storedStats: ReviewStats[] = []; // Закомментировано, так как ниже объявляется снова
   let storedStats: ReviewStats[] = [];
   try {
     const storedStatsRaw = localStorage.getItem("reviewsStatistics_v1");
@@ -52,7 +49,7 @@ export function adShouldBeFiltered(ad: Ad) {
 
   const min = parseFloat(ad.minAmount);
   const max = parseFloat(ad.maxAmount);
-  const diff = max - min;
+  // const diff = max - min;
 
   // 4. Фильтрация, если min/maxAmount не являются числами
   if (isNaN(min) || isNaN(max)) {
@@ -61,10 +58,10 @@ export function adShouldBeFiltered(ad: Ad) {
   }
 
   // 5. Фильтрация по максимальной разнице в цене
-  if (diff > MAX_PRICE_DIFFERENCE) {
+  // if (diff > MAX_PRICE_DIFFERENCE) {
 
-    return true;
-  }
+  //   return true;
+  // }
 
   // 6. Фильтрация по пересечению диапазона с допустимым интервалом
   // 🚀 фильтрация только если диапазон вообще не пересекается с допустимым интервалом
@@ -77,9 +74,14 @@ export function adShouldBeFiltered(ad: Ad) {
   if (ad.remark && typeof ad.remark === 'string') {
     const remark = ad.remark.toLowerCase();
     for (const phrase of forbiddenPhrases) {
-      if (remark.includes(phrase)) {
-
-        return true;
+      if (typeof phrase === 'string') {
+        if (remark.includes(phrase)) {
+          return true;
+        }
+      } else if (phrase instanceof RegExp) {
+        if (phrase.test(remark)) {
+          return true;
+        }
       }
     }
   }

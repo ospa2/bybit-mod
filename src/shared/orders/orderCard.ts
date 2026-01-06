@@ -61,6 +61,11 @@ export async function getUsedCard(orderId: string): Promise<Card | null> {
             case "Взaимный лайк💛":
                details.push("galyaTbank");
                break;
+            case "79823097970 Никита К тбанк":
+            case "5536914064598190":
+            case "взaимный лайк💛":
+               details.push("papaTbank");
+               break;
          }
 
          if (details.length < 1) {
@@ -87,6 +92,10 @@ export function cardToMessage(card: Card, sbp: boolean = true): string {
 
       case "papaSber":
          message = sbp ? "79525181633 Никита К сбер" : "2202208821294064";
+         break;
+
+      case "papaTbank":
+         message = sbp ? "79823097970 Никита К тбанк" : "5536914064598190";
          break;
 
       case "seraphimSber":

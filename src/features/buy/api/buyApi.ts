@@ -21,7 +21,6 @@ export async function fetchAndAppendPage() {
    appState.isLoading = true;
 
    try {
-      const currentUrl = window.location.href;
       const tbody = document.querySelector(".trade-table__tbody");
       if (!tbody) {
          console.log(`[${now()}] Tbody не найден — выходим.`);
@@ -29,14 +28,14 @@ export async function fetchAndAppendPage() {
       }
 
       // Если мы на sell-странице — просто один раз очистить таблицу и выйти
-      if (currentUrl.includes("/sell/USDT/RUB")) {
-         tbody.querySelectorAll(".dynamic-row").forEach((row) => row.remove());
-         tbody.querySelector(".completion-indicator")?.remove();
-         return;
-      }
+      // if (location.href.includes("/buy/USDT/RUB") || location.href.includes("/sell/USDT/RUB")) {
+      //    tbody.querySelectorAll(".dynamic-row").forEach((row) => row.remove());
+      //    tbody.querySelector(".completion-indicator")?.remove();
+      //    return;
+      // }
 
       // Если мы здесь — это buy страница
-      if (!currentUrl.includes("/buy/USDT/RUB")) {
+      if (!((location.href.includes("/buy/USDT/RUB") || location.href.includes("/sell/USDT/RUB")))) {
          console.log(`[${now()}] Не на buy/sell страницах — ничего не делаю.`);
          return;
       }
@@ -48,7 +47,7 @@ export async function fetchAndAppendPage() {
          currencyId: "RUB",
          payment: [],
          side: "1", // buy
-         size: "150",
+         size: "100",
          page: "1",
          amount: "",
          vaMaker: false,
@@ -100,7 +99,7 @@ export async function fetchAndAppendPage() {
 
             try {
                const ad = ads[i];
-               if (adShouldBeFiltered(ad)) continue;
+               if (adShouldBeFiltered(ad) || parseFloat(ad.price) > minPrice*1.01) continue;
                const newRow = createRowFromTemplate(ad, minPrice)
 
                if (newRow) fragment.appendChild(newRow);
@@ -113,9 +112,6 @@ export async function fetchAndAppendPage() {
          }
          // После этого цикл гарантированно завершится
          tbody.prepend(fragment); // Теперь этот код должен быть достигнут.
-
-
-
 
       } else {
          console.warn(`[${now()}] Ответ API не содержит ads.items массив.`);

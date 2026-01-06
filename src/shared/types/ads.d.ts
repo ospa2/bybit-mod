@@ -269,3 +269,33 @@ export interface PendingOrder {
   verificationOrder: boolean;
   expiresSoon: boolean;
 }
+
+export interface ChatMessageData {
+  userId: number | string;
+  orderId: string;
+  message: string;
+  msgUuid: string;
+  createDate: string;
+  contentType: string;
+  roleType: 'user' | 'admin' | 'system';
+  id: number;
+  msgCode: number;
+  onlyForCustomer: number;
+  nickName: string;
+  fromP2pChat: boolean;
+  autoSend: boolean;
+  // Иногда API присылает альтернативные ключи
+  order_id?: string;
+  otcOrderId?: string;
+  order?: string;
+  msg_id?: string;
+  msgId?: string;
+  uuid?: string;
+  text?: string;
+}
+
+export interface IncomingChatPayload {
+  topic: 'OTC_USER_CHAT_MSG_V2';
+  type: 'RECEIVE';
+  data: ChatMessageData;
+}

@@ -1,31 +1,53 @@
-import type { Card } from "../../../shared/types/reviews";
+import { sendCardsToServer } from "../../../shared/orders/fetchCards";
+import { loadCards } from "../../../shared/storage/storageHelper";
 
-export function initializeDailyReset() {
-   // Проверяем и сбрасываем при каждом запуске приложения
-   checkAndResetIfNeeded();
+const RESET_KEY = 'last_daily_reset_date';
+interface ResetStorage {
+   getLastResetDate(): string | null; // ISO Date String (YYYY-MM-DD)
+   setLastResetDate(dateStr: string): void;
+}
+const storage: ResetStorage = {
+   getLastResetDate: () => localStorage.getItem(RESET_KEY),
+   setLastResetDate: (dateStr: string) => localStorage.setItem(RESET_KEY, dateStr)
+};
 
-   // Вычисляем время до следующей полуночи
+export function initializeDailyReset(): void {
+   // Выполняем проверку немедленно при загрузке страницы/скрипта
+   checkAndReset(storage);
+
+   // Интервал проверяет необходимость сброса в реальном времени (например, если вкладка открыта в полночь)
+   setInterval(() => checkAndReset(storage), 1000 * 60);
+}
+
+function checkAndReset(store: ResetStorage): void {
    const now = new Date();
-   const nextMidnight = new Date(now);
-   nextMidnight.setDate(nextMidnight.getDate() + 1);
-   nextMidnight.setHours(0, 0, 0, 0);
 
-   const timeUntilMidnight = nextMidnight.getTime() - now.getTime();
+   // Формируем YYYY-MM-DD в локальном времени
+   const year = now.getFullYear();
+   const month = String(now.getMonth() + 1).padStart(2, '0');
+   const day = String(now.getDate()).padStart(2, '0');
+   const todayStr = `${year}-${month}-${day}`;
 
-   // Устанавливаем таймер ровно до следующей полуночи
-   setTimeout(() => {
-      performDailyReset();
-      // После сброса в полночь запускаем новый цикл
-      initializeDailyReset();
-   }, timeUntilMidnight);
+   const lastResetStr = store.getLastResetDate();
+
+   // Если записи нет (первый запуск) или дата в конфиге меньше текущей
+   if (!lastResetStr || lastResetStr < todayStr) {
+      try {
+         console.log('Выполняем сброс оборотов...');
+         
+         performDailyReset();
+         store.setLastResetDate(todayStr);
+         const cards = loadCards();
+         sendCardsToServer(cards)
+      } catch (error) {
+         console.error("Критическая ошибка при сбросе оборотов:", error);
+      }
+   }
 }
 
 function performDailyReset() {
-   const raw = localStorage.getItem("!cards");
-   if (!raw) return;
-
    try {
-      const cards: Card[] = JSON.parse(raw);
+      const cards = loadCards()
 
       // Обнуляем turnover у всех карт
       const resetCards = cards.map((card) => ({
@@ -36,39 +58,7 @@ function performDailyReset() {
       // Сохраняем обновленные карты
       localStorage.setItem("!cards", JSON.stringify(resetCards));
 
-      // Сохраняем дату последнего сброса
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      localStorage.setItem("!last_reset_date", today.toISOString());
-
-      console.log(`Daily reset performed at ${new Date().toISOString()}`);
    } catch (e) {
       console.error("Error performing daily reset:", e);
-   }
-}
-
-function checkAndResetIfNeeded() {
-   const lastResetRaw = localStorage.getItem("!last_reset_date");
-   const today = new Date();
-   today.setHours(0, 0, 0, 0);
-
-   if (!lastResetRaw) {
-      // Первый запуск - выполняем сброс и сохраняем дату
-      performDailyReset();
-      return;
-   }
-
-   try {
-      const lastResetDate = new Date(lastResetRaw);
-      lastResetDate.setHours(0, 0, 0, 0);
-
-      // Если последний сброс был не сегодня - выполняем сброс
-      if (lastResetDate.getTime() < today.getTime()) {
-         performDailyReset();
-      }
-   } catch (e) {
-      console.error("Error checking last reset date:", e);
-      // При ошибке делаем сброс на всякий случай
-      performDailyReset();
    }
 }

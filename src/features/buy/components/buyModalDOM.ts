@@ -1,7 +1,6 @@
 // src/features/buy/components/buyModalDOM.ts
 
 import { enableBodyScroll } from "../../../shared/utils/domHelpers.ts";
-import { paymentNames } from "../../../core/config.ts";
 import type { Ad } from "../../../shared/types/ads";
 
 export function closeModal(): void {
@@ -121,10 +120,8 @@ export function createModalHTML(ad: Ad): HTMLElement {
                            ${ad.payments && ad.payments.length > 0
             ? ad.payments
                 .map(
-                    (paymentId) =>
-                        `<span class="payment-method">${paymentNames[
-                        paymentId as keyof typeof paymentNames
-                        ] || paymentId
+                    (paymentName) =>
+                        `<span class="payment-method">${paymentName
                         }</span>`
                 )
                 .join("")

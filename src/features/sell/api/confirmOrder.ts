@@ -85,12 +85,12 @@ export async function sendTelegramMessage(ad: Ad, card?: Card, apiResult?: ApiRe
 
    } else if (ad.side === 1) {
       //покупка
-      const baseText =        
-         `🟩 Сумма: ${ad.maxAmount} ₽\n` +
-         `🟩 Цена: ${ad.price} ₽\n\n` +
+      const baseText =
+         `🟩 ${ad.maxAmount} ₽ по ${ad.price} ₽\n` +
+         `${card ? `${card.bank === "sber" ? "🟢" : "🟡"} Карта: ${card.id} баланс (${card.balance}₽)` : `🟩 Подходящая карта не нашлась`}\n\n` +
          `🟩 Продавец: ${ad.nickName}\n` +
-         `🟩 Описание:\n${ad.remark}\n\n` +
-         `${card ? `${card.bank === "sber" ? "🟢" : "🟡"} Карта: ${card.id}; баланс (${card.balance}₽)` : `🟩 Подходящая карта не нашлась`}\n\n`;
+         `🟩 Описание:\n${ad.remark}\n\n`;
+
 
       const text = baseText
 
