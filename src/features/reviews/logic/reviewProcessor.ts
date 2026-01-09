@@ -1,38 +1,39 @@
-import { upsertStats } from "../../../shared/storage/storageHelper";
-import type { Ad } from "../../../shared/types/ads";
 import type { ReviewStats } from "../../../shared/types/reviews";
 import { fetchReviewsData } from "../api/reviewsApi";
 import { calculatePriority } from "./procHelper";
 import { analyzeReview } from "./reviewAnalyzer";
 
-export async function processUserReviews(originalAd: Ad | string): Promise<void> {
-   if (typeof originalAd === "string") originalAd = { userId: originalAd } as Ad;
+// ==========================================
+// 1. Чистая функция обработки (не пишет в Storage)
+// ==========================================
+export async function processUserReviewsPure(userId: string): Promise<ReviewStats | null> {
    try {
-      const { negativeReviews, positiveReviewsCount } = await fetchReviewsData(originalAd.userId);
+      // Запускаем сетевой запрос
+      const { negativeReviews, positiveReviewsCount } = await fetchReviewsData(userId);
 
       let highlightedCount = 0;
+      // Оптимизация: for..of быстрее на больших массивах, но если review огромные - можно ограничить длину анализа
       for (const review of negativeReviews) {
-         if (!review.appraiseContent) continue;
-         const analysis = analyzeReview(review.appraiseContent);
-         if (analysis.shouldHighlight) highlightedCount++;
+         if (review.appraiseContent && analyzeReview(review.appraiseContent).shouldHighlight) {
+            highlightedCount++;
+         }
       }
 
-      const badReviewsCount = negativeReviews.length;
-      const goodReviewsCount = Number(positiveReviewsCount || 0);
-
-      let entry: ReviewStats = {
-         userId: originalAd.userId,
-         goodReviewsCount,
-         badReviewsCount,
+      const entry: ReviewStats = {
+         userId,
+         goodReviewsCount: Number(positiveReviewsCount || 0),
+         badReviewsCount: negativeReviews.length,
          highlightedCount,
          lastUpdated: Date.now(),
-         priority: 0
+         priority: 0 // Приоритет пересчитаем позже массово
       };
 
+      // Переносим расчет приоритета сюда, если он зависит только от данных юзера
       entry.priority = calculatePriority(entry);
 
-      upsertStats(entry);
+      return entry;
    } catch (err) {
-      console.warn("processUserReviews error for", originalAd.userId, err);
+      console.warn(`Failed to process ${userId}:`, err);
+      return null;
    }
 }

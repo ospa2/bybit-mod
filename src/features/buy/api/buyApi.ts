@@ -6,7 +6,7 @@ import { appState } from "../../../core/state.ts";
 import type { Ad, ApiResult, GenericApiResponse } from "../../../shared/types/ads";
 import { watchOrder } from "../../../shared/orders/orderWatcher.ts";
 import { StorageHelper } from "../../../shared/storage/storageHelper.ts";
-import { findBestBuyAd } from "../automation/buyCardSelector.ts";
+import { findBestBuyAd, findBuyCard } from "../automation/buyCardSelector.ts";
 import { openBuyModal } from "../components/buyModal.ts";
 import { updateMaxAmount } from "../../../shared/utils/bankParser.ts";
 
@@ -15,113 +15,150 @@ function now() {
    return new Date().toISOString();
 }
 
-export async function fetchAndAppendPage() {
-   // Защита от одновременных вызовов
+// Кэш для хранения ссылок на существующие строки таблицы
+const rowCache = new Map<string, HTMLElement>();
+
+export async function fetchAndAppendPage(): Promise<void> {
    if (appState.isLoading || appState.shouldStopLoading) return;
+
+   const tbody = document.querySelector(".trade-table__tbody") as HTMLElement | null;
+   if (!tbody) return;
+
+   const isTargetPage = location.href.includes("/buy/USDT/RUB") || location.href.includes("/sell/USDT/RUB");
+   if (!isTargetPage) return;
+
    appState.isLoading = true;
 
    try {
-      const tbody = document.querySelector(".trade-table__tbody");
-      if (!tbody) {
-         console.log(`[${now()}] Tbody не найден — выходим.`);
-         return;
-      }
-
-      // Если мы на sell-странице — просто один раз очистить таблицу и выйти
-      // if (location.href.includes("/buy/USDT/RUB") || location.href.includes("/sell/USDT/RUB")) {
-      //    tbody.querySelectorAll(".dynamic-row").forEach((row) => row.remove());
-      //    tbody.querySelector(".completion-indicator")?.remove();
-      //    return;
-      // }
-
-      // Если мы здесь — это buy страница
-      if (!((location.href.includes("/buy/USDT/RUB") || location.href.includes("/sell/USDT/RUB")))) {
-         console.log(`[${now()}] Не на buy/sell страницах — ничего не делаю.`);
-         return;
-      }
-
-      // Параметры (size и side для buy)
       const payload = {
          userId: USER_ID,
          tokenId: "USDT",
          currencyId: "RUB",
          payment: [],
-         side: "1", // buy
+         side: "1",
          size: "100",
          page: "1",
-         amount: "",
+         sortType: "OVERALL_RANKING",
+         itemRegion: 1,
+         canTrade: true,
          vaMaker: false,
          bulkMaker: false,
-         canTrade: true,
          verificationFilter: 0,
-         sortType: "OVERALL_RANKING",
          paymentPeriod: [],
-         itemRegion: 1,
       };
 
-      const res = await fetch(
-         "https://www.bybit.com/x-api/fiat/otc/item/online",
-         {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-         }
-      );
+      const res = await fetch("https://www.bybit.com/x-api/fiat/otc/item/online", {
+         method: "POST",
+         headers: { "Content-Type": "application/json" },
+         body: JSON.stringify(payload),
+      });
 
       const json = await res.json();
-      const adsRaw: Ad[] = json.result.items || {};
-      const ads: Ad[] = adsRaw.map((ad: Ad) => {
-         ad = updateMaxAmount(ad)
-         return ad
-      })
-      // Удаляем старые строки и индикатор
-      tbody.querySelectorAll(".dynamic-row").forEach((row) => row.remove());
-      tbody.querySelector(".completion-indicator")?.remove();
+      const adsRaw: Ad[] = json.result?.items ?? [];
+      const ads: Ad[] = adsRaw.map(updateMaxAmount).filter(ad => !adShouldBeFiltered(ad))
 
-      // Создаем фрагмент и добавляем строки (приоритетные — наверх)
-      const fragment = document.createDocumentFragment();
-
-      const minPrice = Math.min(...ads.filter((ad: Ad) => !adShouldBeFiltered(ad)).map((a: Ad) => parseFloat(a.price)));
+      // Расчет минимальной цены для фильтрации и логики
+      const minPrice = ads.length > 0 ? Math.min(...ads.map(a => parseFloat(a.price))) : 0;
       localStorage.setItem("minPrice", minPrice.toString());
-      if (ads) {
-         try {
-            const adAndCard = findBestBuyAd(ads);
 
-            if (adAndCard) {
-               openBuyModal(adAndCard, minPrice, true); // автоматическое создание ордера
-            }
-         } catch (error) {
-            console.log('error:', error);
+      // Автоматика (вызов модалки)
+      const bestAd = findBestBuyAd(ads);
+      if (bestAd) openBuyModal(bestAd, minPrice, true);
 
+      const currentIterationIds = new Set<string>();
+
+      // Проход по всем объявлениям из API
+      for (const ad of ads) {
+         const adId = ad.id;
+         currentIterationIds.add(adId);
+
+         // Если объявление не проходит фильтр — удаляем если было, или скипаем
+         if (parseFloat(ad.price) > minPrice * 1.01) {
+            removeRowFromDOM(adId);
+            continue;
          }
 
-         for (let i = 0; i < ads.length; i++) {
+         let row = rowCache.get(adId);
 
-            try {
-               const ad = ads[i];
-               if (adShouldBeFiltered(ad) || parseFloat(ad.price) > minPrice*1.01) continue;
-               const newRow = createRowFromTemplate(ad, minPrice)
-
-               if (newRow) fragment.appendChild(newRow);
-            } catch (error) {
-               // !!! ЭТО ВЫЯВИТ ПРОБЛЕМУ !!!
-               console.error(`Ошибка на итерации i=${i} для объявления:`, ads[i], error);
-               // Продолжаем цикл, чтобы не прерывать весь процесс
-               continue;
+         if (row) {
+            // ОБНОВЛЕНИЕ: Узел уже есть, меняем только текст
+            updateRowData(row, ad, minPrice);
+         } else {
+            // СОЗДАНИЕ: Нового узла
+            const newNode = createRowFromTemplate(ad, minPrice);
+            if (newNode instanceof HTMLElement) {
+               row = newNode;
+               row.setAttribute("data-ad-id", adId);
+               rowCache.set(adId, row);
             }
          }
-         // После этого цикл гарантированно завершится
-         tbody.prepend(fragment); // Теперь этот код должен быть достигнут.
 
-      } else {
-         console.warn(`[${now()}] Ответ API не содержит ads.items массив.`);
+         // Синхронизация порядка: appendChild переместит существующий узел в конец tbody
+         // Это гарантирует, что порядок в DOM = порядку в массиве ads
+         if (row) tbody.appendChild(row);
       }
 
+      // Очистка: удаляем из DOM те ID, которых нет в новом ответе API
+      for (const id of rowCache.keys()) {
+         if (!currentIterationIds.has(id)) {
+            removeRowFromDOM(id);
+         }
+      }
+
+      tbody.querySelector(".completion-indicator")?.remove();
 
    } catch (e) {
-      console.error(`[${now()}] Ошибка при подгрузке:`, e);
+      console.error(`[${now()}] Fetch Error:`, e);
    } finally {
       appState.isLoading = false;
+   }
+}
+
+function removeRowFromDOM(id: string): void {
+   const el = rowCache.get(id);
+   if (el) {
+      el.remove();
+      rowCache.delete(id);
+   }
+}
+
+/**
+ * Точечное обновление данных внутри существующей строки
+ */
+function updateRowData(row: HTMLElement, ad: Ad, minPrice: number): void {
+   // 1. Статус Online/Offline
+   const avatar = row.querySelector('.by-avatar');
+   if (avatar) {
+      const newClass = `by-avatar by-avatar--${ad.isOnline ? "online" : "offline"} small`;
+      if (avatar.className !== newClass) avatar.className = newClass;
+   }
+
+   // 2. Цена (основное число)
+   const priceVal = row.querySelector('.js-price-value');
+   if (priceVal) {
+      const newPrice = parseFloat(ad.price ?? "0").toFixed(2);
+      if (priceVal.textContent !== newPrice) priceVal.textContent = newPrice;
+   }
+
+   // 3. Лимиты (Min ~ Max)
+   const qlValue = row.querySelector('.ql-value');
+   if (qlValue) {
+      const minStr = parseFloat(ad.minAmount ?? "0").toLocaleString("ru-RU", { minimumFractionDigits: 2 });
+      const maxStr = parseFloat(ad.maxAmount ?? "0").toLocaleString("ru-RU", { minimumFractionDigits: 2 });
+      const newHtml = `${minStr}&nbsp;~&nbsp;${maxStr} ${ad.currencyId ?? "RUB"}`;
+      if (qlValue.innerHTML !== newHtml) qlValue.innerHTML = newHtml;
+   }
+
+   // 4. Кнопка и Карта
+   const card = findBuyCard(ad, minPrice);
+   const btn = row.querySelector('.moly-btn') as HTMLElement | null;
+   const btnSpan = btn?.querySelector('span');
+   if (btn && btnSpan) {
+      const newText = card ? card.id : "нет карт";
+      if (btnSpan.textContent !== newText) btnSpan.textContent = newText;
+
+      const newBtnClass = `moly-btn ${card ? "bg-greenColor-bds-green-700-normal" : "bg-gray-500"} text-base-bds-static-white px-[16px] py-[8px] rounded`;
+      if (btn.className !== newBtnClass) btn.className = newBtnClass;
    }
 }
 
@@ -145,7 +182,6 @@ export function resumePendingOrders(): void {
       }
    }
 }
-
 export async function fetchAdDetails(ad: Ad): Promise<ApiResult & GenericApiResponse> {
    const payload = {
       item_id: ad.id,

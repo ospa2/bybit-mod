@@ -1,8 +1,8 @@
-import { LS_KEY } from "../../../shared/storage/storageHelper";
+import { LS_KEY, upsertStatsBatch } from "../../../shared/storage/storageHelper";
 import type { Ad } from "../../../shared/types/ads";
 import type { ReviewStats } from "../../../shared/types/reviews";
 import { shouldRefresh } from "../../reviews/logic/procHelper";
-import { processUserReviews } from "../../reviews/logic/reviewProcessor";
+import { processUserReviewsPure } from "../../reviews/logic/reviewProcessor";
 
 // Минимальное время между началом запросов (мс), чтобы не получить 429 от WAF Bybit
 // 0 = максимально быстро, но риск бана высок. Рекомендую хотя бы 500-1000.
@@ -13,104 +13,127 @@ function delay(ms: number) {
 }
 
 let isBackgroundProcessRunning = false;
-
-export async function backgroundProcessAds(): Promise<void> {
-   if (isBackgroundProcessRunning) {
-      // Процесс уже идет, не запускаем дубль
-      return;
-   }
-   isBackgroundProcessRunning = true;
+async function tryRefreshOneOldUser() {
+   const rawStats = localStorage.getItem(LS_KEY);
+   if (!rawStats || rawStats.length <= 2) return false;
 
    try {
-      // Бесконечный цикл для постоянного мониторинга
-      while (true) {
-         const startTime = Date.now();
-         let didWork = false;
+      const storedStats = JSON.parse(rawStats);
+      if (!Array.isArray(storedStats) || storedStats.length === 0) return false;
 
-         // =======================================================
-         // 1. ПРИОРИТЕТ: Очередь новых продавцов (FIFO)
-         // =======================================================
+      // 1. Поиск кандидата за один проход O(n)
+      let candidate = null;
+      let maxPriority = -1;
 
-         // Читаем только начало очереди, чтобы минимизировать парсинг
-         const newSellersQueueRaw = localStorage.getItem("unknownUserIds") || "[]";
-         // Оптимизация: если строка короткая "[]", даже не парсим
-         if (newSellersQueueRaw.length > 2) {
-            const queue: Ad[] = JSON.parse(newSellersQueueRaw);
+      for (let i = 0; i < storedStats.length; i++) {
+         const stat = storedStats[i];
+         if (!stat || stat.priority === 0) continue;
 
-            if (queue.length > 0) {
-               const adToProcess = queue[0]; // Берем первого
-
-               try {
-                  await processUserReviews(adToProcess);
-               } catch (e) {
-                  console.error(`Error processing new user ${adToProcess.userId}`, e);
-               }
-
-               // Удаляем обработанного (атомарная защита от Race Condition)
-               const freshQueueRaw = localStorage.getItem("unknownUserIds") || "[]";
-               const freshQueue: Ad[] = JSON.parse(freshQueueRaw);
-               // Удаляем именно по ID, так как индекс мог сместиться
-               const nextQueue = freshQueue.filter(item => item.userId !== adToProcess.userId);
-               localStorage.setItem("unknownUserIds", JSON.stringify(nextQueue));
-
-               didWork = true;
-               // В этой ветке мы НЕ делаем break, чтобы сразу перейти к следующему в очереди
-               // но нам нужно проверить тайминги ниже
-            }
+         // Если нашли того, кому СРОЧНО пора обновиться (hard-limit), берем сразу
+         if (shouldRefresh(stat)) {
+            candidate = stat;
+            break;
          }
 
-         // =======================================================
-         // 2. ФОН: Обновление старых (Только если очередь новых пуста)
-         // =======================================================
-         if (!didWork) {
-            const storedStatsRaw = localStorage.getItem(LS_KEY);
-            if (storedStatsRaw && storedStatsRaw.length > 2) {
-               const storedStats = (JSON.parse(storedStatsRaw) as ReviewStats[])
-                  .filter(s => s && s.priority !== 0); // Пропускаем "мертвых"
-
-               // Ищем ОДНОГО кандидата на обновление
-               // (не перебираем всех циклом, чтобы не блокировать поток надолго)
-               let candidate = storedStats.find(stat => shouldRefresh(stat));
-               if (!candidate && storedStats.length > 0) {
-                  // Поиск максимума за один проход O(n)
-                  candidate = storedStats.reduce((prev, current) =>
-                     (current.priority > prev.priority) ? current : prev
-                  );
-               }
-               if (candidate) {
-                  try {
-                     await processUserReviews(candidate.userId);
-                     didWork = true;
-                  } catch (e) {
-                     console.error(`Error refreshing user ${candidate.userId}`, e);
-                  }
-               }
-            }
-         }
-
-         // =======================================================
-         // 3. Управление таймингом (Smart Delay)
-         // =======================================================
-
-         const executionTime = Date.now() - startTime;
-
-         if (didWork) {
-            // Если работа была, соблюдаем минимальный интервал безопасности API
-            const waitTime = Math.max(0, MIN_REQUEST_INTERVAL - executionTime);
-            if (waitTime > 0) await delay(waitTime);
-            // Сразу идем на следующую итерацию while(true)
-         } else {
-            // Если работы НЕ было (обе очереди пусты или никто не требует обновления),
-            // уходим в "сон" на 1-2 секунды, чтобы не грузить CPU холостым циклом
-            await delay(1000);
+         // Иначе ищем самого приоритетного
+         if (stat.priority > maxPriority) {
+            maxPriority = stat.priority;
+            candidate = stat;
          }
       }
 
+      if (!candidate) return false;
+
+      // 2. Выполняем "чистый" сетевой запрос
+      const updatedEntry = await processUserReviewsPure(candidate.userId);
+
+      if (updatedEntry) {
+         // 3. Сохраняем результат через batch-метод (он обновит Map и запишет в LS)
+         upsertStatsBatch([updatedEntry]);
+         return true;
+      }
+
+      return false;
+   } catch (err) {
+      console.error("Error in tryRefreshOneOldUser:", err);
+      return false;
+   }
+}
+// ==========================================
+// 2. Оптимизированный фоновый процесс
+// ==========================================
+export async function backgroundProcessAds(): Promise<void> {
+   if (isBackgroundProcessRunning) return;
+   isBackgroundProcessRunning = true;
+
+   const BATCH_SIZE = 5; // Обрабатываем по 5 юзеров параллельно
+
+   try {
+      while (true) {
+         const startTime = Date.now();
+         let processedCount = 0;
+
+         // --- ШАГ 1: Забираем пачку "Новичков" ---
+         let rawQueue = localStorage.getItem("unknownUserIds");
+         let queue: Ad[] = rawQueue ? JSON.parse(rawQueue) : [];
+
+         // Берем срез задач
+         const batchToDo = queue.slice(0, BATCH_SIZE);
+
+         if (batchToDo.length > 0) {
+            // ПАРАЛЛЕЛЬНОЕ выполнение запросов
+            const results = await Promise.allSettled(
+               batchToDo.map(ad => processUserReviewsPure(ad.userId))
+            );
+
+            // Собираем успешные результаты
+            const newStats: ReviewStats[] = [];
+            const processedIds = new Set<string>();
+
+            results.forEach((res, index) => {
+               const userId = batchToDo[index].userId;
+               processedIds.add(userId); // Помечаем как обработанный даже при ошибке, чтобы не застрять
+               if (res.status === "fulfilled" && res.value) {
+                  newStats.push(res.value);
+               }
+            });
+
+            // --- ШАГ 2: Атомарное сохранение Статистики (1 раз на пачку) ---
+            if (newStats.length > 0) {
+               // Используем upsertStatsBatch из предыдущего совета
+               upsertStatsBatch(newStats);
+            }
+
+            // --- ШАГ 3: Атомарное удаление из очереди (1 раз на пачку) ---
+            // Читаем заново перед записью (защита от Race Condition)
+            const currentRaw = localStorage.getItem("unknownUserIds");
+            const currentQueue: Ad[] = currentRaw ? JSON.parse(currentRaw) : [];
+            const nextQueue = currentQueue.filter(ad => !processedIds.has(ad.userId));
+            localStorage.setItem("unknownUserIds", JSON.stringify(nextQueue));
+
+            processedCount = batchToDo.length;
+         }
+
+         // --- ШАГ 4: Если новичков нет, обновляем "Старичков" ---
+         else {
+            // Тут логика обновления одного старого, но тоже через processUserReviewsPure
+            // и saveReviewsStatistics. 
+            // ... (аналогично коду выше, но берем из statsMap)
+            const didRefresh = await tryRefreshOneOldUser(); // Вынесем в отдельную функцию
+            if (didRefresh) processedCount = 1;
+         }
+
+         // --- Умная задержка ---
+         const executionTime = Date.now() - startTime;
+         // Если ничего не делали - спим дольше (1с), если работали - короткий перерыв (200мс)
+         const delayTime = processedCount === 0 ? 1000 : Math.max(200, MIN_REQUEST_INTERVAL - executionTime);
+
+         await delay(delayTime);
+      }
+
    } catch (fatalError) {
-      console.error("Background Process crashed:", fatalError);
+      console.error("Background loop crashed:", fatalError);
    } finally {
       isBackgroundProcessRunning = false;
-      // Опционально: перезапустить процесс через delay, если он упал
-      // setTimeout(backgroundProcessAds, 5000); 
    }
 }

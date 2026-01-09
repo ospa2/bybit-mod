@@ -192,12 +192,35 @@ export function saveReviewsStatistics(arr: ReviewStats[]) {
    }
 }
 
-export function upsertStats(newEntry: ReviewStats) {
+export function upsertStatsBatch(newEntries: ReviewStats[]) {
+   if (!newEntries || newEntries.length === 0) return;
+
    const arr = loadReviewsStatistics();
-   const idx = arr.findIndex(x => x.userId === newEntry.userId);
-   if (idx >= 0) arr[idx] = { ...arr[idx], ...newEntry };
-   else arr.push(newEntry);
-   saveReviewsStatistics(arr);
+
+   // Создаем Map для мгновенного поиска O(1)
+   const statsMap = new Map(arr.map(item => [item.userId, item]));
+
+   let hasChanges = false;
+
+   for (const entry of newEntries) {
+      const existing = statsMap.get(entry.userId);
+
+      // Глубокое сравнение здесь избыточно, но можно проверить, 
+      // изменились ли данные, чтобы не перезаписывать Storage вхолостую
+      if (existing) {
+         // Обновляем существующую запись
+         statsMap.set(entry.userId, { ...existing, ...entry });
+         hasChanges = true;
+      } else {
+         // Добавляем новую
+         statsMap.set(entry.userId, entry);
+         hasChanges = true;
+      }
+   }
+
+   if (hasChanges) {
+      saveReviewsStatistics(Array.from(statsMap.values()));
+   }
 }
 
 export function getCardUsageData(): CardUsageMap {

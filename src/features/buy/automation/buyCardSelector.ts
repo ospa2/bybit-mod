@@ -1,7 +1,6 @@
 import { loadCards } from "../../../shared/storage/storageHelper";
 import type { Ad } from "../../../shared/types/ads";
 import type { Card } from "../../../shared/types/reviews";
-import { adShouldBeFiltered } from "../../../shared/utils/adFilter";
 import { calculateValue, canUseCard } from "./adFinder";
 
 const MIN_NORMAL_VOLUME = 20000;
@@ -63,15 +62,12 @@ function hasSignificantLead(
 }
 
 export function findBestBuyAd(ads: Ad[]): { ad: Ad; card: Card } | null {
-   // 1. Базовая фильтрация
-   let validAds = ads.filter((a) => !adShouldBeFiltered(a));
-   if (!validAds.length) return null;
 
    // 2. Определяем "Рыночную Цену" (minPrice среди нормальных объемов)
-   const normalVolumeAds = validAds.filter(a => parseFloat(a.maxAmount) >= MIN_NORMAL_VOLUME);
+   const normalVolumeAds = ads.filter(a => parseFloat(a.maxAmount) >= MIN_NORMAL_VOLUME);
 
    // Если нормальных объявлений нет вообще, берем минимальную цену из всего пула
-   const globalMinPrice = Math.min(...validAds.map(a => parseFloat(a.price)));
+   const globalMinPrice = Math.min(...ads.map(a => parseFloat(a.price)));
 
    let referencePrice = globalMinPrice;
    if (normalVolumeAds.length > 0) {
@@ -81,7 +77,7 @@ export function findBestBuyAd(ads: Ad[]): { ad: Ad; card: Card } | null {
    // 3. Формируем кандидатов с учетом жесткого фильтра для мелочи
    const candidates: { ad: Ad; card: Card; value: number }[] = [];
 
-   for (const ad of validAds) {
+   for (const ad of ads) {
       const amount = parseFloat(ad.maxAmount);
       const price = parseFloat(ad.price);
 

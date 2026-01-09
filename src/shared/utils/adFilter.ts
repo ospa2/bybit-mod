@@ -1,6 +1,6 @@
 //src/logic/adFilter.ts 
 
-import { forbiddenPhrases, MIN_EXECUTED_COUNT,  } from '../../core/config.ts';
+import { forbiddenPhrases, MIN_EXECUTED_COUNT, } from '../../core/config.ts';
 import { appState } from '../../core/state.ts';
 import type { Ad } from '../types/ads';
 import type { ReviewStats } from '../types/reviews';
@@ -15,22 +15,25 @@ export function adShouldBeFiltered(ad: Ad) {
   }
   const isOnlySber = localStorage.getItem("onlySber") === "true";
 
-  if (isOnlySber && !(availableBanks(ad.remark).includes("Сбербанк") || availableBanks(ad.remark).includes("*"))) {
-
+  const banks = availableBanks(ad.remark);
+  if (isOnlySber && !banks.includes("Сбербанк") && !banks.includes("*")) {
     return true;
   }
 
   let storedStats: ReviewStats[] = [];
   try {
-    const storedStatsRaw = localStorage.getItem("reviewsStatistics_v1");
-    storedStats = storedStatsRaw ? JSON.parse(storedStatsRaw) : [];
-    const userStats = storedStats.find((item) => item.userId === ad.userId);
-    const goodReviewsCount = userStats?.goodReviewsCount ?? 0;
+
 
     // 2. Фильтрация для стороны ad.side === 0 по количеству хороших отзывов
-    if (ad.side === 0 && goodReviewsCount < 100) {
+    if (ad.side === 0) {
+      const storedStatsRaw = localStorage.getItem("reviewsStatistics_v1");
+      storedStats = storedStatsRaw ? JSON.parse(storedStatsRaw) : [];
+      const userStats = storedStats.find((item) => item.userId === ad.userId);
+      const goodReviewsCount = userStats?.goodReviewsCount ?? 0;
+      if (goodReviewsCount < 100) {
+        return true;
+      }
 
-      return true;
     }
     // Проверка на корректность типа после получения из хранилища (если понадобится)
     if (!Array.isArray(storedStats)) storedStats = [];

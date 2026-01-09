@@ -21,8 +21,9 @@ export function enhanceAdRows(ads: Ad[]) {
   // Чтобы за один проход был только один авто-клик
 
   document.querySelectorAll(".trade-table__tbody tr").forEach((row, i) => {
-    const ad = ads[i-1];
+    const ad = ads[i - 1];
     if (!ad) return;
+
 
     // Авто-клик по лучшим мерчантам
     if (bestMerchants.includes(ad.userId)) {
@@ -41,7 +42,7 @@ export function enhanceAdRows(ads: Ad[]) {
       const sellBtn = row.querySelector<HTMLElement>(
         ".trade-list-action-button button"
       );
-      
+
       if (sellBtn) {
         sellBtn.click();
         clickedAds.add(ad.id); // запоминаем, что кликнули

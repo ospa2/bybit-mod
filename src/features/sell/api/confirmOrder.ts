@@ -44,15 +44,14 @@ export async function sendTelegramMessage(ad: Ad, card?: Card, apiResult?: ApiRe
 
       let poNomeruKarti = false
 
-      const regex = new RegExp(/(?:номер[уа]?\s?)?карт(?!\sне)/g);
+      const regex = new RegExp(/(?:номер[уа]?\s?)карт(?!\sне)/g);
       poNomeruKarti = regex.test(ad.remark);
 
       const baseText =
-         `🟥 Сумма: ${ad.maxAmount} ₽\n` +
-         `🟥 Цена: ${ad.price} ₽\n\n` +
-         `🟥 Покупатель: ${ad.nickName}\n` +
-         `🟥 Описание:\n${ad.remark}\n\n` +
-         `${card ? `${card.bank === "sber" ? "🟢" : "🟡"} по ${poNomeruKarti ? "номеру карты; " : "сбп; "} баланс (${card.balance}₽)` : `🟥 Подходящая карта не нашлась`}\n\n`;
+         `🟥 ${ad.maxAmount} ₽ по ${ad.price} ₽\n` +
+         `🟥 от ${ad.nickName}\n` +
+         `${card?.bank === "sber" ? "🟢" : "🟡"}${card?.id} ${card ? `по ${poNomeruKarti ? "номеру карты; " : "сбп; "} баланс (${card.balance}₽)` : `🟥 Подходящая карта не нашлась`}\n\n` +
+         `🟥 Описание:\n${ad.remark}\n\n`
 
       const text = baseText + `❓ Создать ордер?`;
 
@@ -175,7 +174,7 @@ export async function checkTelegramResponse() {
 
                const messageText = update.callback_query.message.text;
 
-               if (messageText.includes("🟥 Найден ордер на продажу")) {
+               if (messageText.includes("🟥 Описание:")) {
                   if ((window as any).autoClicker) {
                      AutoClickElements.clickLastButton((window as any).autoClicker, messageId);
                   } else {
