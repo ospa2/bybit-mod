@@ -5,7 +5,7 @@ import { AutoClickElements } from "../automation/autoсlicker";
 import { findSellCard } from "../automation/sellCardSelector";
 
 
-const TELEGRAM_BOT_TOKEN = '8275350971:AAHt9lHxoe441wA4mfQIm9kUc-vJ769s00M';
+const TELEGRAM_BOT_TOKEN = '8292233087:AAHqGYefwkLshcpjK6J9kA0dkVMlQbbea3g';
 const TELEGRAM_CHAT_ID = '1233363326';
 
 // Хранилище данных для каждого сообщения

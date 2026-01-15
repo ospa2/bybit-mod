@@ -6,7 +6,81 @@ import { availableBanks, availableBanksSell } from "../../../shared/utils/bankPa
 const COOLDOWN_TIME = 1_200_000; // 20 минут
 
 // ==== Весовые функции ====
+const STORAGE_KEY = "morningPriceStats";
+const CUTOFF_HOUR = 9;
+const CUTOFF_MINUTE = 30;
 
+interface MorningStats {
+   date: string;       // Дата сбора статистики (YYYY-MM-DD)
+   samples: number;    // Количество замеров
+   totalSum: number;   // Сумма цен
+   avgPrice: number;   // Средняя цена
+}
+
+/**
+ * Определяет, является ли текущее время "утренним" (до 09:30)
+ */
+function isMorningPhase(): boolean {
+   const now = new Date();
+   const hours = now.getHours();
+   const minutes = now.getMinutes();
+   return hours < CUTOFF_HOUR || (hours === CUTOFF_HOUR && minutes < CUTOFF_MINUTE);
+}
+
+/**
+ * Возвращает строковое представление текущей даты для сброса статистики
+ */
+function getTodayString(): string {
+   const now = new Date();
+   return `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+}
+
+/**
+ * Управляет логикой "Утренней цены"
+ * @param currentMarketPrice Текущая рыночная цена (на основе нормальных объемов)
+ * @returns Цена, которую следует использовать как базовую (minPrice)
+ */
+export function getContextAwareReferencePrice(currentMarketPrice: number): number {
+   const today = getTodayString();
+   const rawData = localStorage.getItem(STORAGE_KEY);
+   let stats: MorningStats = rawData
+      ? JSON.parse(rawData)
+      : { date: today, samples: 0, totalSum: 0, avgPrice: 0 };
+
+   // Если наступил новый день - сбрасываем статистику
+   if (stats.date !== today) {
+      console.log("🌅 Новый день: сброс утренней статистики цен.");
+      stats = { date: today, samples: 0, totalSum: 0, avgPrice: 0 };
+   }
+
+   if (isMorningPhase()) {
+      // === ФАЗА СБОРА ДАННЫХ (УТРО) ===
+
+      // Обновляем статистику
+      stats.samples++;
+      stats.totalSum += currentMarketPrice;
+      stats.avgPrice = stats.totalSum / stats.samples;
+
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(stats));
+
+      // Утром работаем по текущей рыночной цене
+      return currentMarketPrice;
+   } else {
+      // === ФАЗА ИСПОЛЬЗОВАНИЯ (ДЕНЬ/ВЕЧЕР) ===
+
+      if (stats.samples > 0) {
+         console.log(`📊 Используем утренний контекст: ${stats.avgPrice.toFixed(2)} (Текущая: ${currentMarketPrice})`);
+
+         // ВАЖНО: Если рынок вдруг упал ниже утра (кризис), берем текущую цену, 
+         // чтобы не отсечь всё подряд. Но если рынок вырос - держим утреннюю планку.
+         return Math.min(stats.avgPrice, currentMarketPrice);
+      }
+
+      // Если бот был включен только днем и утренних данных нет - работаем по факту
+      console.warn("⚠️ Нет данных об утренних ценах, используем текущую.");
+      return currentMarketPrice;
+   }
+}
 function priceWeight(price: number, minPrice: number): number {
    const MAX_PRICE_DIFF = 0.007; // 0.7%
 

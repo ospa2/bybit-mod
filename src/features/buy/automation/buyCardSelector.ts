@@ -1,7 +1,7 @@
 import { loadCards } from "../../../shared/storage/storageHelper";
 import type { Ad } from "../../../shared/types/ads";
 import type { Card } from "../../../shared/types/reviews";
-import { calculateValue, canUseCard } from "./adFinder";
+import { calculateValue, canUseCard, getContextAwareReferencePrice } from "./adFinder";
 
 const MIN_NORMAL_VOLUME = 20000;
 // Мелкое объявление должно быть дешевле "нормального" минимум на 0.4%
@@ -33,24 +33,6 @@ function hasSignificantLead(
 
    const top = candidates[0].value;
 
-   // Считаем среднее value среди топ-2...топ-4 (или сколько есть)
-   // Это защита от случая, когда 2-е место случайно просело, но 3-е и 4-е сильные
-
-
-   // Динамический порог в зависимости от времени (твоя логика сохранена)
-   // const hourlyThresholds: Record<number, number> = {
-   //    0: 0.040, 1: 0.040, 2: 0.040, 3: 0.040, 4: 0.040,
-   //    5: 0.040, 6: 0.040, 7: 0.040, 8: 0.045, 9: 0.050,
-   //    10: 0.055, 11: 0.065, 12: 0.075, 13: 0.075, 14: 0.080,
-   //    15: 0.080, 16: 0.080, 17: 0.080, 18: 0.080, 19: 0.080,
-   //    20: 0.080, 21: 0.080, 22: 0.080, 23: 0.075, 24: 0.065
-   // };
-
-   // const now = new Date();
-   // const hour = now.getHours();
-   // const dayOfWeek = now.getDay();
-
-   // if (dayOfWeek === 6 || dayOfWeek === 0) MIN_ABS_DIFF = 0.045;
 
    const MIN_ABSOLUTE_VALUE = 0.8; // Подняли порог минимального качества
    if (top < MIN_ABSOLUTE_VALUE) {
@@ -62,19 +44,26 @@ function hasSignificantLead(
 }
 
 export function findBestBuyAd(ads: Ad[]): { ad: Ad; card: Card } | null {
+   // 1. Предварительная фильтрация (можно добавить, если нужно)
 
-   // 2. Определяем "Рыночную Цену" (minPrice среди нормальных объемов)
+   // 2. Определяем ТЕКУЩУЮ "Рыночную Цену" (minPrice среди нормальных объемов)
    const normalVolumeAds = ads.filter(a => parseFloat(a.maxAmount) >= MIN_NORMAL_VOLUME);
 
-   // Если нормальных объявлений нет вообще, берем минимальную цену из всего пула
+   // Если нормальных объявлений нет, берем минимум из всего пула
    const globalMinPrice = Math.min(...ads.map(a => parseFloat(a.price)));
 
-   let referencePrice = globalMinPrice;
+   let currentMarketPrice = globalMinPrice;
    if (normalVolumeAds.length > 0) {
-      referencePrice = Math.min(...normalVolumeAds.map(a => parseFloat(a.price)));
+      currentMarketPrice = Math.min(...normalVolumeAds.map(a => parseFloat(a.price)));
    }
 
-   // 3. Формируем кандидатов с учетом жесткого фильтра для мелочи
+   // === ИНТЕГРАЦИЯ КОНТЕКСТА ===
+   // Получаем цену с учетом времени суток.
+   // Если сейчас день/вечер, эта переменная вернет среднюю утреннюю цену.
+   const targetReferencePrice = getContextAwareReferencePrice(currentMarketPrice);
+   // ============================
+
+   // 3. Формируем кандидатов
    const candidates: { ad: Ad; card: Card; value: number }[] = [];
 
    for (const ad of ads) {
@@ -83,45 +72,36 @@ export function findBestBuyAd(ads: Ad[]): { ad: Ad; card: Card } | null {
 
       // === ЛОГИКА ФИЛЬТРАЦИИ МЕЛОЧИ ===
       if (amount < MIN_NORMAL_VOLUME) {
-         // Если объявление мелкое, оно ДОЛЖНО быть дешевле референса на X%
-         // Пример: Референс 100.00. Мелочь должна быть <= 99.60
-         if (price > referencePrice * (1 - REQUIRED_DISCOUNT_FOR_SMALL_ADS)) {
-            // Если цена не супер-выгодная, пропускаем сразу, даже не считая Value
+         // Сравниваем с targetReferencePrice (утренней ценой днем)
+         if (price > targetReferencePrice * (1 - REQUIRED_DISCOUNT_FOR_SMALL_ADS)) {
             continue;
          }
       }
       // ================================
 
-      // Передаем globalMinPrice для расчета Value, чтобы Score был честным относительно всего рынка
-      const card = findBuyCard(ad, globalMinPrice);
+      // Важный момент: какую цену передавать в calculateValue как minPrice?
+      // Если передать утреннюю цену (которая ниже текущей), то:
+      // Объявления с ценой 80 (при утренней 79) получат низкий priceWeight.
+      // Это то, что нам нужно.
+
+      const card = findBuyCard(ad, targetReferencePrice);
       if (!card) continue;
 
-      const value = calculateValue(ad, card, globalMinPrice);
+      // Считаем Value относительно целевой (утренней) цены
+      const value = calculateValue(ad, card, targetReferencePrice);
 
-      // Если это "мелочь", прошедшая фильтр цены, она может иметь низкий amountWeight,
-      // поэтому снизим порог входа или оставим как есть, так как priceWeight будет 1.0
       if (value <= 0) continue;
 
       candidates.push({ ad, card, value });
    }
 
    if (!candidates.length) {
-      console.log("Нет подходящих кандидатов после фильтрации по объему/цене.");
+      // Можно добавить лог, чтобы понимать, что фильтрация работает
+      // console.log(`Кандидаты отсеяны по цене > ${targetReferencePrice}`);
       return null;
    }
 
    candidates.sort((a, b) => b.value - a.value);
-
-   // Логирование
-   console.log(`Ref Price (>20k): ${referencePrice} | Global Min: ${globalMinPrice}`);
-   console.log("=== ТОП-3 КАНДИДАТОВ ===");
-   candidates.slice(0, 3).forEach((c, i) => {
-      const price = parseFloat(c.ad.price);
-      const amount = parseFloat(c.ad.maxAmount);
-      const isSmall = amount < MIN_NORMAL_VOLUME;
-      const tag = isSmall ? "[SMALL GEM]" : "[NORMAL]";
-      console.log(`${i + 1}. ${tag} Val: ${c.value.toFixed(3)} | P: ${price} | Amt: ${amount} | ${c.card.bank}`);
-   });
 
    // Проверка кулдауна
    const COOLDOWN_MS = 5 * 60 * 1000;
@@ -130,17 +110,20 @@ export function findBestBuyAd(ads: Ad[]): { ad: Ad; card: Card } | null {
 
    if (now - lastTime < COOLDOWN_MS) {
       const remainingMs = COOLDOWN_MS - (now - lastTime);
-      console.log(`КД трейдинга: ${(remainingMs / 1000).toFixed(0)} сек`);
+      console.log(`⏳ КД трейдинга: ${(remainingMs / 1000).toFixed(0)} сек`);
       return null;
    }
 
+   // Передаем кандидатов в проверку лидерства
+   // (Примечание: hasSignificantLead использует абсолютные значения value, 
+   // которые теперь будут занижены для дорогих вечерних объявлений, что нам и нужно)
    if (!hasSignificantLead(candidates)) {
-      console.log("Лидер не имеет достаточного преимущества над средним конкурентов.");
+      console.log("📉 Лидер не имеет достаточного преимущества.");
       return null;
    }
 
    const winner = candidates[0];
-   console.log(`✅ ВЫБРАНО: ${parseFloat(winner.ad.price)} | Vol: ${parseFloat(winner.ad.maxAmount)}`);
+   console.log(`✅ ВЫБРАНО (Ref: ${targetReferencePrice.toFixed(2)}): ${parseFloat(winner.ad.price)} | Vol: ${parseFloat(winner.ad.maxAmount)}`);
 
    return winner;
 }

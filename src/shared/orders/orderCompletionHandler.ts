@@ -72,7 +72,6 @@ export async function handleOrderCompletion(
       console.error(`Не удалось найти данные ордера ${orderId}`);
       return;
    }
-   (window as any).manager.stopForOrder(orderId);
    if (status === "completed") {
       await handleCompletedOrder(orderId, originalCard, orderData);
    } else if (status === "cancelled") {

@@ -382,7 +382,7 @@ export const bestMerchants = [
   "149356350", //KUCHER_P2P
   //"378807768", //ALTER-X
   "78757034", //Konex
-  //"337917397" //test
+  "23477628", //test
   "442702833", //ibra096
 ];
 

@@ -36,6 +36,36 @@ async function getCurrentOrders() {
    }
 }
 
+async function isAlreadyGreetened(orderId: string): Promise<boolean> {
+   try {
+
+      const res = await fetch(
+         "https://www.bybit.com/x-api/fiat/otc/order/message/listpage",
+         {
+            method: "POST",
+            headers: {
+               "Content-Type": "application/json;charset=UTF-8",
+               accept: "application/json",
+               origin: "https://www.bybit.com",
+            },
+            body: JSON.stringify({
+               orderId: orderId,
+               currentPage: "1",
+               size: "100",
+            }),
+            credentials: "include",
+         }
+      ).then((response) => response.json());
+
+      const messages: string[] = res.result.result.map((m: any) => m.message);
+
+      return messages.some((message: string) => message.toLowerCase().includes("Привет"));
+   } catch (error) {
+      console.error("❌❌ Ошибка в isAlreadyGreetened:", error);
+      return false
+   }
+}
+
 export async function watchNewOrders() {
    let isRunning = false;
 
@@ -77,7 +107,7 @@ export async function watchNewOrders() {
                version: "",
                securityRiskToken: "",
                isFromAi: false,
-               
+
             };
             let card: Card | null = null;
             const remark = await getRemarkByOrderID(order.id);
@@ -96,9 +126,12 @@ export async function watchNewOrders() {
                }
             }
             let cards = loadCards();
-
-            if (!(window as any).manager.isActive(order.id)) {
-               (window as any).manager.startForOrder(order.id);
+            const isGreetened = await isAlreadyGreetened(order.id);
+            if (!isGreetened) {
+               await (window as any).wsClient.sendMessage({
+                  orderId: order.id,
+                  message: "Привет"
+               });
             }
 
             // 🔹 Запустить наблюдение за картой только если она есть
@@ -165,12 +198,12 @@ export async function getRemarkByOrderID(orderId: string) {
 
 
       const messages: string[] = res.result.result.map((m: any) => m.message);
-      console.log("🚀 ~ getRemarkByOrderID ~ messages:", messages[messages.length-2])
+      console.log("🚀 ~ getRemarkByOrderID ~ messages:", messages[messages.length - 2])
       return messages[messages.length - 2]
    } catch (error) {
       console.error("❌❌ Ошибка в getRemarkByOrderID:", error);
    }
-}  
+}
 // {
 //    "ret_code": 0,
 //       "ret_msg": "SUCCESS",

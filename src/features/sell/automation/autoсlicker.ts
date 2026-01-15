@@ -1,5 +1,4 @@
 import { editTelegramMessage, } from "../api/confirmOrder";
-
 export class AutoClickElements {
   private observer: MutationObserver | null = null;
   private isActive = false;
@@ -55,8 +54,6 @@ export class AutoClickElements {
         }
       }
     });
-
-    setTimeout(() => { }, 500)
     // 2️⃣ Ищем селект "Выбрать способ оплаты"
     const divs: HTMLDivElement[] = element.querySelectorAll?.("div")
       ? Array.from(element.querySelectorAll("div"))
@@ -80,6 +77,13 @@ export class AutoClickElements {
     });
   }
   static findAndClickCancel(ctx: AutoClickElements): void {
+    document.dispatchEvent(new KeyboardEvent("keydown", {
+      key: "Escape",
+      code: "Escape",
+      keyCode: 27,
+      which: 27,
+      bubbles: true
+    }));
     const modal = document.querySelector('div[role="dialog"]') as HTMLElement;
     const buttons: HTMLButtonElement[] = modal.querySelectorAll?.("button")
       ? Array.from(modal.querySelectorAll("button"))
@@ -94,15 +98,6 @@ export class AutoClickElements {
         }
       });
     }
-
-    document.dispatchEvent(new KeyboardEvent("keydown", {
-      key: "Escape",
-      code: "Escape",
-      keyCode: 27,
-      which: 27,
-      bubbles: true
-    }));
-
   }
 
 
@@ -357,11 +352,6 @@ export class AutoClickElements {
     callback?: () => void
   ): void {
     try {
-      const anyEl = element as any;
-      if ("disabled" in anyEl && anyEl.disabled) {
-        console.log(`AutoClick: ${type} отключен`);
-        return;
-      }
 
       if (type === "span") {
         let i = 0;
@@ -413,100 +403,64 @@ export class AutoClickElements {
   }
 
 
-
   // --- Основная функция ---
   static async runSequentialActionsToCreateOrder(ctx: AutoClickElements, messageId: any): Promise<void> {
-    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-    const element: HTMLElement = document.querySelector('div[role="dialog"]') as HTMLElement;
-
     try {
-      // Обновляем статус в начале
+      // 0. Инициализация
       await editTelegramMessage(messageId, "\n\n⏳ Создаю ордер...");
 
-      // 1. Клик "Продать"
-      ctx.findAndClickSellButton(element);
+      // 1-4. Предварительные шаги (Продажа, выбор метода, ввод пароля)
+      // Допущение: методы внутри clickEveryButtonExceptOne не бросают исключения, 
+      // которые нужно обрабатывать специфично для этого этапа.
+      await this.clickEveryButtonExceptOne(ctx);
 
-      // 2. Клик "Использовать другие способы"
-      await delay(2000);
-      await ctx.findAndClickUseOtherMethods();
-
-      // 3. Клик "Пароль фонда"
-      ctx.findAndClickFundPassword();
-
-      // 4. Ввод пароля
-      await ctx.findAndTypeFundPassword();
-
-      // 5. Клик "Подтвердить"
-      ctx.findAndClickConfirmButton();
-
-      // 6. Успех!
-      await editTelegramMessage(messageId, "\n\n✅ Ордер успешно создан!");
-
-      // 7. Назад
-      await delay(6400);
-      window.location.href = "https://www.bybit.com/ru-RU/p2p/sell/USDT/RUB";
+      // 5-7. Завершение (Подтверждение, уведомление, редирект)
+      await this.clickLastButton(ctx, messageId);
 
     } catch (error) {
       console.error("AutoClick: Ошибка в последовательности:", error);
 
-      // Отправляем сообщение об ошибке
       const errorMessage = error instanceof Error ? error.message : "😭 Неизвестная ошибка";
       await editTelegramMessage(messageId, errorMessage);
 
       // Закрываем диалог при ошибке
-      const dialog = document.querySelector('div[role="dialog"]') as HTMLElement;
+      const dialog = document.querySelector('div[role="dialog"]') as HTMLElement | null;
       if (dialog) {
         AutoClickElements.findAndClickCancel(ctx);
       }
     }
   }
-  //предложенное объявление
-  static async clickEveryButtonExceptOne(ctx: AutoClickElements) {
+
+  static async clickEveryButtonExceptOne(ctx: AutoClickElements): Promise<void> {
     const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
     await delay(2000);
-    const element: HTMLElement = document.querySelector('div[role="dialog"]') as HTMLElement;
-    // 1. Клик "Продать"
+    const element = document.querySelector('div[role="dialog"]') as HTMLElement;
+
+    // Если element === null, последующие вызовы упадут. 
+    // В TypeScript рекомендуется добавить проверку: if (!element) throw new Error("Dialog not found");
+
     await delay(3000);
     ctx.findAndClickSellButton(element);
 
-    // 2. Клик "Использовать другие способы"
     await delay(2000);
     await ctx.findAndClickUseOtherMethods();
 
-    // 3. Клик "Пароль фонда"
     ctx.findAndClickFundPassword();
-
-    // 4. Ввод пароля
     await ctx.findAndTypeFundPassword();
-
   }
 
   static async clickLastButton(ctx: AutoClickElements, messageId: any): Promise<void> {
     const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-    try {
 
-      // 5. Клик "Подтвердить"
-      ctx.findAndClickConfirmButton();
+    // 5. Клик "Подтвердить"
+    ctx.findAndClickConfirmButton();
 
-      // 6. Успех!
-      await editTelegramMessage(messageId, "\n\n✅ Ордер успешно создан!");
+    // 6. Успех!
+    await editTelegramMessage(messageId, "\n\n✅ Ордер успешно создан!");
 
-      // 7. Назад
-      await delay(6400);
-      window.location.href = "https://www.bybit.com/ru-RU/p2p/sell/USDT/RUB";
-
-    } catch (error) {
-      console.error("AutoClick: Ошибка в последовательности:", error);
-
-      // Отправляем сообщение об ошибке
-      const errorMessage = error instanceof Error ? error.message : "😭 Неизвестная ошибка";
-      await editTelegramMessage(messageId, errorMessage);
-
-      // Закрываем диалог при ошибке
-      const dialog = document.querySelector('div[role="dialog"]') as HTMLElement;
-      if (dialog) {
-        AutoClickElements.findAndClickCancel(ctx);
-      }
-    }
+    // 7. Назад
+    await delay(6400);
+    window.location.href = "https://www.bybit.com/ru-RU/p2p/sell/USDT/RUB";
   }
 }

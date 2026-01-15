@@ -3,7 +3,6 @@
 import { forbiddenPhrases, MIN_EXECUTED_COUNT, } from '../../core/config.ts';
 import { appState } from '../../core/state.ts';
 import type { Ad } from '../types/ads';
-import type { ReviewStats } from '../types/reviews';
 import { availableBanks } from './bankParser.ts';
 
 // side == 1 - покупка
@@ -20,35 +19,6 @@ export function adShouldBeFiltered(ad: Ad) {
     return true;
   }
 
-  let storedStats: ReviewStats[] = [];
-  try {
-
-
-    // 2. Фильтрация для стороны ad.side === 0 по количеству хороших отзывов
-    if (ad.side === 0) {
-      const storedStatsRaw = localStorage.getItem("reviewsStatistics_v1");
-      storedStats = storedStatsRaw ? JSON.parse(storedStatsRaw) : [];
-      const userStats = storedStats.find((item) => item.userId === ad.userId);
-      const goodReviewsCount = userStats?.goodReviewsCount ?? 0;
-      if (goodReviewsCount < 100) {
-        return true;
-      }
-
-    }
-    // Проверка на корректность типа после получения из хранилища (если понадобится)
-    if (!Array.isArray(storedStats)) storedStats = [];
-  } catch (err) {
-
-    storedStats = []; // Сброс в пустой массив при ошибке
-  }
-
-  const userStats = storedStats.find(item => item.userId === ad.userId);
-
-  // 3. Фильтрация по количеству подсвеченных (highlighted) объявлений
-  if (userStats && userStats.highlightedCount >= 3 && ad.side === 0) {
-
-    return true;
-  }
 
   const min = parseFloat(ad.minAmount);
   const max = parseFloat(ad.maxAmount);
