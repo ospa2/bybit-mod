@@ -58,7 +58,7 @@ export function adShouldBeFiltered(ad: Ad) {
       }
     }
   }
-
+  
   // Если объявление прошло все проверки
   return false;
 }

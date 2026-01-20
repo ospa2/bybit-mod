@@ -6,7 +6,7 @@ import { appState } from "../../../core/state.ts";
 import type { Ad, ApiResult, GenericApiResponse } from "../../../shared/types/ads";
 import { watchOrder } from "../../../shared/orders/orderWatcher.ts";
 import { StorageHelper } from "../../../shared/storage/storageHelper.ts";
-import { findBestBuyAd, findBuyCard } from "../automation/buyCardSelector.ts";
+import { findBestBuyAd, findBuyCard } from "../automation/buyAdSelector.ts";
 import { openBuyModal } from "../components/buyModal.ts";
 import { updateMaxAmount } from "../../../shared/utils/bankParser.ts";
 
@@ -56,6 +56,7 @@ export async function fetchAndAppendPage(): Promise<void> {
       const json = await res.json();
       const adsRaw: Ad[] = json.result?.items ?? [];
       const ads: Ad[] = adsRaw.map(updateMaxAmount).filter(ad => !adShouldBeFiltered(ad))
+
 
       // Расчет минимальной цены для фильтрации и логики
       const minPrice = ads.length > 0 ? Math.min(...ads.map(a => parseFloat(a.price))) : 0;
@@ -232,7 +233,7 @@ export async function fetchAdDetails(ad: Ad): Promise<ApiResult & GenericApiResp
       // 2. Применяем логику обновления maxAmount и quantity
       // Функция updateMaxAmount вернет мутированный объект
       console.log(combinedResult.maxAmount);
-      
+
       const updatedResult = updateMaxAmount(combinedResult);
       console.log(updatedResult.maxAmount)
 

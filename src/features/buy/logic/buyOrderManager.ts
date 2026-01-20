@@ -6,7 +6,7 @@ import { watchOrder } from "../../../shared/orders/orderWatcher.ts";
 import { loadCards, StorageHelper } from "../../../shared/storage/storageHelper.ts";
 import type { ApiResult, Order, OrderData } from "../../../shared/types/ads";
 import type { Card } from "../../../shared/types/reviews";
-import { markCardAsUsed } from "../automation/adFinder.ts";
+import { markCardAsUsed } from "../automation/cardFinder.ts";
 
 
 /**

@@ -1,7 +1,7 @@
 import { loadCards } from "../../../shared/storage/storageHelper";
 import type { Ad } from "../../../shared/types/ads";
 import type { Card } from "../../../shared/types/reviews";
-import { calculateValue, canUseCard, getContextAwareReferencePrice } from "./adFinder";
+import { calculateValue, canUseCard, getContextAwareReferencePrice } from "./cardFinder";
 
 const MIN_NORMAL_VOLUME = 20000;
 // Мелкое объявление должно быть дешевле "нормального" минимум на 0.4%
@@ -103,16 +103,6 @@ export function findBestBuyAd(ads: Ad[]): { ad: Ad; card: Card } | null {
 
    candidates.sort((a, b) => b.value - a.value);
 
-   // Проверка кулдауна
-   const COOLDOWN_MS = 5 * 60 * 1000;
-   const lastTime = Number(localStorage.getItem("tradingModalCooldown") || "0");
-   const now = Date.now();
-
-   if (now - lastTime < COOLDOWN_MS) {
-      const remainingMs = COOLDOWN_MS - (now - lastTime);
-      console.log(`⏳ КД трейдинга: ${(remainingMs / 1000).toFixed(0)} сек`);
-      return null;
-   }
 
    // Передаем кандидатов в проверку лидерства
    // (Примечание: hasSignificantLead использует абсолютные значения value, 

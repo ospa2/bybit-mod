@@ -6,7 +6,7 @@ import { watchOrder } from "../../../shared/orders/orderWatcher";
 import { loadCards, StorageHelper } from "../../../shared/storage/storageHelper";
 import type { Ad, CreateResponse, OrderData, OrderPayload } from "../../../shared/types/ads";
 import type { Card } from "../../../shared/types/reviews";
-import { markCardAsUsed } from "../../buy/automation/adFinder";
+import { markCardAsUsed } from "../../buy/automation/cardFinder";
 import { findSellCard } from "../automation/sellCardSelector";
 
 const API_URL = "https://orders-finances-68zktfy1k-ospa2s-projects.vercel.app/api/orders";
@@ -26,7 +26,7 @@ export async function saveSellData(request: OrderPayload, result: CreateResponse
 
    const card = findSellCard(request, remark);
    const maxAmount = parseFloat(request.amount);
-   
+
    if (card) watchOrder(result.result.orderId, card);
 
    cards = cards.map((c) =>

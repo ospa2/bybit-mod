@@ -2,7 +2,6 @@
 
 import type { OrderData } from "../types/ads";
 import type { Card, CardUsageMap, ReviewStats } from "../types/reviews";
-import { isSameDay } from "../utils/timeStuff";
 
 const REVIEWSSTATISTICS = "reviewsStatistics_v1";
 const CARDS_LAST_USED = '!cards_last_used';
@@ -248,14 +247,6 @@ export function loadCards(): Card[] {
    try {
       const cardsFromStorage: Card[] = JSON.parse(raw);
 
-      // Проверяем, нужно ли сбросить оборот для всех карт
-      if (shouldResetTurnover()) {
-         return cardsFromStorage.map((card) => ({
-            ...card,
-            turnover: 0,
-         }));
-      }
-
       // Если сброс не требуется, просто возвращаем карты с восстановленными датами
       return cardsFromStorage.map((card) => ({
          ...card
@@ -263,29 +254,6 @@ export function loadCards(): Card[] {
    } catch (e) {
       console.error("Error loading or processing cards:", e);
       return [];
-   }
-}
-
-function shouldResetTurnover(): boolean {
-   const raw = localStorage.getItem("!cards_last_used");
-   if (!raw) return false;
-
-   try {
-      const lastUsedTimes: Record<string, number> = JSON.parse(raw);
-      const timestamps = Object.values(lastUsedTimes);
-
-      if (timestamps.length === 0) return false;
-
-      // Находим максимальный timestamp
-      const maxTimestamp = Math.max(...timestamps);
-      const lastUsedDate = new Date(maxTimestamp);
-      const today = new Date();
-
-      // Проверяем, было ли последнее использование не сегодня
-      return !isSameDay(lastUsedDate, today);
-   } catch (e) {
-      console.error("Error checking last used times:", e);
-      return false;
    }
 }
 

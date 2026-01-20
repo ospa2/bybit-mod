@@ -75,6 +75,8 @@ export function initFetchInterceptor() {
 
    // Запуск бота
    runBotPolling();
+
+   // не сработает, если создать ордер с телефона
    function watchCurOrders() {
       let isProcessing = false; // защита от повторного выполнения
       const interval = 1000; // интервал проверки

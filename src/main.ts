@@ -11,7 +11,7 @@ import { AutoClickElements } from "./features/sell/automation/autoсlicker.ts";
 import { backgroundProcessAds } from "./features/sell/logic/sellBackgroundProc.ts";
 import { addOnlySberSwitch } from "./features/buy/components/sberSwitch.ts";
 import { loadCards } from "./shared/storage/storageHelper.ts";
-import { watchNewOrders } from "./shared/orders/getOrders.ts";
+import { watchNewOrders } from "./shared/orders/newOrdersScanner.ts";
 import { fetchAndStoreCards } from "./shared/orders/fetchCards.ts";
 import { OrderChatManager } from "./shared/orders/orderChatManager.ts";
 import { initializeDailyReset } from "./features/buy/automation/cardsTurnover.ts";

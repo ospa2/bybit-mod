@@ -149,6 +149,7 @@ export function canUseCard(card: Card, ad: Ad | OrderPayload, remarkFromTG?: str
    if ("maxAmount" in ad) {
       amount = parseFloat(ad.maxAmount);
       if (isNaN(amount)) return false;
+      
       if (card.balance - amount < 10_000) return false;
       if (card.turnover + amount > 100_000) return false;
       return paymentWeight(ad, card) > 0;

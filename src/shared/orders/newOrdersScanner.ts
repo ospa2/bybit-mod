@@ -1,13 +1,15 @@
-import { markCardAsUsed } from "../../features/buy/automation/adFinder";
-import { findBuyCard } from "../../features/buy/automation/buyCardSelector";
+import { markCardAsUsed } from "../../features/buy/automation/cardFinder";
+import { findBuyCard } from "../../features/buy/automation/buyAdSelector";
 import { findSellCard } from "../../features/sell/automation/sellCardSelector";
 import { loadCards, StorageHelper } from "../storage/storageHelper";
-import type { Ad, OrderData, OrderPayload, PendingOrder } from "../types/ads";
+import type { Ad, CreateResponse, OrderData, OrderPayload, PendingOrder } from "../types/ads";
 import type { Card } from "../types/reviews";
 import { payloadToAd } from "../utils/typeConverter";
 import { watchOrder } from "./orderWatcher";
+import { appState } from "../../core/state";
+import { saveSellData } from "../../features/sell/api/sellApi";
 
-async function getCurrentOrders() {
+async function getPendingOrders() {
    try {
       const res = await fetch(
          "https://www.bybit.com/x-api/fiat/otc/order/pending/simplifyListNotCore",
@@ -70,11 +72,11 @@ export async function watchNewOrders() {
    let isRunning = false;
 
    const interval = setInterval(async () => {
-      if (isRunning) return; // предотвращает параллельные вызовы
+      if (isRunning) return;
       isRunning = true;
 
       try {
-         const orders: PendingOrder[] = await getCurrentOrders();
+         const orders: PendingOrder[] = await getPendingOrders();
          let ordersFromLS: OrderData[] = StorageHelper.getOrders() || [];
 
          for (const order of orders) {
@@ -107,8 +109,8 @@ export async function watchNewOrders() {
                version: "",
                securityRiskToken: "",
                isFromAi: false,
-
             };
+
             let card: Card | null = null;
             const remark = await getRemarkByOrderID(order.id);
             const minPriceRaw = localStorage.getItem("minPrice") || orderPayload.amount;
@@ -125,42 +127,75 @@ export async function watchNewOrders() {
                   card = findSellCard(orderPayload);
                }
             }
-            let cards = loadCards();
-            const isGreetened = await isAlreadyGreetened(order.id);
-            if (!isGreetened) {
-               await (window as any).wsClient.sendMessage({
-                  orderId: order.id,
-                  message: "Привет"
-               });
+
+            // 🔹 Используем saveSellData для обработки SELL ордеров
+            if (orderData.Type === "SELL") {
+               const mockResult: CreateResponse = {
+                  ret_code: 0,
+                  ret_msg: "",
+                  result: {
+                     orderId: order.id,
+                     isNeedConfirm: false,
+                     confirmId: "",
+                     success: true,
+                     securityRiskToken: "",
+                     riskTokenType: "",
+                     riskVersion: "",
+                     needSecurityRisk: false,
+                     isBulkOrder: false,
+                     delayTime: ""
+                  },
+                  ext_code: "",
+                  ext_info: {},
+                  time_now: new Date().toISOString()
+               };
+
+               // Временно сохраняем nickname для saveSellData
+               const previousNickname = appState.counterpartyNickname;
+               appState.counterpartyNickname = order.targetNickName || order.targetUserMaskId;
+
+               await saveSellData(orderPayload, mockResult);
+
+               // Восстанавливаем предыдущее значение
+               appState.counterpartyNickname = previousNickname;
+            } else {
+               // BUY ордер - обрабатываем отдельно
+               let cards = loadCards();
+               const isGreetened = await isAlreadyGreetened(order.id);
+
+               if (!isGreetened) {
+                  await (window as any).wsClient.sendMessage({
+                     orderId: order.id,
+                     message: "Привет"
+                  });
+               }
+
+               if (card) watchOrder(order.id, card);
+
+               if (card) {
+                  const val = -parseFloat(order.amount);
+                  cards = cards.map((c) =>
+                     c.id === card.id
+                        ? {
+                           ...c,
+                           balance: c.balance + val,
+                           turnover: c.turnover + val,
+                        }
+                        : c
+                  );
+
+                  markCardAsUsed(card.id);
+                  localStorage.setItem("!cards", JSON.stringify(cards));
+               }
+
+               const newOrderData: OrderData = {
+                  order: orderData,
+                  card: card || null
+               };
+
+               ordersFromLS.push(newOrderData);
+               StorageHelper.setOrders(ordersFromLS);
             }
-
-            // 🔹 Запустить наблюдение за картой только если она есть
-            if (card) watchOrder(order.id, card);
-
-            // 🔹 Обновление балансов карты
-            if (card) {
-               const val = orderData.Type === "BUY" ? -parseFloat(order.amount) : parseFloat(order.amount);
-               cards = cards.map((c) =>
-                  c.id === card.id
-                     ? {
-                        ...c,
-                        balance: c.balance + val,
-                        turnover: c.turnover + val,
-                     }
-                     : c
-               );
-
-               markCardAsUsed(card.id);
-               localStorage.setItem("!cards", JSON.stringify(cards));
-            }
-
-            const newOrderData: OrderData = {
-               order: orderData,
-               card: card || null
-            };
-
-            ordersFromLS.push(newOrderData);
-            StorageHelper.setOrders(ordersFromLS);
          }
       } catch (error) {
          console.error("❌ Ошибка при проверке новых ордеров", error);

@@ -1,8 +1,32 @@
 import type { Ad, ApiResult, GenericApiResponse } from "../types/ads";
 
-type BankVariants = {
-   [key: string]: (string | RegExp)[];
-};
+
+const BANK_NAMES = [
+   "Тинькофф",
+   "Сбербанк",
+   "Альфа-Банк",
+   "ВТБ",
+   "Газпромбанк",
+   "Райффайзенбанк",
+   "Росбанк",
+   "МКБ",
+   "Совкомбанк",
+   "Яндекс",
+   "Почта Банк",
+   "Ак Барс",
+   "УралСиб",
+   "Русский Стандарт",
+   "Промсвязьбанк",
+   "ОТП Банк",
+   "Россельхозбанк",
+   "Озон",
+] as const;
+
+type BankName = (typeof BANK_NAMES)[number];
+
+// 2. Делаем структуру readonly для оптимизации компилятором
+type BankVariants = Readonly<Record<BankName, ReadonlyArray<string | RegExp>>>;
+
 const bankVariants: BankVariants = {
    Тинькофф: [/[tт]ин[ь]?к/, /[тt]\-*_*[.]*\s*_*б[аa]нк/, "t-bank"],
    Сбербанк: [/[сc]б[еe][рp]/, "sber"],
@@ -23,6 +47,41 @@ const bankVariants: BankVariants = {
    Россельхозбанк: ["россельхоз", "рсхб"],
    Озон: ["озон", "ozon"],
 };
+
+// 3. Компилируем паттерны один раз при инициализации
+// Превращаем строки в RegExp с флагом 'i', чтобы не делать toLowerCase()
+const COMPILED_BANKS: ReadonlyArray<{ name: BankName; matcher: RegExp }> =
+   Object.entries(bankVariants).map(([name, variants]) => {
+      const pattern = variants
+         .map((v) =>
+            typeof v === "string"
+               ? v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+               : v.source
+         )
+         .join("|");
+      return {
+         name: name as BankName,
+         matcher: new RegExp(pattern, "i"),
+      };
+   });
+
+/**
+ * Оптимизированный поиск
+ * Исключает аллокацию lowerText и Set внутри цикла
+ */
+function findAllMentionedBanks(text: string): BankName[] {
+   const result: BankName[] = [];
+
+   // Обычный for быстрее, чем forEach/map для горячих путей
+   for (let i = 0; i < COMPILED_BANKS.length; i++) {
+      const { name, matcher } = COMPILED_BANKS[i];
+      if (matcher.test(text)) {
+         result.push(name);
+      }
+   }
+
+   return result;
+}
 
 function replaceEmojiWithDots(text: string): string {
    // Константа для минимального расстояния
@@ -260,56 +319,46 @@ function removeRecipientBanks(text: string): string {
 
    return result.replace(/\s+/g, " ").trim();
 }
-
-function removeExcludedBanks(input: string): string {
+interface CleanedData {
+   text: string;
+   excluded: BankName[];
+}
+function removeExcludedBanks(input: string): CleanedData {
    let result = input;
+   const excludedSet = new Set<BankName>();
 
-   // Паттерны для запретов
    const excludePatterns = [
       // 1. "не принимаю с [банк]"
-      // Примеры: "не принимаю с альфы", "не принимаем платеж от сбербанка"
       /не\s+(?:(?:принима[юе][тм]?[ся]?|прим[уе][м]?|работа[юе]м?)\s)?(?:платеж[и]?|перевод[ы]?|оплат[аыу]?)?\s?(?:с|со|от|из)\s?[^.;\n]+/g,
-
       // 2. "кроме [банк/список банков]"
-      // Примеры: "кроме сбербанка", "кроме тинькофф и альфы"
       /кроме\s+[^.,;!?\n]+/g,
-
       // 3. "[банк] не принимаю"
       /(?:(?!(?:^|\s)(?:принимаю|только|на|перевод|по|карт)(?:\s|$))[а-яa-z\-—\s,])+\s*(?<!верси(?:[июя]|ей)\s)(?:платеж[и]?|перевод[ы]?|оплат[аыу]?)?не\s*(?:принима[юе][тм]?[ся]?|прим[уе][м]?)(?!\sс\s(?:ип|веб|т-бизнеса|ооо))/g,
-
-      // 4. "исключая [банк]" или "за исключением [банк]"
-      // Примеры: "исключаю сбер", "за исключением тинькофф"
+      // 4. "исключая [банк]"
       /(?:исключа[яю]|за\s+исключением)\s+[а-я]+/g,
-
-      // 5. "не принимаю: [список банков через запятую]"
-      // Примеры: "не принимаю: озон, сбер, альфа", "не приму; тинькофф, райф"
-      // Захватывает всё до точки или конца строки
+      // 5. "не принимаю: [список]"
       /не\s+(?:принима[юе][тм]?[ся]?|прим[уе][м]?)\s*[:;]\s*[^.\n]+/g,
    ];
 
-   const anyBankPatterns = [/с\sлюбого\sбанк/];
-   let anyBank = false;
-   anyBank = anyBankPatterns.some((pattern) => {
-      return pattern.test(input);
-   });
-
    excludePatterns.forEach((pattern) => {
       result = result.replace(pattern, (match) => {
-         // Проверяем, упомянут ли какой-то банк в найденном фрагменте
          const mentionedBanks = findAllMentionedBanks(match);
-         if (mentionedBanks.length > 0 || anyBank) {
-            // Только если найден хотя бы один банк — заменяем
+
+         if (mentionedBanks.length > 0) {
+            // Сохраняем найденные банки в Set перед удалением
+            mentionedBanks.forEach((bank) => excludedSet.add(bank));
             return " ";
          }
-         // Иначе оставляем как есть
          return match;
       });
    });
 
-   // Нормализуем пробелы
    result = result.replace(/\s+/g, " ").trim();
 
-   return result;
+   return {
+      text: result,
+      excluded: Array.from(excludedSet),
+   };
 }
 function removeExcludedSellBanks(input: string): string {
    let result = input;
@@ -358,66 +407,46 @@ function removeExcludedSellBanks(input: string): string {
    return result;
 }
 // Находит все упомянутые банки в очищенном тексте
-function findAllMentionedBanks(text: string): string[] {
-   function includesBank(text: string, variant: string | RegExp) {
-      if (typeof variant === "string") {
-         return text.includes(variant);
-      } else {
-         return variant.test(text);
-      }
-   }
 
-   const lowerText = text.toLowerCase();
-   const found = new Set<string>();
 
-   for (const [bankName, variants] of Object.entries(bankVariants)) {
-      for (const variant of variants) {
-         if (includesBank(lowerText, variant)) {
-            found.add(bankName);
-            break;
-         }
-      }
-   }
+// function isFromAnyBank(text: string): boolean {
+//    if (!text) return false;
 
-   return Array.from(found);
-}
+//    const pattern=/(?:со?|из)\s+(?:люб[оы](?:го|х)|всех)\s+банк(?:а|ов)/
+   
+//    return pattern.test(text);
 
-function isFromAnyBank(text: string): boolean {
-   if (!text) return false;
-
-   let remark = cleanText(text);
-
-   const patterns = [
-      // с любого банка / с любого российского банка
-      /со?\s+любо(го|й)\s+банка/,
-      /со?\s+всех\s+банков/,
-      /со?\s+любых\s+банков/,
-
-      // из любого банка
-      /из\s+любо(го|й)\s+банка/,
-
-   ];
-   const noExcludedBanks = removeExcludedBanks(remark).length === remark.length;
-   if (noExcludedBanks) {
-      return patterns.some((regex) => regex.test(remark));
-   } else {
-      return false;
-   }
-}
+// }
 // Главная функция с новым подходом
 export function availableBanks(description: string): string[] {
-   // Удаляем эмодзи и лишние пробелы
-   let text = cleanText(description);
-   // Шаг 1: Удаляем фрагменты с запрещенными банками
-   text = removeExcludedBanks(text);
-   // Шаг 2: Удаляем фрагменты, где банки упоминаются как получатели
-   text = removeRecipientBanks(text);
-   // Шаг 3: Ищем все оставшиеся упоминания банков
-   const result = findAllMentionedBanks(text);
-   // Если ничего не найдено, возвращаем wildcard
-   if (isFromAnyBank(description)) return ["*"];
+   let remark = cleanText(description);
 
-   return result.length > 0 ? result : ["*"];
+   // Шаг 1: Извлекаем исключенные банки и чистим текст
+   const { text: textWithoutExclusion, excluded } = removeExcludedBanks(remark);
+   remark = textWithoutExclusion;
+
+   // Шаг 2: Удаляем банки-получатели (ваша существующая логика)
+   remark = removeRecipientBanks(remark);
+
+   // Шаг 3: Ищем явно разрешенные банки
+   const explicitBanks = findAllMentionedBanks(remark);
+
+
+   // Логика выбора результата:
+
+   // 1. Если указаны конкретные банки для перевода (напр. "на сбер и тиньк")
+   if (explicitBanks.length > 0) {
+      return explicitBanks;
+   }
+
+   // 2. Если явных нет, но есть список "кроме" (напр. "кроме озона")
+   if (excluded.length > 0) {
+      // Возвращаем все банки из справочника, которых нет в excluded
+      return BANK_NAMES.filter((name) => !excluded.includes(name));
+   }
+
+   // 3. Если ничего не найдено
+   return ["*"];
 }
 
 export function availableBanksSell(description: string): string[] {

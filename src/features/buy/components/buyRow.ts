@@ -3,19 +3,19 @@ import { openBuyModal } from "./buyModal";
 import { paymentColors } from "../../../core/config";
 import type { Ad } from "../../../shared/types/ads";
 import { availableBanks } from "../../../shared/utils/bankParser";
-import { findBuyCard } from "../automation/buyCardSelector";
+import { findBuyCard } from "../automation/buyAdSelector";
 
 export function createRowFromTemplate(ad: Ad, minPrice?: number): ChildNode | null {
-   function getPaymentStyle(paymentId: string): string {
-      const color = (paymentColors as any)[paymentId];
-      if (!color) return "";
-      const isGradient = color.includes('gradient');
-      return `${isGradient ? 'background' : 'background-color'}: ${color}; color: white;`;
-   }
+    function getPaymentStyle(paymentId: string): string {
+        const color = (paymentColors as any)[paymentId];
+        if (!color) return "";
+        const isGradient = color.includes('gradient');
+        return `${isGradient ? 'background' : 'background-color'}: ${color}; color: white;`;
+    }
 
-   const card = findBuyCard(ad, minPrice || 0);
+    const card = findBuyCard(ad, minPrice || 0);
 
-   const rowHTML = /*html*/ `
+    const rowHTML = /*html*/ `
         <div class="dynamic-row" style="display: contents;">
             <div class="table-row" style="display: table-row;">
                 <div class="table-cell" style="display: table-cell; width: 500px; padding: 16px; vertical-align: middle;">
@@ -81,54 +81,54 @@ export function createRowFromTemplate(ad: Ad, minPrice?: number): ChildNode | nu
         </div>
     `;
 
-   const tempDiv = document.createElement("div");
-   tempDiv.innerHTML = rowHTML.trim();
-   const newRow = tempDiv.firstChild as HTMLElement;
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = rowHTML.trim();
+    const newRow = tempDiv.firstChild as HTMLElement;
 
-   // Регистрация событий (только один раз при создании)
-   newRow.querySelector("button")?.addEventListener("click", () => {
-      const currentMinPrice = parseFloat(localStorage.getItem("minPrice") || "0");
-      const currentCard = findBuyCard(ad, currentMinPrice);
-      openBuyModal({ ad, card: currentCard }, currentMinPrice, false);
-   });
+    // Регистрация событий (только один раз при создании)
+    newRow.querySelector("button")?.addEventListener("click", () => {
+        const currentMinPrice = parseFloat(localStorage.getItem("minPrice") || "0");
+        const currentCard = findBuyCard(ad, currentMinPrice);
+        openBuyModal({ ad, card: currentCard }, currentMinPrice, false);
+    });
 
-   const priceSpan = newRow.querySelector(".price-amount") as HTMLElement;
-   if (priceSpan) {
-      priceSpan.addEventListener("mouseenter", () => {
-         const val = priceSpan.querySelector('.js-price-value')?.textContent || ad.price;
-         showPricePopup(priceSpan, val);
-      });
-      priceSpan.addEventListener("mouseleave", removeExistingPricePopup);
-   }
+    const priceSpan = newRow.querySelector(".price-amount") as HTMLElement;
+    if (priceSpan) {
+        priceSpan.addEventListener("mouseenter", () => {
+            const val = priceSpan.querySelector('.js-price-value')?.textContent || ad.price;
+            showPricePopup(priceSpan, val);
+        });
+        priceSpan.addEventListener("mouseleave", removeExistingPricePopup);
+    }
 
-   return newRow;
+    return newRow;
 }
 
 // Вспомогательные функции для Popup (без изменений)
 function removeExistingPricePopup() {
-   document.querySelector(".price-popup")?.remove();
+    document.querySelector(".price-popup")?.remove();
 }
 
 function showPricePopup(anchor: HTMLElement, valueStr: string) {
-   removeExistingPricePopup();
-   const popup = document.createElement("div");
-   popup.className = "price-popup";
-   const priceNum = parseFloat(valueStr);
+    removeExistingPricePopup();
+    const popup = document.createElement("div");
+    popup.className = "price-popup";
+    const priceNum = parseFloat(valueStr);
 
-   Object.assign(popup.style, {
-      position: "absolute", padding: "8px 10px", borderRadius: "6px",
-      background: "white", color: "black", fontSize: "13px", zIndex: "99999",
-      boxShadow: "0 6px 18px rgba(0,0,0,0.12)", pointerEvents: "none"
-   });
+    Object.assign(popup.style, {
+        position: "absolute", padding: "8px 10px", borderRadius: "6px",
+        background: "white", color: "black", fontSize: "13px", zIndex: "99999",
+        boxShadow: "0 6px 18px rgba(0,0,0,0.12)", pointerEvents: "none"
+    });
 
-   const rows = [3, 4, 5, 6, 7].map(pct => `
+    const rows = [3, 4, 5, 6, 7].map(pct => `
         <div><strong>+${pct}%:</strong> ${(priceNum * (1 + pct / 100)).toLocaleString("ru-RU", { minimumFractionDigits: 2 })}</div>
     `).join('');
 
-   popup.innerHTML = `<div style="display: flex; flex-direction: column; gap: 4px;">${rows}</div>`;
-   document.body.appendChild(popup);
+    popup.innerHTML = `<div style="display: flex; flex-direction: column; gap: 4px;">${rows}</div>`;
+    document.body.appendChild(popup);
 
-   const rect = anchor.getBoundingClientRect();
-   popup.style.left = `${rect.left + window.scrollX}px`;
-   popup.style.top = `${rect.top + window.scrollY - popup.offsetHeight - 8}px`;
+    const rect = anchor.getBoundingClientRect();
+    popup.style.left = `${rect.left + window.scrollX}px`;
+    popup.style.top = `${rect.top + window.scrollY - popup.offsetHeight - 8}px`;
 }
