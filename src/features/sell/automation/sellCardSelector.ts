@@ -16,19 +16,11 @@ export function findSellCard(ad: OrderPayload, remark?: string): Card | null {
    if (!available.length) return null;
 
    // если есть рабочие тиньки, то они в приоритете
-   available.sort((a, b) => {
-      const priority = (bank: string) =>
-         bank.toLowerCase().includes("sber")
-            ? 1
-            : bank.toLowerCase().includes("tbank")
-               ? 2
-               : 3;
-      return priority(a.bank) - priority(b.bank);
-   });
+   available.sort((a, b) => a.balance - b.balance);
+   
 
    let bestCard = available[0];
 
-   // Обновляем cards_v1 (сброс turnover при новом дне)
    localStorage.setItem("!cards", JSON.stringify(cards));
 
    return bestCard;

@@ -4,7 +4,7 @@ import { bestMerchants } from "../../../core/config";
 import { filterRemark } from "../../../shared/utils/filterRemark";
 import type { Ad } from "../../../shared/types/ads";
 import type { ReviewStats } from "../../../shared/types/reviews";
-import { sendTelegramMessage } from "../api/confirmOrder";
+import { sendTelegramMessage } from "../api/telegramNotifier";
 import { AutoClickElements } from "../automation/autoсlicker";
 
 

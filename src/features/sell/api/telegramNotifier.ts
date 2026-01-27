@@ -19,10 +19,6 @@ function getMessageData(messageId: number) {
    return messageDataStore.get(messageId);
 }
 
-function deleteMessageData(messageId: number) {
-   messageDataStore.delete(messageId);
-}
-
 export async function sendTelegramMessage(ad: Ad, card?: Card, apiResult?: ApiResult) {
    const payload: OrderPayload = {
       itemId: ad.id,
@@ -40,12 +36,12 @@ export async function sendTelegramMessage(ad: Ad, card?: Card, apiResult?: ApiRe
 
    if (ad.side === 0) {
       // продажа
-      const card = findSellCard(payload, ad.remark);
+      const card = findSellCard(payload, ad.remark.toLowerCase());
 
       let poNomeruKarti = false
 
       const regex = new RegExp(/(?:номер[уа]?\s?)карт(?!\sне)/g);
-      poNomeruKarti = regex.test(ad.remark);
+      poNomeruKarti = regex.test(ad.remark.toLowerCase());
 
       const baseText =
          `🟥 ${ad.maxAmount} ₽ по ${ad.price} ₽\n` +
@@ -53,7 +49,7 @@ export async function sendTelegramMessage(ad: Ad, card?: Card, apiResult?: ApiRe
          `${card?.bank === "sber" ? "🟢" : "🟡"}${card?.id} ${card ? `по ${poNomeruKarti ? "номеру карты; " : "сбп; "} баланс (${card.balance}₽)` : `🟥 Подходящая карта не нашлась`}\n\n` +
          `🟥 Описание:\n${ad.remark}\n\n`
 
-      const text = baseText + `❓ Создать ордер?`;
+      const text = baseText
 
       const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
          method: "POST",
@@ -64,8 +60,7 @@ export async function sendTelegramMessage(ad: Ad, card?: Card, apiResult?: ApiRe
             reply_markup: {
                inline_keyboard: [
                   [
-                     { text: "✅ Да", callback_data: "confirm_yes" },
-                     { text: "❌ Нет", callback_data: "confirm_no" }
+                     { text: "✅ Создать ордер", callback_data: "confirm_yes" },
                   ]
                ]
             }
@@ -146,7 +141,11 @@ let lastUpdateId = 0;
 export async function checkTelegramResponse() {
    try {
       const allowed = encodeURIComponent(JSON.stringify(["message", "callback_query"]));
-      const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates?offset=${lastUpdateId + 1}&allowed_updates=${allowed}`);
+      // Внутри checkTelegramResponse
+      const timeout = 30; // Секунды ожидания на стороне сервера TG
+      const res = await fetch(
+         `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates?offset=${lastUpdateId + 1}&limit=100&timeout=${timeout}&allowed_updates=${allowed}`
+      );
       const data = await res.json();
 
       if (!data.ok) {
@@ -191,18 +190,6 @@ export async function checkTelegramResponse() {
                   }
                }
 
-            } else if (action === "confirm_no") {
-               console.log("❌ Отменено пользователем");
-               const dialog = document.querySelector('div[role="dialog"]') as HTMLElement;
-               if (dialog && (window as any).autoClicker) {
-                  AutoClickElements.findAndClickCancel((window as any).autoClicker);
-               } else {
-                  console.log("AutoClick: диалог или экземпляр autoClicker не найден");
-               }
-               await answerCallback(callbackId, "Отменено ❌");
-
-               // Удаляем данные отмененного сообщения
-               deleteMessageData(messageId);
             }
          }
       }

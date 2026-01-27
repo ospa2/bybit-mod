@@ -22,7 +22,7 @@ export async function saveSellData(request: OrderPayload, result: CreateResponse
    let cards: Card[] = loadCards()
    const curAds: Ad[] = JSON.parse(localStorage.getItem("curAds") || "[]");
 
-   const remark = curAds.find((a) => a.id === request.itemId)?.remark
+   const remark = curAds.find((a) => a.id === request.itemId)?.remark.toLowerCase()
 
    const card = findSellCard(request, remark);
    const maxAmount = parseFloat(request.amount);
@@ -68,7 +68,9 @@ export async function saveSellData(request: OrderPayload, result: CreateResponse
       // Добавляем новый объект
       orders.push({ order: newOrder, card: card });
       StorageHelper.setOrders(orders);
-      sendCardsToServer(cards);
+      if (card) {
+         sendCardsToServer(card.id, Number(request.amount));
+      }
    }
    if ((window as any).wsClient) {
       await (window as any).wsClient.sendMessage({

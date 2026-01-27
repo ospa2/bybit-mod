@@ -8,13 +8,12 @@ import { BybitP2PWebSocket } from "./shared/api/wsPrivate.ts";
 import { initFetchInterceptor } from "./features/sell/logic/sellInterceptor.ts";
 import { resumePendingOrders } from "./features/buy/api/buyApi.ts";
 import { AutoClickElements } from "./features/sell/automation/autoсlicker.ts";
-import { backgroundProcessAds } from "./features/sell/logic/sellBackgroundProc.ts";
+import { backgroundProcessAds } from "./features/sell/logic/reviewsSync.ts";
 import { addOnlySberSwitch } from "./features/buy/components/sberSwitch.ts";
 import { loadCards } from "./shared/storage/storageHelper.ts";
 import { watchNewOrders } from "./shared/orders/newOrdersScanner.ts";
 import { fetchAndStoreCards } from "./shared/orders/fetchCards.ts";
 import { OrderChatManager } from "./shared/orders/orderChatManager.ts";
-import { initializeDailyReset } from "./features/buy/automation/cardsTurnover.ts";
 function now() {
    return new Date().toISOString();
 }
@@ -24,7 +23,7 @@ initFetchInterceptor();
 function startPeriodicRefresh() {
    stopPeriodicRefresh();
    // Только на buy странице обновляем раз в 3000ms
-   if (location.href.includes("/buy/USDT/RUB")|| location.href.includes("/sell/USDT/RUB")) {
+   if (location.href.includes("/buy/USDT/RUB") || location.href.includes("/sell/USDT/RUB")) {
       periodicRefreshId = setInterval(() => {
          // Запускаем загрузку (внутри уже есть защита от параллельных вызовов)
          loadOnceAndApply().catch((e) =>
@@ -140,8 +139,6 @@ fetchAndStoreCards()
 resumePendingOrders();
 
 backgroundProcessAds()
-
-initializeDailyReset()
 
 const cards = loadCards()
 console.log('cards:', cards);

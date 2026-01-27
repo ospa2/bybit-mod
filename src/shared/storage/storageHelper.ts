@@ -247,7 +247,6 @@ export function loadCards(): Card[] {
    try {
       const cardsFromStorage: Card[] = JSON.parse(raw);
 
-      // Если сброс не требуется, просто возвращаем карты с восстановленными датами
       return cardsFromStorage.map((card) => ({
          ...card
       }));

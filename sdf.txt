@@ -111,8 +111,14 @@
 ]
 
 {
-  "date": "2026-1-19",
-  "samples": 41,
-  "totalSum": 3252.5999999999985,
-  "avgPrice": 78.33170731707314
+  "date": "2026-1-22",
+  "samples": 5,
+  "totalSum": 390.95,
+  "avgPrice": 78.19
 }
+[{"order":{"Order No.":"2014628474955075585","Type":"SELL","Fiat Amount":"64100","Price":"81.00","Coin Amount":"791.3581","Counterparty":"Gatti209","Status":"pending","Time":"2026-01-23T09:17:14.713Z"},"card":{
+    "id": "papaTbank",
+    "bank": "tbank",
+    "balance": 21214,
+    "turnover": 0
+}}]

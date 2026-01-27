@@ -4,9 +4,9 @@ import type { Ad } from "../../../shared/types/ads";
 
 
 import { saveSellData } from "../api/sellApi";
-import { backgroundProcessAds } from "./sellBackgroundProc";
+import { backgroundProcessAds } from "./reviewsSync";
 import { setupSellButtonListener } from "../components/sellDOMHandlers";
-import { checkTelegramResponse } from "../api/confirmOrder";
+import { checkTelegramResponse } from "../api/telegramNotifier";
 import { AutoClickElements } from "../automation/autoсlicker";
 
 let onlineAdsData: Ad[] = []; // Локальное хранилище данных об объявлениях на продажу
@@ -52,16 +52,11 @@ export function initFetchInterceptor() {
    async function runBotPolling() {
       while (true) {
          try {
-
+            // Запрос будет "висеть" до 30 сек, если событий нет.
+            // Как только вы нажмете кнопку, TG мгновенно вернет ответ.
             await checkTelegramResponse();
-
-
-            // Даже при непрерывном polling нужна короткая пауза,
-            // чтобы JS-движок успевал "отдышаться" и не блокировал страницу.
-            await new Promise(resolve => setTimeout(resolve, 50));
-            // 50 мс — практически мгновенно, но достаточно, чтобы не зависала страница
          } catch (error) {
-            console.error("Ошибка в цикле опроса, пауза 5 сек...", error);
+            console.error("Polling error, retry in 5s", error);
             await new Promise(resolve => setTimeout(resolve, 5000));
          }
       }

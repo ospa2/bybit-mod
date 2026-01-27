@@ -1,6 +1,10 @@
 import type { Card } from "../types/reviews";
 
-export async function fetchAndStoreCards() {
+function isValidBank(bank: string): bank is Card['bank'] {
+   return ['tbank', 'sber'].includes(bank);
+}
+
+export async function fetchAndStoreCards(): Promise<void> {
    try {
       const response = await fetch('https://orders-finances.vercel.app/api/cards');
 
@@ -8,18 +12,41 @@ export async function fetchAndStoreCards() {
          throw new Error(`Ошибка запроса: ${response.status}`);
       }
 
-      const cards: Card[] = await response.json();
+      const rawData: unknown = await response.json();
 
-      // Сохраняем в localStorage
+      if (!Array.isArray(rawData)) {
+         throw new Error('Ожидался массив данных');
+      }
+
+      // Маппинг и очистка данных
+      const cards: Card[] = rawData.reduce((acc: Card[], item: any) => {
+         if (
+            typeof item.id === 'string' &&
+            isValidBank(item.bank) &&
+            typeof item.balance === 'number' &&
+            typeof item.turnover === 'number'
+         ) {
+            acc.push({
+               id: item.id,
+               bank: item.bank,
+               balance: item.balance,
+               turnover: item.turnover,
+            });
+         } else {
+            console.warn('Некорректный формат карточки пропущен:', item);
+         }
+         return acc;
+      }, []);
+
       localStorage.setItem('!cards', JSON.stringify(cards));
 
-      console.log('Карты успешно сохранены в localStorage:', cards);
+      console.log('Карты успешно сохранены:', cards);
    } catch (error) {
-      console.error('Не удалось получить или сохранить карты:', error);
+      console.error('Ошибка в fetchAndStoreCards:', error instanceof Error ? error.message : error);
    }
 }
 
-export async function sendCardsToServer(cards: Card[]) {
+export async function sendCardsToServer(id: string, amount: number) {
    try {
       const response = await fetch(
          'https://orders-finances.vercel.app/api/cards',
@@ -28,18 +55,22 @@ export async function sendCardsToServer(cards: Card[]) {
             headers: {
                'Content-Type': 'application/json',
             },
-            body: JSON.stringify(cards),
+            // Изменено: используем id вместо cardId
+            body: JSON.stringify({ id, amount }),
          }
       );
 
       if (!response.ok) {
-         throw new Error(`Ошибка запроса: ${response.status}`);
+         // Выводим текст ошибки от сервера для отладки
+         const errorData = await response.json().catch(() => ({}));
+         throw new Error(`Ошибка ${response.status}: ${errorData.error || 'Unknown error'}`);
       }
 
       const result = await response.json();
-      console.log('Данные успешно отправлены на сервер:', result);
+      console.log('✅ Данные успешно обновлены:', result);
       return result;
    } catch (error) {
-      console.error('Не удалось отправить данные на сервер:', error);
+      console.error('❌ Ошибка отправки на сервер:', error);
+      throw error; // Пробрасываем ошибку дальше
    }
 }

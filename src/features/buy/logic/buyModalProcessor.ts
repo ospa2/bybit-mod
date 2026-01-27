@@ -9,7 +9,7 @@ import type { Ad, ApiResult } from "../../../shared/types/ads";
 import { fetchAdDetails } from "../api/buyApi.ts";
 import type { Card } from "../../../shared/types/reviews";
 import { findBuyCard } from "../automation/buyAdSelector.ts";
-import { sendTelegramMessage } from "../../sell/api/confirmOrder.ts";
+import { sendTelegramMessage } from "../../sell/api/telegramNotifier.ts";
 import { updateMaxAmount } from "../../../shared/utils/bankParser.ts";
 
 

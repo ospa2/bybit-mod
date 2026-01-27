@@ -1,27 +1,10 @@
-import { loadCards } from "../../../shared/storage/storageHelper";
 import type { Ad } from "../../../shared/types/ads";
 import type { Card } from "../../../shared/types/reviews";
-import { calculateValue, canUseCard, getContextAwareReferencePrice } from "./cardFinder";
+import { calculateValue, findBuyCard, getContextAwareReferencePrice } from "./cardFinder";
 
 const MIN_NORMAL_VOLUME = 20000;
 // Мелкое объявление должно быть дешевле "нормального" минимум на 0.4%
 const REQUIRED_DISCOUNT_FOR_SMALL_ADS = 0.004;
-
-export function findBuyCard(ad: Ad, minPrice: number): Card | null {
-   const cards = loadCards();
-   if (!cards.length) return null;
-
-   let best: { card: Card; value: number } | null = null;
-   for (const card of cards) {
-      if (!canUseCard(card, ad)) continue;
-      const value = calculateValue(ad, card, minPrice);
-      if (value <= 0) continue;
-      if (!best || value > best.value) {
-         best = { card, value };
-      }
-   }
-   return best ? best.card : null;
-}
 
 // ==== Улучшенная проверка лидерства ====
 function hasSignificantLead(
@@ -36,7 +19,6 @@ function hasSignificantLead(
 
    const MIN_ABSOLUTE_VALUE = 0.8; // Подняли порог минимального качества
    if (top < MIN_ABSOLUTE_VALUE) {
-      console.log(`Лидер отклонён: value ${top.toFixed(3)} < ${MIN_ABSOLUTE_VALUE}`);
       return false;
    }
 
@@ -79,11 +61,6 @@ export function findBestBuyAd(ads: Ad[]): { ad: Ad; card: Card } | null {
       }
       // ================================
 
-      // Важный момент: какую цену передавать в calculateValue как minPrice?
-      // Если передать утреннюю цену (которая ниже текущей), то:
-      // Объявления с ценой 80 (при утренней 79) получат низкий priceWeight.
-      // Это то, что нам нужно.
-
       const card = findBuyCard(ad, targetReferencePrice);
       if (!card) continue;
 
@@ -108,12 +85,14 @@ export function findBestBuyAd(ads: Ad[]): { ad: Ad; card: Card } | null {
    // (Примечание: hasSignificantLead использует абсолютные значения value, 
    // которые теперь будут занижены для дорогих вечерних объявлений, что нам и нужно)
    if (!hasSignificantLead(candidates)) {
-      console.log("📉 Лидер не имеет достаточного преимущества.");
       return null;
    }
 
    const winner = candidates[0];
    console.log(`✅ ВЫБРАНО (Ref: ${targetReferencePrice.toFixed(2)}): ${parseFloat(winner.ad.price)} | Vol: ${parseFloat(winner.ad.maxAmount)}`);
+   
 
    return winner;
 }
+
+export { findBuyCard };

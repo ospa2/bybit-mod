@@ -67,7 +67,7 @@ async function isAlreadyGreetened(orderId: string): Promise<boolean> {
       return false
    }
 }
-
+// ордеры, созданные через мобильное приложение
 export async function watchNewOrders() {
    let isRunning = false;
 
@@ -122,7 +122,7 @@ export async function watchNewOrders() {
             } else {
                // SELL
                if (remark) {
-                  card = findSellCard(orderPayload, remark);
+                  card = findSellCard(orderPayload, remark.toLowerCase());
                } else {
                   card = findSellCard(orderPayload);
                }

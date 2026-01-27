@@ -5,7 +5,7 @@ import { closeModal } from "../components/buyModalDOM.ts";
 import type { ApiResult, OrderPayload, CreateResponse } from "../../../shared/types/ads";
 import { saveOrderAndWatch } from "./buyOrderManager.ts";
 import type { Card } from "../../../shared/types/reviews";
-import { editTelegramMessage } from "../../sell/api/confirmOrder.ts";
+import { editTelegramMessage } from "../../sell/api/telegramNotifier.ts";
 
 // === Валидация и расчеты ===
 
@@ -17,15 +17,8 @@ export function validateAndToggleButton(amountInput: HTMLInputElement | null, tr
 
    // ... (весь код валидации) ... 
 
-   // (Логика получения баланса из DOM здесь!)
-   const overlay = document.querySelector(".bybit-modal-overlay");
-   const availableBalanceEl = overlay?.querySelector(".balance-info") as HTMLElement | null;
 
-   // ... (Логика извлечения баланса из текста availableBalanceEl.textContent)
-
-   const balanceText = availableBalanceEl?.textContent || "";
-   const cleanedText = balanceText.replace(/Доступно для (покупки|продажи):/g, "").replace(/USDT/g, "").trim();
-   const balance: number = parseFloat(cleanedText.replace(/\s+/g, "").replace(",", ".")) || 0;
+   const balance: number = localStorage.getItem("curbal") ? parseFloat(localStorage.getItem("curbal")!) : 123;
 
 
    const minAmountInUSDT: number = price > 0 ? parseFloat((minAmount / price).toFixed(4)) : 0;
@@ -35,8 +28,12 @@ export function validateAndToggleButton(amountInput: HTMLInputElement | null, tr
       (amount > 0 &&
          amount >= minAmountInUSDT &&
          amount <= maxAmountInUSDT &&
-         amount <= balance) ||
-      window.location.href.includes("buy"); // Не совсем понятно, зачем этот or, но оставляем
+         amount <= balance)
+   console.log("🚀 ~ validateAndToggleButton ~ balance:", balance)
+   console.log("🚀 ~ validateAndToggleButton ~ amount:", amount)
+   console.log("🚀 ~ validateAndToggleButton ~ minAmountInUSDT:", minAmountInUSDT)
+   console.log("🚀 ~ validateAndToggleButton ~ maxAmountInUSDT:", maxAmountInUSDT)
+
 
    if (tradeButton) {
       tradeButton.disabled = !isValid;

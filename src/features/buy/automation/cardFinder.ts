@@ -1,4 +1,4 @@
-import { getCardUsageData, setCardUsageData } from "../../../shared/storage/storageHelper";
+import { getCardUsageData, loadCards, setCardUsageData } from "../../../shared/storage/storageHelper";
 import type { Ad, OrderPayload } from "../../../shared/types/ads";
 import type { Card } from "../../../shared/types/reviews";
 import { availableBanks, availableBanksSell } from "../../../shared/utils/bankParser";
@@ -200,4 +200,20 @@ export function calculateValue(ad: Ad, card: Card, minPrice: number): number {
    const paymentCoef = 0.10;
 
    return wPrice * priceCoef + wPayment * paymentCoef + wAmount * amountCoef;
+}
+
+export function findBuyCard(ad: Ad, minPrice: number): Card | null {
+   const cards = loadCards();
+   if (!cards.length) return null;
+
+   let best: { card: Card; value: number } | null = null;
+   for (const card of cards) {
+      if (!canUseCard(card, ad)) continue;
+      const value = calculateValue(ad, card, minPrice);
+      if (value <= 0) continue;
+      if (!best || value > best.value) {
+         best = { card, value };
+      }
+   }
+   return best ? best.card : null;
 }

@@ -1,5 +1,5 @@
 import { sendOrderToServer } from "../../features/sell/api/sellApi";
-import { restoreCardBalance, updateCardBalance, removeOrderFromStorage, loadCards } from "../storage/storageHelper";
+import { restoreCardBalance, updateCardBalance, removeOrderFromStorage } from "../storage/storageHelper";
 import type { OrderData } from "../types/ads";
 import type { Card } from "../types/reviews";
 import { sendCardsToServer } from "./fetchCards";
@@ -29,8 +29,7 @@ export async function handleCompletedOrder(
       // Отправляем на сервер
       orderData.order.Status = "Completed";
       await sendOrderToServer(orderData);
-      const cards = loadCards();
-      sendCardsToServer(cards);
+      sendCardsToServer(actuallyUsedCard.id, rubleAmount);
    } catch (error) {
       console.error(`Ошибка при обработке завершённого ордера ${orderId}:`, error);
       throw error;
@@ -52,8 +51,7 @@ export async function handleCancelledOrder(
       // Отправляем на сервер
       orderData.order.Status = "Cancelled";
       await sendOrderToServer(orderData);
-      const cards = loadCards();
-      sendCardsToServer(cards);
+      sendCardsToServer(originalCard.id, orderData.order.Type === "BUY" ? Number(orderData.order["Fiat Amount"]) : -Number(orderData.order["Fiat Amount"]));
    } catch (error) {
       console.error(`Ошибка при обработке отменённого ордера ${orderId}:`, error);
       throw error;

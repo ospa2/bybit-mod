@@ -6,7 +6,7 @@ import reviewsStatistics from "../../../shared/storage/storageHelper.ts";
 import { convertBybitTime } from "../../../shared/utils/timeStuff.ts";
 import { calculatePriority } from "../logic/procHelper.ts";
 function createReviewHTML(review: Review, className: string) {
-  
+
    const analysis = analyzeReview(review.appraiseContent);
    const highlightClass = analysis.shouldHighlight ? "highlighted-review" : "";
    const formattedDate = convertBybitTime(review.updateDate);
@@ -29,7 +29,10 @@ export async function loadAndDisplayReviews(originalAd: Ad) {
       const { negativeReviews, positiveReviewsCount } =
          await fetchReviewsData(originalAd.userId);
       const currentBalance = await fetchBalance()
-
+      localStorage.setItem(
+         "curbal",
+         currentBalance.toString()
+      )
       const balanceValueEl = document.getElementById("balance-value");
       const availableForTradeEl = document.getElementById(
          "available-for-trade"

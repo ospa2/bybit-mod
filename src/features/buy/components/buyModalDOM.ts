@@ -21,7 +21,7 @@ export function createModalHTML(ad: Ad): HTMLElement {
 
     const modal = document.createElement("div");
     modal.className = "bybit-modal";
-
+    const balance = localStorage.getItem("curbal");
     // ⭐ Весь ваш HTML-шаблон переносится сюда
     // Вставляем "скелет" модального окна с данными из originalAd и плейсхолдерами для загрузки
     modal.innerHTML = /* html */ `
@@ -58,7 +58,7 @@ export function createModalHTML(ad: Ad): HTMLElement {
                        <div class="crypto-info-section">
                            <div class="crypto-info-item">
                                <span class="crypto-info-label">Доступно</span>
-                               <span class="crypto-info-value" id="balance-value"><div class="spinner small"></div></span>
+                               <span class="crypto-info-value" id="balance-value">${balance} USDT</span>
                            </div>
                            <div class="crypto-info-item">
                                <span class="crypto-info-label">Лимиты</span>
@@ -77,7 +77,7 @@ export function createModalHTML(ad: Ad): HTMLElement {
                    </div>
                    <div class="terms-section">
                        <div class="terms-title" id="reviews-titleee">Хороших отзывов: ...</div>
-                       <div class="terms-content" id="reviews-container"><div class="spinner"></div></div>
+                       <div class="terms-content" id="reviews-container"><div class="loader"></div></div>
                    </div>
                </div>
                <div class="trading-panel">
@@ -91,26 +91,24 @@ export function createModalHTML(ad: Ad): HTMLElement {
         )} ${ad.currencyId || "RUB"}</div>
                    </div>
                    <div class="input-section">
-                       <label class="input-label">Я ${ad.side === 1 ? "куплю" : "продам"
-        }</label>
+                       <label class="input-label">Я куплю</label>
                        <div class="input-container" id="amount-container">
                            <div class="input-wrapper">
                                <input type="text" class="amount-input" id="amount-input" placeholder="0.0000" autocomplete="off">
                                <div class="input-suffix">
-                                   <span>${ad.tokenId || "USDT"
-        }</span><span class="input-divider">|</span><button type="button" class="max-button" id="max-button">Все</button>
+                                   <span>USDT
+        </span><span class="input-divider">|</span><button type="button" class="max-button" id="max-button">Все</button>
                                </div>
                            </div>
                        </div>
-                       <div class="balance-info" id="available-for-trade">Доступно для ${ad.side === 1 ? "покупки" : "продажи"
-        }: <span class="spinner small"></span></div>
+                       <div class="balance-info" id="available-for-trade">Доступно для покупки: ${balance} USDT</div>
                    </div>
                    <div class="input-section">
                        <label class="input-label">Я получу</label>
                        <div class="input-container"><div class="input-wrapper">
                            <div style="width: 24px;">₽</div>
                            <input type="text" class="amount-input" id="receive-input" placeholder="0.00">
-                           <div class="input-suffix"><span>${ad.currencyId || "RUB"
+                           <div class="input-suffix"><span>RUB
         }</span></div>
                        </div></div>
                    </div>
