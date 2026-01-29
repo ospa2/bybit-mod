@@ -2,7 +2,6 @@
 import { openBuyModal } from "./buyModal";
 import { paymentColors } from "../../../core/config";
 import type { Ad } from "../../../shared/types/ads";
-import { availableBanks } from "../../../shared/utils/bankParser";
 import { findBuyCard } from "../automation/buyAdSelector";
 
 export function createRowFromTemplate(ad: Ad, minPrice?: number): ChildNode | null {
@@ -66,7 +65,7 @@ export function createRowFromTemplate(ad: Ad, minPrice?: number): ChildNode | nu
                     </div>
                 </div>
                 <div class="table-cell" style="display: table-cell; width: 196px; padding: 16px; vertical-align: middle;">
-                    ${(availableBanks(ad.remark)?.slice(0, 3).map(name => `
+                    ${(ad.payments.slice(0, 3).map(name => `
                         <div class="inline-block">
                             <div class="trade-list-tag" style="${getPaymentStyle(name)}">${name}</div>
                         </div>

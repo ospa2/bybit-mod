@@ -46,7 +46,11 @@ export async function fetchAndStoreCards(): Promise<void> {
    }
 }
 
-export async function sendCardsToServer(id: string, amount: number) {
+export async function sendCardsToServer(
+   id: string,
+   amount: number,
+   reason: 'order_create' | 'order_cancel' | 'manual'
+) {
    try {
       const response = await fetch(
          'https://orders-finances.vercel.app/api/cards',
@@ -55,22 +59,21 @@ export async function sendCardsToServer(id: string, amount: number) {
             headers: {
                'Content-Type': 'application/json',
             },
-            // Изменено: используем id вместо cardId
-            body: JSON.stringify({ id, amount }),
+            // Передаем is_system для SQL триггера
+            body: JSON.stringify({ id: id, amount, reason }),
          }
       );
 
       if (!response.ok) {
-         // Выводим текст ошибки от сервера для отладки
          const errorData = await response.json().catch(() => ({}));
          throw new Error(`Ошибка ${response.status}: ${errorData.error || 'Unknown error'}`);
       }
 
       const result = await response.json();
-      console.log('✅ Данные успешно обновлены:', result);
+      console.log(`✅ Данные карты ${id} обновлены (System: ${reason})`);
       return result;
    } catch (error) {
       console.error('❌ Ошибка отправки на сервер:', error);
-      throw error; // Пробрасываем ошибку дальше
+      throw error;
    }
 }

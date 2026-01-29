@@ -1,7 +1,7 @@
 import { getCardUsageData, loadCards, setCardUsageData } from "../../../shared/storage/storageHelper";
 import type { Ad, OrderPayload } from "../../../shared/types/ads";
 import type { Card } from "../../../shared/types/reviews";
-import { availableBanks, availableBanksSell } from "../../../shared/utils/bankParser";
+import { availableBanksSell } from "../../../shared/utils/bankParser";
 
 const COOLDOWN_TIME = 1_200_000; // 20 минут
 
@@ -125,7 +125,7 @@ function amountWeight(amount: number): number {
 }
 
 export function paymentWeight(ad: Ad, card: Card): number {
-   const banks = availableBanks(ad.remark);
+   const banks = ad.payments
    const isSberAd = (banks.includes("Сбербанк") || banks.includes("*"));
    const isUniversalAd = (banks.includes("*"));
 

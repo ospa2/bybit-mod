@@ -8,7 +8,7 @@ import { watchOrder } from "../../../shared/orders/orderWatcher.ts";
 import { StorageHelper } from "../../../shared/storage/storageHelper.ts";
 import { findBestBuyAd, findBuyCard } from "../automation/buyAdSelector.ts";
 import { openBuyModal } from "../components/buyModal.ts";
-import { updateMaxAmount } from "../../../shared/utils/bankParser.ts";
+import { addPaymentsToAds, updateMaxAmount } from "../../../shared/utils/bankParser.ts";
 
 
 function now() {
@@ -55,7 +55,8 @@ export async function fetchAndAppendPage(): Promise<void> {
 
       const json = await res.json();
       const adsRaw: Ad[] = json.result?.items ?? [];
-      const ads: Ad[] = adsRaw.map(updateMaxAmount).filter(ad => !adShouldBeFiltered(ad))
+      const adsFiltered: Ad[] = adsRaw.map(updateMaxAmount).filter(ad => !adShouldBeFiltered(ad))
+      const ads = addPaymentsToAds(adsFiltered);
 
 
       // Расчет минимальной цены для фильтрации и логики

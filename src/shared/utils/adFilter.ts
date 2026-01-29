@@ -3,7 +3,6 @@
 import { forbiddenPhrases, MIN_EXECUTED_COUNT, } from '../../core/config.ts';
 import { appState } from '../../core/state.ts';
 import type { Ad } from '../types/ads';
-import { availableBanks } from './bankParser.ts';
 
 // side == 1 - покупка
 export function adShouldBeFiltered(ad: Ad) {
@@ -12,13 +11,6 @@ export function adShouldBeFiltered(ad: Ad) {
 
     return true;
   }
-  const isOnlySber = localStorage.getItem("onlySber") === "true";
-
-  const banks = availableBanks(ad.remark);
-  if (isOnlySber && !banks.includes("Сбербанк") && !banks.includes("*")) {
-    return true;
-  }
-
 
   const min = parseFloat(ad.minAmount);
   const max = parseFloat(ad.maxAmount);

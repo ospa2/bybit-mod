@@ -1,3 +1,4 @@
+import { findBuyCard } from "../../features/buy/automation/cardFinder";
 import type { Ad, ApiResult, GenericApiResponse } from "../types/ads";
 
 
@@ -461,30 +462,20 @@ export function availableBanksSell(description: string): string[] {
 }
 
 
-// Определяем объединенный тип для удобства
 type AdOrApi = Ad | (ApiResult & GenericApiResponse);
 
-// <T extends AdOrApi> означает: "Я принимаю любой тип T, который похож на Ad или ApiResult"
-// (item: T): T означает: "Я верну именно тот тип T, который мне передали"
 export function updateMaxAmount<T extends AdOrApi>(item: T): T {
-   // 1. Безопасное получение remark
-   // (item as any) нужно, так как в ApiResult поля remark формально нет в интерфейсе
    const remarkRaw = (item as any).remark;
-
    if (!remarkRaw) return item;
 
    const remark = remarkRaw.toLowerCase();
-
-   // Получаем текущие числовые значения (эти поля price и maxAmount есть в обоих интерфейсах)
    const currentPrice = parseFloat(item.price);
    const currentMaxAmount = parseFloat(item.maxAmount);
 
    if (isNaN(currentPrice) || isNaN(currentMaxAmount)) return item;
 
-   let maxValue: number | null = null;
-   let numbers: number[] = [];
-
-   // --- 1. Кратные ---
+   // --- 1. Кратные (Приоритетная жесткая логика) ---
+   // Если указана кратность, мы обязаны ей следовать, вариативности тут обычно нет.
    const kratnyeMatch = remark.match(/кратн(?:ые|ых|ая)\s*[\d.,]*/g);
    if (kratnyeMatch) {
       const part = kratnyeMatch[0] || "";
@@ -493,54 +484,77 @@ export function updateMaxAmount<T extends AdOrApi>(item: T): T {
 
       if (num && num !== 0) {
          const result = currentMaxAmount - (currentMaxAmount % num);
+         // Здесь мы не проверяем карту, так как кратность — это условие математическое, а не "выбор из списка"
+         // Но при желании можно добавить проверку и сюда.
          applyChanges(item, result, currentPrice);
          return item;
       }
    }
 
-   // --- 2. Поиск чисел ---
+   // --- 2. Поиск чисел (Логика подбора) ---
    const allNumbers = remark.match(/\d+[.,\s]?\d*/g);
+   let candidates: number[] = [];
 
    if (allNumbers && allNumbers.length > 0) {
-      numbers = allNumbers
+      candidates = allNumbers
          .map((s: string) => {
             const floatGuess = parseFloat(s.replace(",", "."));
+            // Эвристика: если число < 10000, возможно это часть номера карты или мусор,
+            // пробуем убрать разделители.
             if (floatGuess < 10000) {
                const withoutSep = s.replace(/[.\s]/g, "");
                return parseFloat(withoutSep);
             }
             return floatGuess;
          })
-         .filter((n: number) => Number.isFinite(n));
+         .filter((n: number) => Number.isFinite(n) && n <= currentMaxAmount); // Фильтруем сразу превышающие текущий лимит
    }
 
-   if (numbers.length > 0) {
-      maxValue = Math.max(...numbers);
-   }
+   if (candidates.length === 0) return item;
 
-   // --- 3. Применение ---
-   if (maxValue !== null && maxValue <= currentMaxAmount) {
-      applyChanges(item, maxValue, currentPrice);
+   // Сортируем по убыванию, чтобы найти максимально возможный объем
+   const uniqueCandidates = [...new Set(candidates)].sort((a, b) => b - a);
+
+
+
+   const minPrice = parseFloat(localStorage.getItem("minPrice") || "77");
+   if(uniqueCandidates.length>1) {
+      // --- 3. Перебор кандидатов ---
+      for (const amount of uniqueCandidates) {
+         // Применяем изменения
+         applyChanges(item, amount, currentPrice);
+
+         // Проверяем наличие карты под этот объем
+         // (item as Ad) - потенциально опасное приведение, см. "Допущения" п.3
+         const cardFound = findBuyCard(item as Ad, minPrice);
+
+         if (cardFound) {
+            // Карта есть, объем подходит. Возвращаем измененный item.
+            return item;
+         }
+      }
    }
 
    return item;
 }
 
+
+export function addPaymentsToAds(ads: Ad[]): Ad[] {
+   ads.forEach((ad) => {
+      ad.payments = availableBanks(ad.remark);
+   })
+   return ads
+}
 /**
  * Вспомогательная функция для мутации объекта.
- * Определяет, какое поле количества обновлять (quantity или lastQuantity).
  */
 function applyChanges(item: AdOrApi, newMaxAmount: number, price: number) {
-   // Обновляем сумму (поле maxAmount есть у обоих)
    item.maxAmount = newMaxAmount.toFixed(2);
    const newQuantity = (newMaxAmount / price).toFixed(4);
 
-   // Проверяем наличие свойства quantity, характерного для Ad
    if ('quantity' in item) {
       (item as Ad).quantity = newQuantity;
    } else {
-      // Иначе считаем, что это ApiResult, у которого lastQuantity
-      // Используем as any, если в типах ApiResult нет lastQuantity явно (но в P2PResult оно есть)
       (item as any).lastQuantity = newQuantity;
    }
 }

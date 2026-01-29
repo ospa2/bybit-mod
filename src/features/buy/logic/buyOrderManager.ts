@@ -57,7 +57,7 @@ export async function saveOrderAndWatch(orderId: string, card: Card, apiResult: 
    );
    localStorage.setItem("!cards", JSON.stringify(cards));
 
-   sendCardsToServer(card.id, amountToUpdate);
+   sendCardsToServer(card.id, amountToUpdate, 'order_create');
    orders.push({ order: newOrder, card: card });
    StorageHelper.setOrders(orders);
 }

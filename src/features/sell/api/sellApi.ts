@@ -69,7 +69,7 @@ export async function saveSellData(request: OrderPayload, result: CreateResponse
       orders.push({ order: newOrder, card: card });
       StorageHelper.setOrders(orders);
       if (card) {
-         sendCardsToServer(card.id, Number(request.amount));
+         sendCardsToServer(card.id, Number(request.amount), "order_create");
       }
    }
    if ((window as any).wsClient) {
