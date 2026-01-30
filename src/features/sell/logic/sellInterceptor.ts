@@ -4,7 +4,7 @@ import type { Ad } from "../../../shared/types/ads";
 
 
 import { saveSellData } from "../api/sellApi";
-import { backgroundProcessAds } from "./reviewsSync";
+import { backgroundProcessAds } from "../../reviews/logic/reviewsSync";
 import { setupSellButtonListener } from "../components/sellDOMHandlers";
 import { checkTelegramResponse } from "../api/telegramNotifier";
 import { AutoClickElements } from "../automation/autoсlicker";

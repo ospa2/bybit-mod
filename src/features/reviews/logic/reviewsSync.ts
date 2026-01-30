@@ -1,8 +1,8 @@
 import { LS_KEY, upsertStatsBatch } from "../../../shared/storage/storageHelper";
 import type { Ad } from "../../../shared/types/ads";
 import type { ReviewStats } from "../../../shared/types/reviews";
-import { shouldRefresh } from "../../reviews/logic/procHelper";
-import { processUserReviewsPure } from "../../reviews/logic/reviewProcessor";
+import { shouldRefresh } from "./procHelper";
+import { processUserReviewsPure } from "./reviewProcessor";
 
 // Минимальное время между началом запросов (мс), чтобы не получить 429 от WAF Bybit
 // 0 = максимально быстро, но риск бана высок. Рекомендую хотя бы 500-1000.

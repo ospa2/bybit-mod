@@ -8,7 +8,7 @@ import { BybitP2PWebSocket } from "./shared/api/wsPrivate.ts";
 import { initFetchInterceptor } from "./features/sell/logic/sellInterceptor.ts";
 import { resumePendingOrders } from "./features/buy/api/buyApi.ts";
 import { AutoClickElements } from "./features/sell/automation/autoсlicker.ts";
-import { backgroundProcessAds } from "./features/sell/logic/reviewsSync.ts";
+import { backgroundProcessAds } from "./features/reviews/logic/reviewsSync.ts";
 import { addOnlySberSwitch } from "./features/buy/components/sberSwitch.ts";
 import { loadCards } from "./shared/storage/storageHelper.ts";
 import { watchNewOrders } from "./shared/orders/newOrdersScanner.ts";

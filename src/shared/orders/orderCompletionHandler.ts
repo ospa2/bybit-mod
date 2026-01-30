@@ -70,7 +70,7 @@ export async function handleCancelledOrder(
    console.log(`❌ Ордер ${orderId} отменён`);
 
    try {
-
+ 
       // Откат локального баланса
       const rubleAmount = calculateSignedAmount(orderData.order);
 
