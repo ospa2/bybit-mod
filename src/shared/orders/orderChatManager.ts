@@ -14,7 +14,7 @@ function wait(ms: number) {
 }
 
 function randomDelay() {
-    return Math.random() * 2000;
+    return Math.random() * 1000;
 }
 
 interface KeywordMatcher {
@@ -35,7 +35,7 @@ export class OrderChatManager {
             response: (bank) => bank
         },
         {
-            matcher: /(?:лицо|личная\sкарта|кто\s*о[пт][пт]равитель)/,
+            matcher: /(?:лицо|личная\sкарта|кто\s*о[пт][пт]равитель)|[13]\s*л?/,
             response: "Можно с карты родственника? лк у меня"
         },
         {

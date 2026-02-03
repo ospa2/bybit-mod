@@ -55,8 +55,8 @@ export async function fetchAndAppendPage(): Promise<void> {
 
       const json = await res.json();
       const adsRaw: Ad[] = json.result?.items ?? [];
-      const adsFiltered: Ad[] = adsRaw.map(updateMaxAmount).filter(ad => !adShouldBeFiltered(ad))
-      const ads = addPaymentsToAds(adsFiltered);
+      const adsRawWithBanks = addPaymentsToAds(adsRaw);
+      const ads: Ad[] = adsRawWithBanks.map(updateMaxAmount).filter(ad => !adShouldBeFiltered(ad))
 
 
       // Расчет минимальной цены для фильтрации и логики

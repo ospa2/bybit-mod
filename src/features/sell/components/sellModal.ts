@@ -4,6 +4,7 @@ import { loadAndDisplayReviews } from "../../reviews/components/reviewDisplay.ts
 import type { Ad } from "../../../shared/types/ads";
 import { getRowIndex } from "../../../shared/utils/domHelpers";
 import { appState } from "../../../core/state";
+import { AutoClickElements } from "../automation/autoсlicker.ts";
 
 export function handleModalOpening(ad: Ad, e: MouseEvent) {
   const btn = (e.target as HTMLElement)?.closest("button");
@@ -29,6 +30,8 @@ export function handleModalOpening(ad: Ad, e: MouseEvent) {
 
         let reviewsContainer = document.getElementById("reviews-container");
 
+        AutoClickElements.executeWorkflow((window as any).autoClicker, modal);
+        
         if (!reviewsContainer) {
           reviewsContainer = document.createElement("div");
           reviewsContainer.className = "terms-content";

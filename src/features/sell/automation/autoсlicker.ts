@@ -86,26 +86,7 @@ export class AutoClickElements {
   private async findAndClickSellButton(dialog: HTMLElement): Promise<void> {
     // 1. Ждем и кликаем на "Все"
 
-
-    this.clickMax();
-
-    // 2. Ждем и выбираем способ оплаты
-    const paymentSelector = await this.waitFor(
-      () => {
-        const divs = Array.from(dialog.querySelectorAll<HTMLDivElement>("div.cursor-pointer"));
-        return divs.find((div) => div.textContent?.includes("Выбрать способ оплаты"));
-      },
-      "😭 Не найден селектор оплаты"
-    );
-
-    await new Promise<void>((resolve) => {
-      this.clickElement(paymentSelector, "payment selector", () => resolve());
-    });
-
-    // Предполагаем, что этот метод также должен быть async и ждать рендера списка
-    // Если он синхронный — он может не успеть выбрать элемент до проверки кнопки "Продажа"
-    // Но waitFor ниже всё равно будет ждать активации кнопки
-    await this.findAndClickSBP();
+    await AutoClickElements.executeWorkflow(this, dialog);
 
     // 3. Кнопка "Продажа" — Ждем перехода в состояние ENABLED
     const sellButton = await this.waitFor(
@@ -127,6 +108,33 @@ export class AutoClickElements {
     this.clickElement(sellButton, "button");
   }
 
+  /**
+   * Изолированная логика автоматизации
+   */
+  static async executeWorkflow(
+    deps: AutoClickElements,
+    dialog: HTMLElement
+  ): Promise<void> {
+    // 1. Установка максимального значения
+    deps.clickMax();
+
+    // 2. Ожидание и выбор селектора оплаты
+    const paymentSelector = await deps.waitFor(
+      () => {
+        const divs = Array.from(dialog.querySelectorAll<HTMLDivElement>("div.cursor-pointer"));
+        return divs.find((div) => div.textContent?.includes("Выбрать способ оплаты"));
+      },
+      "😭 Не найден селектор оплаты"
+    );
+
+    // Используем Promise для синхронизации с callback-системой clickElement
+    await new Promise<void>((resolve) => {
+      deps.clickElement(paymentSelector, "payment selector", () => resolve());
+    });
+
+    // 3. Выбор конкретного метода (банка/системы)
+    await deps.findAndClickPaymentMethod();
+  }
   // --- Шаг 2 ---
   private async findAndClickUseOtherMethods(): Promise<void> {
     const targetElement = await this.waitFor(
@@ -325,7 +333,7 @@ export class AutoClickElements {
     }
   }
   // --- Поиск способа оплаты ---
-  private findAndClickSBP(): void {
+  private findAndClickPaymentMethod(): void {
     const sbpDivs = document.querySelectorAll<HTMLDivElement>(
       "div.payment-select__list-wrapper"
     );
@@ -343,7 +351,7 @@ export class AutoClickElements {
 
     if (sbpDivs.length === 0) {
       console.log("AutoClick: способы оплаты ещё не загрузились, повторная попытка...");
-      setTimeout(() => this.findAndClickSBP(), 500);
+      setTimeout(() => this.findAndClickPaymentMethod(), 500);
     }
   }
 

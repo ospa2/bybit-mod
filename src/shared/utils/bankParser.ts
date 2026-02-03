@@ -414,7 +414,7 @@ function removeExcludedSellBanks(input: string): string {
 //    if (!text) return false;
 
 //    const pattern=/(?:со?|из)\s+(?:люб[оы](?:го|х)|всех)\s+банк(?:а|ов)/
-   
+
 //    return pattern.test(text);
 
 // }
@@ -518,7 +518,7 @@ export function updateMaxAmount<T extends AdOrApi>(item: T): T {
 
 
    const minPrice = parseFloat(localStorage.getItem("minPrice") || "77");
-   if(uniqueCandidates.length>1) {
+   if (uniqueCandidates.length > 0) {
       // --- 3. Перебор кандидатов ---
       for (const amount of uniqueCandidates) {
          // Применяем изменения
@@ -527,8 +527,11 @@ export function updateMaxAmount<T extends AdOrApi>(item: T): T {
          // Проверяем наличие карты под этот объем
          // (item as Ad) - потенциально опасное приведение, см. "Допущения" п.3
          const cardFound = findBuyCard(item as Ad, minPrice);
-
+         console.log(item as Ad);
+         
          if (cardFound) {
+            console.log(cardFound, ' для ', item.nickName);
+            
             // Карта есть, объем подходит. Возвращаем измененный item.
             return item;
          }
@@ -573,7 +576,7 @@ export function bankLatinToCyrillic(name: string): string {
       mts: "МТС Банк",
       sovcom: "Совкомбанк",
       uralsib: "Уралсиб",
-      rnkb: "РНКБ"
+      otp: "ОТП Банк",
    };
 
    const key = name.toLowerCase();

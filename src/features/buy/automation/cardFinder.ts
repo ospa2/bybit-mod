@@ -1,7 +1,7 @@
 import { getCardUsageData, loadCards, setCardUsageData } from "../../../shared/storage/storageHelper";
 import type { Ad, OrderPayload } from "../../../shared/types/ads";
 import type { Card } from "../../../shared/types/reviews";
-import { availableBanksSell } from "../../../shared/utils/bankParser";
+import { availableBanksSell, bankLatinToCyrillic } from "../../../shared/utils/bankParser";
 
 const COOLDOWN_TIME = 1_200_000; // 20 минут
 
@@ -124,15 +124,51 @@ function amountWeight(amount: number): number {
    return 1.0 * ratio;
 }
 
+const BANK_SCARCITY: Record<string, number> = {
+   vtb: 0.93,       // 6. Самый редкий
+   uralsib: 0.92,   // 5.
+   sber: 0.90,      // 4.
+   psb: 0.83,       // 3.
+   sovcom: 0.76,    // 2.
+   tbank: 0.70,     // 1. Самый частый
+   default: 0.50    // Прочие (Альфа, Райф и т.д.)
+};
+
+/**
+ * Определяет ценность связки Карта + Объявление
+ * Чем реже банк карты требуется в объявлении, тем выше value
+ */
 export function paymentWeight(ad: Ad, card: Card): number {
-   const banks = ad.payments
-   const isSberAd = (banks.includes("Сбербанк") || banks.includes("*"));
-   const isUniversalAd = (banks.includes("*"));
+   const adBanks = ad.payments; // string[]
+   const cardCyrillic = bankLatinToCyrillic(card.bank).toLowerCase();
+   const cardKey = card.bank.toLowerCase();
 
-   if (card.bank === "sber" && isSberAd) return 1.0;
-   if (card.bank === "tbank" && !isSberAd) return 0.8;
-   if (card.bank === "tbank" && isUniversalAd) return 0.7;
+   // 1. Проверяем прямое совпадение или вхождение названия
+   const isMatch = adBanks.some(adBankName => {
+      const normalizedAdBank = adBankName.toLowerCase();
 
+      // Проверка на вхождение: "Сбербанк" включает в себя "Сбер", 
+      // "Тинькофф" и "Т-Банк" обрабатываются через маппинг
+      return (
+         normalizedAdBank.includes(cardCyrillic) ||
+         cardCyrillic.includes(normalizedAdBank) ||
+         (cardKey === 'tbank' && normalizedAdBank.includes('тинькофф')) ||
+         (cardKey === 'psb' && normalizedAdBank.includes('промсвязь'))
+      );
+   });
+
+   if (isMatch) {
+      // Возвращаем вес редкости из конфига
+      return BANK_SCARCITY[cardKey] || BANK_SCARCITY.default;
+   }
+
+   // 2. Обработка универсального метода оплаты (*)
+   if (adBanks.includes("*")) {
+    
+      return BANK_SCARCITY[cardKey] || BANK_SCARCITY.default;
+   }
+
+   // 3. Несоответствие
    return 0;
 }
 

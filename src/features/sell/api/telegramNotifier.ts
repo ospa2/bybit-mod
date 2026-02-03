@@ -118,7 +118,32 @@ export async function sendTelegramMessage(ad: Ad, card?: Card, apiResult?: ApiRe
       return messageId;
    }
 }
+export async function notifyTelegramOrderCreated(ad: Ad, card?: Card) {
+   //покупка
+   const baseText =
+      `🟩 Автоматически создан ордер\n\n` +
 
+      `🟩 ${ad.maxAmount} ₽ по ${ad.price} ₽\n` +
+      `${card ? `${card.bank === "sber" ? "🟢" : "🟡"} Карта: ${card.id} баланс (${card.balance}₽)` : `🟩 Подходящая карта не нашлась`}\n\n` +
+      `🟩 Продавец: ${ad.nickName}\n` +
+      `🟩 Описание:\n${ad.remark}\n\n`;
+
+
+   const text = baseText
+
+   const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+         chat_id: TELEGRAM_CHAT_ID,
+         text: text,
+      })
+   });
+
+   const data = await response.json();
+   const messageId = data.result.message_id;
+   return messageId;
+}
 // Упрощенная функция редактирования
 export async function editTelegramMessage(messageId: number, newText: string) {
    const messageData = getMessageData(messageId);

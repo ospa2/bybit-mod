@@ -15,7 +15,7 @@ export function findSellCard(ad: OrderPayload, remark?: string): Card | null {
 
    if (!available.length) return null;
 
-   // если есть рабочие тиньки, то они в приоритете
+   // выбрать карту с наименьшим балансом
    available.sort((a, b) => a.balance - b.balance);
    
 

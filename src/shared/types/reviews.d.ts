@@ -24,7 +24,7 @@ export type FetchReviewsResult = {
 
 export interface Card {
   id: string;
-  bank: "tbank" | "sber";
+  bank: "tbank" | "sber" | "alfa" | "vtb" | "raif" | "gazprom" | "psb" | "rshb" | "mts" | "sovcom" | "uralsib" | "otp";
   balance: number; // остаток
   turnover: number; // оборот за сегодня
 }

@@ -9,8 +9,10 @@ import type { Ad, ApiResult } from "../../../shared/types/ads";
 import { fetchAdDetails } from "../api/buyApi.ts";
 import type { Card } from "../../../shared/types/reviews";
 import { findBuyCard } from "../automation/buyAdSelector.ts";
-import { sendTelegramMessage } from "../../sell/api/telegramNotifier.ts";
+import { notifyTelegramOrderCreated, sendTelegramMessage } from "../../sell/api/telegramNotifier.ts";
 import { updateMaxAmount } from "../../../shared/utils/bankParser.ts";
+import { calculateValue } from "../automation/cardFinder.ts";
+// import { calculateValue } from "../automation/cardFinder.ts";
 
 
 /**
@@ -112,6 +114,24 @@ function setupTradeEvents(apiResult: ApiResult, data: { ad: Ad; card: Card | nul
    // --- Измененная логика проверки уникальности ---
    const uniqueKey = `${ad.id}_${apiResult.price}_${apiResult.maxAmount}`;
 
+   const morningPriceStats = localStorage.getItem("morningPriceStats")
+   const morningMinPrice: number = morningPriceStats ? JSON.parse(morningPriceStats).minPrice : 0
+
+   if (parseFloat(apiResult.price) * 1.005 < morningMinPrice) {
+      if (card) {
+         const value = calculateValue(ad, card, morningMinPrice)
+         if (value > 0.6) {
+            // если объявление сильно дешевле остальных, то создаем ордер автоматически и информируем о создании в тг
+            if (new Date().getHours() > 8) {
+               notifyTelegramOrderCreated(ad, card);
+               executeTrade(apiResult, card, tradeButton);
+               clickedAds.add(uniqueKey);
+               return;
+            }
+
+         }
+      }
+   }
    if (card && !clickedAds.has(uniqueKey)) {
       sendTelegramMessage(ad, card, apiResult);
       clickedAds.add(uniqueKey);

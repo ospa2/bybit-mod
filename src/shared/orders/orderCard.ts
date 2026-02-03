@@ -73,7 +73,7 @@ export async function getUsedCard(orderId: string): Promise<Card | null> {
          }
       });
       // вернуть последнюю найденную карту(если было загружено несколько реквизитов)
-      foundCard = cards.find((c: Card) => c.id === details[details.length - 1]) || null
+      foundCard = cards.find((c: Card) => c.id === details[0]) || null
       return foundCard
    } catch (error) {
       console.error("❌❌ Ошибка в getOrderCard:", error);
