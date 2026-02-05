@@ -527,10 +527,8 @@ export function updateMaxAmount<T extends AdOrApi>(item: T): T {
          // Проверяем наличие карты под этот объем
          // (item as Ad) - потенциально опасное приведение, см. "Допущения" п.3
          const cardFound = findBuyCard(item as Ad, minPrice);
-         console.log(item as Ad);
          
          if (cardFound) {
-            console.log(cardFound, ' для ', item.nickName);
             
             // Карта есть, объем подходит. Возвращаем измененный item.
             return item;

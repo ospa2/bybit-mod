@@ -1,16 +1,11 @@
 //src/logic/adFilter.ts 
 
-import { forbiddenPhrases, MIN_EXECUTED_COUNT, } from '../../core/config.ts';
+import { forbiddenPhrases } from '../../core/config.ts';
 import { appState } from '../../core/state.ts';
 import type { Ad } from '../types/ads';
 
 // side == 1 - покупка
 export function adShouldBeFiltered(ad: Ad) {
-  // 1. Фильтрация по минимальному количеству выполненных объявлений
-  if (ad.finishNum <= MIN_EXECUTED_COUNT && ad.side === 0) {
-
-    return true;
-  }
 
   const min = parseFloat(ad.minAmount);
   const max = parseFloat(ad.maxAmount);

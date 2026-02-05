@@ -6,7 +6,6 @@ import type { ChatMessageData, IncomingChatPayload, OrderData } from "../types/a
 import { bankLatinToCyrillic } from "../utils/bankParser";
 
 const STORAGE_KEY_PROCESSED = 'bybit_p2p_processed_msgs_v1';
-const STORAGE_KEY_RATE = 'bybit_p2p_rate_v1';
 
 // Утилитные функции вынесены из класса, так как они не зависят от инстанса
 function wait(ms: number) {
@@ -24,7 +23,6 @@ interface KeywordMatcher {
 
 export class OrderChatManager {
     private wsClient: BybitP2PWebSocket;
-    private replyRateLimitPerMinute = 6;
     private processingLock = new Set<string>();
 
     // Keywords теперь статичны или не зависят от this.bank напрямую в момент инициализации
@@ -35,7 +33,7 @@ export class OrderChatManager {
             response: (bank) => bank
         },
         {
-            matcher: /(?:лицо|личная\sкарта|кто\s*о[пт][пт]равитель)|[13]\s*л?/,
+            matcher: /(?:лицо|личная\sкарта|кто\s*о[пт][пт]равитель)|[13]\s*л\?/,
             response: "Можно с карты родственника? лк у меня"
         },
         {
@@ -66,17 +64,6 @@ export class OrderChatManager {
 
     private saveProcessed(obj: Record<string, string[]>) {
         localStorage.setItem(STORAGE_KEY_PROCESSED, JSON.stringify(obj));
-    }
-
-    private loadRate(): Record<string, number[]> {
-        try {
-            const raw = localStorage.getItem(STORAGE_KEY_RATE);
-            return raw ? JSON.parse(raw) : {};
-        } catch { return {}; }
-    }
-
-    private saveRate(obj: Record<string, number[]>) {
-        localStorage.setItem(STORAGE_KEY_RATE, JSON.stringify(obj));
     }
 
     /* ---------- Logic ---------- */
@@ -134,12 +121,6 @@ export class OrderChatManager {
 
                 // 4. Отправка
                 for (const reply of replies) {
-                    if (!this.canReplyNow(orderId)) {
-                        console.warn(`[OrderChatManager] Rate limit hit for ${orderId}`);
-                        break;
-                    }
-
-                    this.pushRateTimestamp(orderId, Date.now());
 
                     // Имитация задержки ввода
                     await wait(randomDelay());
@@ -190,29 +171,6 @@ export class OrderChatManager {
         return replies;
     }
 
-    private canReplyNow(orderId: string): boolean {
-        const rate = this.loadRate();
-        const now = Date.now();
-        const history = (rate[orderId] || []).filter(ts => now - ts < 60_000);
-
-        // Оптимизация: сохраняем сразу очищенный массив, чтобы не копить мусор
-        if (history.length !== (rate[orderId]?.length || 0)) {
-            rate[orderId] = history;
-            this.saveRate(rate);
-        }
-
-        return history.length < this.replyRateLimitPerMinute;
-    }
-
-    private pushRateTimestamp(orderId: string, ts: number) {
-        const rate = this.loadRate();
-        rate[orderId] = rate[orderId] || [];
-        rate[orderId].push(ts);
-        // Trim логика уже частично есть в canReplyNow, но для надежности можно оставить
-        if (rate[orderId].length > 20) rate[orderId] = rate[orderId].slice(-20); // храним меньше, нам нужна только последняя минута
-        this.saveRate(rate);
-    }
-
     private hookIncomingMessages() {
         if (this.wsClient && typeof (this.wsClient as any).on === 'function') {
             (this.wsClient as any).on('message', (msg: any) => {
@@ -237,4 +195,22 @@ export class OrderChatManager {
 //     "fromP2pChat": false,
 //     "autoSend": false,
 //     "msgUuId": "37bb0430-a075-6b76-cd4a-def38762cec6"
+// }
+
+// {
+//     "userId": 204412940,
+//         "orderId": "2019058790599499776",
+//             "message": "лан",
+//                 "msgUuid": "863970e3-f758-4db5-9ee3-0b20b97ccfd2",
+//                     "createDate": "1770217310253",
+//                         "contentType": "str",
+//                             "roleType": "user",
+//                                 "id": 5661831948,
+//                                     "msgCode": 0,
+//                                         "fileName": "",
+//                                             "onlyForCustomer": 0,
+//                                                 "nickName": "daydream1",
+//                                                     "fromP2pChat": false,
+//                                                         "autoSend": false,
+//                                                             "msgUuId": "863970e3-f758-4db5-9ee3-0b20b97ccfd2"
 // }

@@ -78,7 +78,18 @@ export function findBestBuyAd(ads: Ad[]): { ad: Ad; card: Card } | null {
       return null;
    }
 
-   candidates.sort((a, b) => b.value - a.value);
+   candidates.sort((a, b) => {
+      // 1. Приоритет по value (по убыванию)
+      if (b.value !== a.value) {
+         return b.value - a.value;
+      }
+
+      // 2. Если value одинаковы, значит карты одного банка. выбираем карту у которой баланс больше
+      const balanceA = a.card?.balance ?? 0;
+      const balanceB = b.card?.balance ?? 0;
+
+      return balanceB - balanceA;
+   });
 
 
    // Передаем кандидатов в проверку лидерства

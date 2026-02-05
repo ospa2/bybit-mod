@@ -4,7 +4,7 @@ import { handleUrlChange } from "../features/buy/logic/buyLoader";
 // Единый объект состояния приложения
 export const appState = {
     MIN_LEFT_VALUE: 10000,
-    MAX_RIGHT_VALUE: 80000,
+    MAX_RIGHT_VALUE: 100000,
     isLoading: false,
     isSequentialLoadingActive: false,
     shouldStopLoading: false, // Флаг для остановки
